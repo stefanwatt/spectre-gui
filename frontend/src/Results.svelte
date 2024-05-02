@@ -3,7 +3,6 @@
   import "./assets/prism.css";
   import ChevronDown from "./ChevronDown.svelte";
   import ChevronUp from "./ChevronUp.svelte";
-  import Matches from "./Matches.svelte";
   import ResultsHeader from "./ResultsHeader.svelte";
   import { map_results, highlight_all } from "./results.service";
   import Match from "./Match.svelte";
@@ -31,23 +30,25 @@
   <div class="flex flex-col w-full">
     {#each mapped as { path, matches }}
       {#if !path.includes(":")}
-        <div class="grid grid-cols-[auto,1fr] pt-2 snap-start">
-          <div class="text-blue">
+        <div class="grid grid-cols-[1fr,15fr] pt-2 snap-start">
+          <div class="text-blue flex justify-end items-center w-full">
             {#if !collapsed}
               <ChevronDown></ChevronDown>
             {:else}
               <ChevronUp></ChevronUp>
             {/if}
           </div>
-          <div>
-            <ResultsHeader {path} match_count={matches.length}></ResultsHeader>
-
-            {#each matches as match}
-              {#if match.Path.length < 15 && match.Col.length < 5}
-                <Match {match}></Match>
-              {/if}
-            {/each}
-          </div>
+          <ResultsHeader {path} match_count={matches.length}></ResultsHeader>
+          {#each matches as match}
+            {#if match.Path.length < 15 && match.Col.length < 5}
+              <div
+                class="pr-2 text-overlay0 flex justify-end items-center w-full"
+              >
+                {match.Row}:{match.Col}
+              </div>
+              <Match {match}></Match>
+            {/if}
+          {/each}
         </div>
       {/if}
     {/each}

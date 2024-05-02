@@ -12,7 +12,7 @@
   on:click={() => {
     replace_match(match);
   }}
-  class="cursor-pointer snap-start flex justify-start p-2"
+  class="cursor-pointer snap-start flex justify-start p-2 w-full"
 >
   <code class="language-go w-4/5">
     {match.MatchedLine}
