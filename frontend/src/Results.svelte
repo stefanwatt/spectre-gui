@@ -9,11 +9,14 @@
 
   /*** @type {RipgrepResultApi} */
   export let results;
+  /*** @type {string} */
+  export let search_term;
   let collapsed = false;
   onMount(async () => {
     await import("./assets/prism.js");
     setTimeout(() => {
-      highlight_all();
+      window.Prism.plugins.filterHighlightAll.reject.addSelector('.spectre-match');
+      highlight_all() 
     });
   });
 
@@ -25,6 +28,10 @@
     }
   }
 </script>
+<svelte:head>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/plugins/filter-highlight-all/prism-filter-highlight-all.min.js"></script>
+</svelte:head>
 
 {#if results && mapped}
   <div class="flex flex-col w-full">
@@ -46,7 +53,7 @@
               >
                 {match.Row}:{match.Col}
               </div>
-              <Match {match}></Match>
+              <Match {search_term} {match}></Match>
             {/if}
           {/each}
         </div>

@@ -25,6 +25,6 @@
   <div
     class="grow h-0 pt-2 overflow-y-scroll overflow-x-hidden snap-y snap-mandatory"
   >
-    <Results {results}></Results>
+    <Results {search_term} {results}></Results>
   </div>
 </div>
