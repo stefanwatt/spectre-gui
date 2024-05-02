@@ -4,4 +4,4 @@ import {main} from '../models';
 
 export function Greet(arg1:string):Promise<string>;
 
-export function Search(arg1:string,arg2:string):Promise<Array<main.RipgrepMatch>>;
+export function Search(arg1:string,arg2:string):Promise<{[key: string]: Array<main.RipgrepMatch>}>;

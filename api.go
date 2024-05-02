@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 )
+
+type RipgrepResult = map[string][]RipgrepMatch
 
 type RipgrepMatch struct {
 	Path        string
@@ -16,14 +17,15 @@ type RipgrepMatch struct {
 	MatchedLine string
 }
 
-func (a *App) Search(search_term string, dir string) []RipgrepMatch {
+func (a *App) Search(search_term string, dir string) RipgrepResult {
 	return ripgrep(search_term, dir)
 }
 
-func ripgrep(search_term string, dir string) []RipgrepMatch {
+func ripgrep(search_term string, dir string) RipgrepResult {
 	if search_term == "" || dir == "" {
-		return []RipgrepMatch{}
+		return RipgrepResult{}
 	}
+	search_term = strings.TrimSpace(search_term)
 	rg_cmd := exec.Command("rg", "-F", "--line-number", "--column", "--no-heading", "--smart-case", search_term, dir)
 	bytes, err := rg_cmd.Output()
 	if err != nil {
@@ -42,10 +44,13 @@ func ripgrep(search_term string, dir string) []RipgrepMatch {
 			fmt.Println("line ", line)
 			panic("error parsing ripgrep output")
 		}
-		length := float64(len(submatches[4]))
-		max_length := int(math.Min(25.0, length)) - 1
+		// length := float64(len(submatches[4]))
+		// max_length := int(math.Min(25.0, length)) - 1
 		matched_line := submatches[4]
-		matched_line = matched_line[:max_length]
+		matched_line = strings.TrimSpace(matched_line)
+		// if len(matched_line) > max_length && max_length > 0 {
+		// 	matched_line = matched_line[:max_length]
+		// }
 		return RipgrepMatch{
 			filepath.Base(submatches[1]),
 			submatches[2],
@@ -53,6 +58,19 @@ func ripgrep(search_term string, dir string) []RipgrepMatch {
 			matched_line,
 		}
 	})
-	return matches
+	grouped := GroupByProperty(matches, func(match RipgrepMatch) string {
+		return match.Path
+	})
+	return grouped
+}
 
+func GroupByProperty[T any, K comparable](items []T, getProperty func(T) K) map[K][]T {
+	grouped := make(map[K][]T)
+
+	for _, item := range items {
+		key := getProperty(item)
+		grouped[key] = append(grouped[key], item)
+	}
+
+	return grouped
 }
