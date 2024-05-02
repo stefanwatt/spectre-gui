@@ -1,4 +1,9 @@
-type RipgrepResult = [key: string]: Array<main.RipgrepMatch>
+type RipgrepResultApi = [key: string]: Array<main.RipgrepMatch>
+
+interface RipgrepResult {
+  path : string;
+  matches: RipgrepMatch[]
+}
 
 interface RipgrepMatch {
   Path: string;

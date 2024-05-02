@@ -3,8 +3,11 @@
   import "./assets/prism.css";
   import ChevronDown from "./ChevronDown.svelte";
   import ChevronUp from "./ChevronUp.svelte";
+  import Matches from "./Matches.svelte";
+  import ResultsHeader from "./ResultsHeader.svelte";
+  import { map_results } from "./results.service";
 
-  /*** @type {RipgrepResult} */
+  /*** @type {RipgrepResultApi} */
   export let results;
   let collapsed = false;
   onMount(async () => {
@@ -13,15 +16,18 @@
       window.Prism.highlightAll(false);
     });
   });
+
+  $: mapped = map_results(results);
+
   $: {
-    if (results && window.Prism) {
+    if (mapped && window.Prism) {
       window.Prism.highlightAll(false);
     }
   }
 </script>
 
-{#if results && Object.keys(results)?.length}
-  {#each Object.entries(results) as [path, matches], i}
+{#if results && mapped}
+  {#each mapped as { path, matches }}
     {#if !path.includes(":")}
       <div class="flex pt-2 snap-start">
         <div class="text-blue">
@@ -31,25 +37,9 @@
             <ChevronUp></ChevronUp>
           {/if}
         </div>
-
         <div>
-          <div class="flex">
-            <div class="font-bold text-blue px-2">{path}</div>
-            <div
-              class="w-8 flex justify-center items-center rounded-full bg-blue text-base"
-            >
-              {matches.length}
-            </div>
-          </div>
-          {#each matches as match, j}
-            {#if match.Path.length < 15 && match.Col.length < 5}
-              <div class="snap-start flex justify-start p-2">
-                <code class="language-go w-4/5">
-                  {match.MatchedLine}
-                </code>
-              </div>
-            {/if}
-          {/each}
+          <ResultsHeader {path} match_count={matches.length}></ResultsHeader>
+          <Matches {matches}></Matches>
         </div>
       </div>
     {/if}

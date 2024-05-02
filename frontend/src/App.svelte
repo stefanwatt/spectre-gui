@@ -3,14 +3,14 @@
   import Form from "./Form.svelte";
   import Results from "./Results.svelte";
 
-  /**@type {RipgrepResult} */
+  /**@type {RipgrepResultApi} */
   let results;
   let search_term = "utils";
   let dir = "/home/stefan/Projects/nvim-float";
   $: {
     try {
       Search(search_term, dir).then(
-        /**@param {RipgrepResult} res */ (res) => {
+        /**@param {RipgrepResultApi} res */ (res) => {
           results = res;
         },
       );
