@@ -3,6 +3,8 @@
   export let match;
   /** @type {string}*/
   export let search_term;
+  /** @type {string}*/
+  export let replace_term;
 
   /** @param {RipgrepMatch} match*/
   function replace_match(match) {
@@ -29,9 +31,16 @@
     </code>
   </div>
 
-  <div class="flex items-center h-full">
-    <div class="font-mono spectre-match bg-flamingo text-base flex">
+  <div class="flex items-center h-full whitespace-pre">
+    <div
+      class="font-mono px-1 spectre-match line-through bg-flamingo text-surface1 rounded-sm flex whitespace-pre-wrap"
+    >
       {search_term}
+    </div>
+    <div
+      class="ml-1 px-1 spectre-match whitespace-pre bg-surface1 text-flamingo rounded-sm"
+    >
+      {replace_term}
     </div>
   </div>
   <div class="flex items-center h-full">
