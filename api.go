@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -17,24 +18,66 @@ type RipgrepMatch struct {
 	MatchedLine string
 }
 
-func (a *App) Search(search_term string, dir string) RipgrepResult {
-	return ripgrep(search_term, dir)
-}
-
-func ripgrep(search_term string, dir string) RipgrepResult {
-	if search_term == "" || dir == "" {
+func (a *App) Search(search_term string, dir string, include string, exclude string) RipgrepResult {
+	if search_term == "" {
 		return RipgrepResult{}
 	}
-	search_term = strings.TrimSpace(search_term)
-	rg_cmd := exec.Command("rg", "-F", "--line-number", "--column", "--no-heading", "--smart-case", search_term, dir)
+	lines := ripgrep(search_term, dir, include, exclude)
+	matches := mapRipgrepMatch(lines)
+	grouped := GroupByProperty(matches, func(match RipgrepMatch) string {
+		return match.Path
+	})
+	return grouped
+}
+
+func map_glob_pattern(patterns string, exclude bool) []string {
+	parts := strings.Split(patterns, ",")
+	parts = Filter(parts, func(part string) bool { return part != "" })
+	if len(parts) == 0 {
+		return []string{}
+	}
+	x := MapArray(parts, func(pattern string) []string {
+		var adapted_pattern string
+		if exclude {
+			adapted_pattern = fmt.Sprintf("!%s", pattern)
+		} else {
+			adapted_pattern = fmt.Sprintf("%s", pattern)
+		}
+		return []string{"--glob", adapted_pattern}
+	})
+	return Flatten(x)
+}
+
+func ripgrep(search_term string, dir string, include string, exclude string) []string {
+	includeArgs := map_glob_pattern(include, false)
+	excludeArgs := map_glob_pattern(exclude, true)
+	args := append(includeArgs, excludeArgs...)
+	args = append(args, []string{
+		"-F",
+		"--line-number",
+		"--debug",
+		"--column",
+		"--no-heading",
+		"--smart-case",
+	}...)
+	args = append(args, fmt.Sprintf("%s", search_term))
+	args = append(args, fmt.Sprintf("%s", dir))
+	rg_cmd := exec.Command("rg", args...)
+	rg_cmd.Stderr = os.Stderr
+	Log(rg_cmd.String())
 	bytes, err := rg_cmd.Output()
 	if err != nil {
-		panic(err)
+		Log(err.Error())
+		return []string{}
 	}
 	lines := strings.Split(string(bytes), "\n")
 	lines = Filter(lines, func(line string) bool {
 		return line != ""
 	})
+	return lines
+}
+
+func mapRipgrepMatch(lines []string) []RipgrepMatch {
 	matches := MapArray(lines, func(line string) RipgrepMatch {
 		regexpattern := `(.*):(.*):(.*):(.*)`
 		re := regexp.MustCompile(regexpattern)
@@ -58,10 +101,7 @@ func ripgrep(search_term string, dir string) RipgrepResult {
 			matched_line,
 		}
 	})
-	grouped := GroupByProperty(matches, func(match RipgrepMatch) string {
-		return match.Path
-	})
-	return grouped
+	return matches
 }
 
 func GroupByProperty[T any, K comparable](items []T, getProperty func(T) K) map[K][]T {

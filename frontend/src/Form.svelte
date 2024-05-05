@@ -3,8 +3,8 @@
   export let search_term = "turn",
     dir = "/home/stefan/Projects/nvim-float",
     replace_term = "",
-    exclude_filter = "",
-    include_filter = "";
+    exclude = "",
+    include = "";
 </script>
 
 <div class="flex">
@@ -39,13 +39,13 @@
   </div>
   <div class="w-full flex">
     <input
-      bind:value={exclude_filter}
+      bind:value={exclude}
       type="text"
       placeholder="eg *service.go,src/**/exclude"
       class="w-full ml-2 input input-primary bg-surface0 text-text rounded-sm px-2 py-1"
     />
     <input
-      bind:value={include_filter}
+      bind:value={include}
       type="text"
       placeholder="eg *service.go,src/**/include"
       class="w-full ml-2 input input-primary bg-surface0 text-text rounded-sm px-2 py-1"
