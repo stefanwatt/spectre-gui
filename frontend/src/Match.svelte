@@ -1,6 +1,5 @@
 <script>
-  /** @type {boolean}*/
-  export let selected;
+  import { selected_match } from "./store";
   /** @type {RipgrepMatch}*/
   export let match;
   /** @type {string}*/
@@ -25,12 +24,9 @@
   on:click={() => {
     replace_match(match);
   }}
-  class:bg-sky={selected}
+  class:bg-sky={$selected_match === match}
   class="cursor-pointer snap-start flex justify-start p-2 w-full"
 >
-  {#if selected}
-    <div>**</div>
-  {/if}
   <div class="flex items-center h-full">
     <code class="language-go">
       <div>{start}</div>

@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -56,7 +57,7 @@ func Ripgrep(search_term string, dir string, include string, exclude string) []R
 }
 
 func map_ripgrep_match(line string) RipgrepMatch {
-	regexpattern := `(.*):(.*):(.*):(.*)`
+	regexpattern := `(.*):(\d+):(\d+):(.*)`
 	re := regexp.MustCompile(regexpattern)
 	submatches := re.FindStringSubmatch(line)
 	if len(submatches) != 5 {
@@ -71,10 +72,22 @@ func map_ripgrep_match(line string) RipgrepMatch {
 	// if len(matched_line) > max_length && max_length > 0 {
 	// 	matched_line = matched_line[:max_length]
 	// }
-	return RipgrepMatch{
+
+	row, err := strconv.Atoi(submatches[2])
+	if err != nil {
+		Log(strings.Join(submatches, "\n match: "))
+		panic(err)
+	}
+	col, err := strconv.Atoi(submatches[3])
+	if err != nil {
+		Log(strings.Join(submatches, "\n match: "))
+		panic(err)
+	}
+	match := RipgrepMatch{
 		filepath.Base(submatches[1]),
-		submatches[2],
-		submatches[3],
+		row,
+		col,
 		matched_line,
 	}
+	return match
 }

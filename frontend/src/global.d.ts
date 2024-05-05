@@ -7,8 +7,8 @@ interface RipgrepResult {
 
 interface RipgrepMatch {
   Path: string;
-  Row: string;
-  Col: string;
+  Row: number;
+  Col: number;
   MatchedLine: string;
 
 }

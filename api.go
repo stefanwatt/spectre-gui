@@ -4,8 +4,8 @@ type RipgrepResult = map[string][]RipgrepMatch
 
 type RipgrepMatch struct {
 	Path        string
-	Row         string
-	Col         string
+	Row         int
+	Col         int
 	MatchedLine string
 }
 
