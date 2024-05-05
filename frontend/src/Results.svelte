@@ -7,6 +7,8 @@
   import { map_results, highlight_all } from "./results.service";
   import Match from "./Match.svelte";
 
+  /*** @type {RipgrepMatch} */
+  export let selected_match;
   /*** @type {RipgrepResultApi} */
   export let results;
   /*** @type {string} */
@@ -39,7 +41,6 @@
     src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/plugins/filter-highlight-all/prism-filter-highlight-all.min.js"
   ></script>
 </svelte:head>
-
 {#if results && mapped}
   <div class="flex flex-col w-full">
     {#each mapped as { path, matches }}
@@ -60,7 +61,12 @@
               >
                 {match.Row}:{match.Col}
               </div>
-              <Match {search_term} {replace_term} {match}></Match>
+              <Match
+                selected={selected_match?.MatchedLine == match.MatchedLine}
+                {search_term}
+                {replace_term}
+                {match}
+              ></Match>
             {/if}
           {/each}
         </div>

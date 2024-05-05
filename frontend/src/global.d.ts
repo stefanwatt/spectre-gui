@@ -1,7 +1,7 @@
-type RipgrepResultApi = [key: string]: Array<main.RipgrepMatch>
+type Modifier = 'c' | 's' | 'a'
 
 interface RipgrepResult {
-  path : string;
+  path: string;
   matches: RipgrepMatch[]
 }
 
@@ -12,3 +12,5 @@ interface RipgrepMatch {
   MatchedLine: string;
 
 }
+
+type RipgrepResultApi = { [key: string]: Array<RipgrepMatch> };
