@@ -22,21 +22,23 @@ pre[class*=language-] {
 }
 
 pre[class*=language-] {
-  padding: 1em;
-  margin: .5em 0;
+  /* padding: 1em; */
+  /* margin: .5em 0; */
   overflow: auto;
 }
 
 :not(pre)>code[class*=language-],
 pre[class*=language-] {
-  background: #303446;
-  /* Base */
+  background: transparent;
 }
 
 :not(pre)>code[class*=language-] {
   padding: .1em;
   border-radius: .3em;
-  white-space: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 0.5rem;
 }
 
 .token.block-comment,

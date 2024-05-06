@@ -24,8 +24,8 @@
   on:click={() => {
     replace_match(match);
   }}
-  class:bg-sky={$selected_match === match}
-  class="cursor-pointer snap-start flex justify-start p-2 w-full"
+  class:bg-surface1={$selected_match === match}
+  class="cursor-pointer rounded-sm snap-start flex justify-start p-1 m-1 w-full"
 >
   <div class="flex items-center h-full">
     <code class="language-go">
@@ -46,7 +46,7 @@
     </div>
   </div>
   <div class="flex items-center h-full">
-    <code class="language-go">
+    <code class="language-go bg-transparent">
       <div>{end}</div>
     </code>
   </div>

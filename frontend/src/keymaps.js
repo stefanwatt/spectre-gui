@@ -1,4 +1,5 @@
 import { get } from "svelte/store";
+import { Replace } from "../wailsjs/go/main/App"
 import { get_next_match, get_prev_match } from "./results.service";
 import { selected_match, results } from "./store";
 

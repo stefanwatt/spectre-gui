@@ -1,5 +1,32 @@
-* Todo
-** make directoriy a comma separated list as well
-** allow all languages for prism highlighting
+* (-) Todo
+** ( ) Technical
+*** ( ) maybe refactor go model so we don't have to do mapping in svelte
+** ( ) Features
+*** ( ) make directoriy a comma separated list as well
+*** ( ) allow selection of multiple items
+*** ( ) undo 
 
-** replace
+*** ( ) Keyboard first
+    make sure everything is fully keyboard navigable
+*** ( ) search and replace behavior flags
+
+**** ( ) search
+     - ignore case
+     - regex
+     - match whole word
+**** ( ) replace
+     - preserve case
+** (-) UI/UX
+*** ( ) allow all languages for prism highlighting
+
+*** ( ) scroll when selected match is out of viewport
+*** ( ) create file watchers on current matches
+    - when Search runs create new file watcher
+    - emit event from go code with entirely new RipgrepResult
+    - listen for event in svelte and update results
+*** (x) bug: highlighting missing
+    1. open page (with "utils" as search)-> highlighting works
+    2. type nonsense -> no search results
+    3. search for "utils" again -> no highlighting
+*** ( ) toasts
+    - to confirm successful/failed replace action

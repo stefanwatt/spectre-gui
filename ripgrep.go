@@ -10,6 +10,16 @@ import (
 	"strings"
 )
 
+type RipgrepResult = map[string][]RipgrepMatch
+
+type RipgrepMatch struct {
+	Path         string
+	AbsolutePath string
+	MatchedLine  string
+	Row          int
+	Col          int
+}
+
 func map_glob_pattern(patterns string, exclude bool) []string {
 	parts := strings.Split(patterns, ",")
 	parts = Filter(parts, func(part string) bool { return part != "" })
@@ -32,16 +42,14 @@ func Ripgrep(search_term string, dir string, include string, exclude string) []R
 	args = append(args, []string{
 		"-F",
 		"--line-number",
-		"--debug",
 		"--column",
 		"--no-heading",
 		"--smart-case",
 	}...)
-	args = append(args, fmt.Sprintf("%s", search_term))
-	args = append(args, fmt.Sprintf("%s", dir))
+	args = append(args, search_term)
+	args = append(args, dir)
 	rg_cmd := exec.Command("rg", args...)
 	rg_cmd.Stderr = os.Stderr
-	Log(rg_cmd.String())
 	bytes, err := rg_cmd.Output()
 	if err != nil {
 		Log(err.Error())
@@ -75,19 +83,19 @@ func map_ripgrep_match(line string) RipgrepMatch {
 
 	row, err := strconv.Atoi(submatches[2])
 	if err != nil {
-		Log(strings.Join(submatches, "\n match: "))
 		panic(err)
 	}
 	col, err := strconv.Atoi(submatches[3])
 	if err != nil {
-		Log(strings.Join(submatches, "\n match: "))
 		panic(err)
 	}
+	path := submatches[1]
 	match := RipgrepMatch{
-		filepath.Base(submatches[1]),
+		path,
+		filepath.Base(path),
+		matched_line,
 		row,
 		col,
-		matched_line,
 	}
 	return match
 }

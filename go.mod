@@ -4,7 +4,10 @@ go 1.21
 
 toolchain go1.22.2
 
-require github.com/wailsapp/wails/v2 v2.8.1
+require (
+	github.com/fsnotify/fsnotify v1.4.9
+	github.com/wailsapp/wails/v2 v2.8.1
+)
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
@@ -15,7 +18,7 @@ require (
 )
 
 require (
-	github.com/bep/debounce v1.2.1 // indirect
+	github.com/bep/debounce v1.2.1
 	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
