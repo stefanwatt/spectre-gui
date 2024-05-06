@@ -2,27 +2,35 @@ package main
 
 import (
 	"context"
+	"time"
 
+	"github.com/bep/debounce"
 	"github.com/fsnotify/fsnotify"
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
+// TODO: investigate long delay
+var debounced_files_changed = debounce.New(100 * time.Millisecond)
+
 func on_write(event fsnotify.Event, ctx context.Context) {
-	if event.Name[len(event.Name)-1:] == "~" {
+	path := event.Name
+	if path[len(path)-1:] == "~" {
 		return
 	}
-	Log("\nWRITE: ")
-	Log(event.Name)
-	Runtime.EventsEmit(ctx, "matches-changed")
+	debounced_files_changed(func() {
+		Runtime.EventsEmit(ctx, "files-changed")
+	})
 }
 
 func on_delete(event fsnotify.Event, ctx context.Context) {
-	if event.Name[len(event.Name)-1:] == "~" {
+	path := event.Name
+	if path[len(path)-1:] == "~" {
 		return
 	}
-	Log("\nDELETE: ")
-	Log(event.Name)
-	Runtime.EventsEmit(ctx, "matches-changed")
+
+	debounced_files_changed(func() {
+		Runtime.EventsEmit(ctx, "files-changed")
+	})
 }
 
 func (a *App) Search(search_term string, dir string, include string, exclude string) RipgrepResult {

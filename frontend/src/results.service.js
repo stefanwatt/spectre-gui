@@ -1,3 +1,37 @@
+import { Search } from "../wailsjs/go/main/App";
+import { selected_match, results } from "./store";
+
+/**
+* @param {string} search_term
+* @param {string} dir 
+* @param {string} include 
+* @param {string} exclude 
+ * */
+export function search(search_term, dir, include, exclude) {
+  try {
+    Search(search_term, dir, include, exclude).then(
+        /**@param {RipgrepResultApi} res */(res) => {
+        selected_match.set(null)
+        const mapped = map_results(res);
+        results.set(mapped);
+        const matches = mapped[0]?.matches;
+        if (!matches?.length || !matches[0]) {
+          selected_match.set(null)
+          return;
+        }
+        const first_match = matches[0];
+        console.assert(!!first_match, first_match);
+        selected_match.set(first_match)
+        setTimeout(() => {
+          highlight_all();
+        });
+      },
+    );
+  } catch (error) {
+    console.error(error)
+  }
+}
+
 /**
  * @returns {RipgrepResult[]}
  * @param {RipgrepResultApi} results

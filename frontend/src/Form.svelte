@@ -11,12 +11,7 @@
 
   async function replace() {
     /**@type {RipgrepResultApi}*/
-    const res = await Replace($selected_match, "utils", "foo");
-    const mapped = map_results(res);
-    $results = mapped;
-    setTimeout(() => {
-      $selected_match = mapped[0].matches[0];
-    });
+    await Replace($selected_match, "utils", "foo");
   }
 
   function foo(event) {

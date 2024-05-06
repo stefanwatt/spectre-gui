@@ -91,8 +91,8 @@ func map_ripgrep_match(line string) RipgrepMatch {
 	}
 	path := submatches[1]
 	match := RipgrepMatch{
-		path,
 		filepath.Base(path),
+		path,
 		matched_line,
 		row,
 		col,

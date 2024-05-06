@@ -13,7 +13,7 @@ var watcher *fsnotify.Watcher
 
 func ObserveFiles(ctx context.Context,
 	match_groups map[string][]RipgrepMatch,
-	directory string,
+	dir string,
 	on_write func(fsnotify.Event, context.Context),
 	on_delete func(fsnotify.Event, context.Context),
 ) {
@@ -23,17 +23,17 @@ func ObserveFiles(ctx context.Context,
 		Log(err.Error())
 		panic(err)
 	}
-	debouncedWrite := debounce.New(100 * time.Millisecond)
-	debouncedDelete := debounce.New(100 * time.Millisecond)
+	debouncedWrite := debounce.New(2000 * time.Millisecond)
+	debouncedDelete := debounce.New(2000 * time.Millisecond)
 	defer watcher.Close()
-	err = watch_files(match_groups)
+	err = watch_files(match_groups, dir)
 	if err != nil {
 		Log(err.Error())
 		panic(err)
 	}
-	err = watcher.Add(directory)
+	err = watcher.Add(dir)
 	if err != nil {
-		Log("skipping directory " + directory + " because of error")
+		Log("skipping directory " + dir + " because of error")
 		Log(err.Error())
 		panic(err)
 	}
@@ -62,10 +62,10 @@ func ObserveFiles(ctx context.Context,
 	}
 }
 
-func watch_files(match_groups map[string][]RipgrepMatch) error {
+func watch_files(match_groups map[string][]RipgrepMatch, dir string) error {
 	var dirs []string
 	for path := range match_groups {
-		current_dir := filepath.Dir(path)
+		current_dir := filepath.Dir(match_groups[path][0].AbsolutePath)
 		_, err := Find(dirs, func(dir string) bool {
 			return dir == current_dir
 		})

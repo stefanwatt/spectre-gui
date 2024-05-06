@@ -41,7 +41,7 @@
         <ResultsHeader {path} match_count={matches.length}></ResultsHeader>
       </div>
       {#each matches as match}
-        {#if match.Path.length < 15 && match.Col < 10000}
+        {#if match.Col < 10000}
           <div class="pr-2 text-overlay0 flex justify-end items-center w-full">
             {match.Row}:{match.Col}
           </div>

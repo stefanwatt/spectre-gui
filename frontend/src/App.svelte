@@ -1,10 +1,9 @@
 <script>
-  import { Search } from "../wailsjs/go/main/App";
+  import { EventsOn } from "../wailsjs/runtime/runtime.js";
   import Form from "./Form.svelte";
   import Results from "./Results.svelte";
-  import { highlight_all, map_results } from "./results.service";
-  import { selected_match, results } from "./store";
   import { setup_keymaps } from "./keymaps";
+  import { search } from "./results.service";
   import { onMount } from "svelte";
 
   let search_term = "utils";
@@ -14,30 +13,14 @@
   let exclude = "**/*.sh";
   /**@type {RipgrepMatch} */
   $: {
-    try {
-      Search(search_term, dir, include, exclude).then(
-        /**@param {RipgrepResultApi} res */ (res) => {
-          $selected_match = null;
-          const mapped = map_results(res);
-          results.set(mapped);
-          const matches = mapped[0]?.matches;
-          if (!matches?.length || !matches[0]) {
-            $selected_match = null;
-            return;
-          }
-          const first_match = matches[0];
-          console.assert(!!first_match, first_match);
-          $selected_match = first_match;
-          setTimeout(() => {
-            highlight_all();
-          });
-        },
-      );
-    } catch (error) {}
+    search(search_term, dir, include, exclude);
   }
 
   onMount(() => {
     setup_keymaps();
+    EventsOn("files-changed", () => {
+      search(search_term, dir, include, exclude);
+    });
   });
 </script>
 
