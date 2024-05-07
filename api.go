@@ -56,8 +56,6 @@ func (a *App) Search(search_term string, dir string, include string, exclude str
 	return grouped
 }
 
-// TODO: should i store the last search term?
-// should i recompute matches for safety?
 func (a *App) Replace(replaced_match RipgrepMatch, search_term string, replace_term string) {
 	Log(fmt.Sprintf("replacing in file: %s\nmatched line: %s\nsearch_term: %s\nreplace_term: %s", replaced_match.Path, replaced_match.MatchedLine, search_term, replace_term))
 	Log("calling sed")
@@ -65,6 +63,15 @@ func (a *App) Replace(replaced_match RipgrepMatch, search_term string, replace_t
 	a.current_matches = Filter(a.current_matches, func(m RipgrepMatch) bool {
 		return m.Path != replaced_match.Path || m.Row != replaced_match.Row || m.Col != replaced_match.Col
 	})
+}
+
+func (a *App) ReplaceAll(search_term string, replace_term string, dir string, include string, exclude string) {
+	Log(fmt.Sprintf("replacing all: \nsearch_term: %s\nreplace_term: %s", search_term, replace_term))
+	Log("calling sed")
+	matches := Ripgrep(search_term, dir, include, exclude)
+	for _, match := range matches {
+		Sed(match, search_term, replace_term)
+	}
 }
 
 func group_by_property[T any, K comparable](items []T, getProperty func(T) K) map[K][]T {

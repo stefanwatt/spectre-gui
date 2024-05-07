@@ -4,4 +4,6 @@ import {main} from '../models';
 
 export function Replace(arg1:main.RipgrepMatch,arg2:string,arg3:string):Promise<void>;
 
+export function ReplaceAll(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<void>;
+
 export function Search(arg1:string,arg2:string,arg3:string,arg4:string):Promise<{[key: string]: Array<main.RipgrepMatch>}>;

@@ -21,9 +21,13 @@
 *** ( ) maybe refactor go model so we don't have to do mapping in svelte
 *** (x) debounce all inputs
 ** ( ) Features
+*** ( ) replace all
 *** ( ) make directoriy a comma separated list as well
 *** ( ) remember last inputs
 *** ( ) allow selection of multiple items
+    - now we have not only /selected/,but /marked/ and /cursor/ 
+      or something like that
+    - space to mark
 *** ( ) undo 
 
 *** ( ) Keyboard first
@@ -41,7 +45,7 @@
 *** ( ) allow all languages for prism highlighting
 
 *** ( ) scroll when selected match is out of viewport
-*** ( ) create file watchers on current matches
+*** (x) create file watchers on current matches
     - when Search runs create new file watcher
     - emit event from go code with entirely new RipgrepResult
     - listen for event in svelte and update results
@@ -49,5 +53,5 @@
     1. open page (with "utils" as search)-> highlighting works
     2. type nonsense -> no search results
     3. search for "utils" again -> no highlighting
-*** ( ) toasts
+*** (x) toasts
     - to confirm successful/failed replace action

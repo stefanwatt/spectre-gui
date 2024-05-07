@@ -6,6 +6,10 @@ export function Replace(arg1, arg2, arg3) {
   return window['go']['main']['App']['Replace'](arg1, arg2, arg3);
 }
 
+export function ReplaceAll(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['ReplaceAll'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function Search(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['Search'](arg1, arg2, arg3, arg4);
 }
