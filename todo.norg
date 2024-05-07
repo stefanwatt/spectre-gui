@@ -1,8 +1,28 @@
 * (-) Todo
-** ( ) Technical
+** (-) Technical
+*** (x) fix delay on replacing
+*** (x) BUG: replace does nothing
+    generally works on first try and subsequent ones with same search term.
+    but following scenario generally doesnt work:
+    ~ search utils
+    ~ replace all one by one with foo
+    ~ search foo
+    ~ press enter
+    *Expected Result:*
+    entry is replaced back to "utils"
+    *Actual Result:* 
+    nothing happens except a toast sometimes
+
+    Fixed
+    - The original issue was coming from hardcoded values that were send to go
+    - the rest was due to incorrect checks when running replace
+
+
 *** ( ) maybe refactor go model so we don't have to do mapping in svelte
+*** (x) debounce all inputs
 ** ( ) Features
 *** ( ) make directoriy a comma separated list as well
+*** ( ) remember last inputs
 *** ( ) allow selection of multiple items
 *** ( ) undo 
 
@@ -17,6 +37,7 @@
 **** ( ) replace
      - preserve case
 ** (-) UI/UX
+*** ( ) BUG: highlighting is broken around search term highlight
 *** ( ) allow all languages for prism highlighting
 
 *** ( ) scroll when selected match is out of viewport

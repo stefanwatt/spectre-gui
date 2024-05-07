@@ -9,10 +9,6 @@
   import Match from "./Match.svelte";
   import NoResults from "./NoResults.svelte";
 
-  /*** @type {string} */
-  export let search_term;
-  /*** @type {string} */
-  export let replace_term;
   let collapsed = false;
   onMount(async () => {
     await import("./assets/prism.js");
@@ -28,7 +24,7 @@
   ></script>
 </svelte:head>
 <div class="flex flex-col w-full">
-  {#each $results as { path, matches }}
+  {#each $results as item(item.path)}
     <div class="grid grid-cols-[1fr,15fr] pt-2 snap-start">
       <div class="mb-2 text-blue flex justify-end items-center w-full">
         {#if !collapsed}
@@ -38,14 +34,14 @@
         {/if}
       </div>
       <div class="mb-2">
-        <ResultsHeader {path} match_count={matches.length}></ResultsHeader>
+        <ResultsHeader path ={item.path} match_count={item.matches.length}></ResultsHeader>
       </div>
-      {#each matches as match}
+      {#each item.matches as match (match.Id)}
         {#if match.Col < 10000}
           <div class="pr-2 text-overlay0 flex justify-end items-center w-full">
             {match.Row}:{match.Col}
           </div>
-          <Match {search_term} {replace_term} {match}></Match>
+          <Match {match}></Match>
         {/if}
       {/each}
     </div>

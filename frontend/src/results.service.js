@@ -33,8 +33,8 @@ export function search(search_term, dir, include, exclude) {
 }
 
 /**
- * @returns {RipgrepResult[]}
  * @param {RipgrepResultApi} results
+ * @returns {RipgrepResult[]}
  */
 export function map_results(results) {
   if (!results) return [];

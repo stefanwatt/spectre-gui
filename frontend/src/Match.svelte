@@ -1,12 +1,7 @@
 <script>
-  import { selected_match } from "./store";
+  import { selected_match, search_term, replace_term } from "./store";
   /** @type {RipgrepMatch}*/
   export let match;
-  /** @type {string}*/
-  export let search_term;
-  /** @type {string}*/
-  export let replace_term;
-
   /** @param {RipgrepMatch} match*/
   function replace_match(match) {
     console.log("replace_match", match);
@@ -15,9 +10,9 @@
   // TODO: this should really be match.Col
   // this will always highlight the first occurence
   // but that might not be the matched one
-  $: start_index = match.MatchedLine.indexOf(search_term);
+  $: start_index = match.MatchedLine.indexOf($search_term);
   $: start = match.MatchedLine.slice(0, start_index);
-  $: end = match.MatchedLine.slice(start_index + search_term.length);
+  $: end = match.MatchedLine.slice(start_index + $search_term.length);
 </script>
 
 <button
@@ -37,12 +32,12 @@
     <div
       class="font-mono px-1 spectre-match line-through bg-flamingo text-surface1 rounded-sm flex whitespace-pre-wrap"
     >
-      {search_term}
+      {$search_term}
     </div>
     <div
       class="ml-1 px-1 spectre-match whitespace-pre bg-surface1 text-flamingo rounded-sm"
     >
-      {replace_term}
+      {$replace_term}
     </div>
   </div>
   <div class="flex items-center h-full">

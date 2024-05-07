@@ -1,72 +1,80 @@
 <script>
   import { debounce } from "./utils.service.js";
-  import { Replace } from "../wailsjs/go/main/App.js";
-  import { results, selected_match } from "./store.js";
-  import { get_next_match, map_results } from "./results.service.js";
-  export let search_term = "turn",
-    dir = "/home/stefan/Projects/nvim-float",
-    replace_term = "",
-    exclude = "",
-    include = "";
+  import { search_term, replace_term, dir, include, exclude } from "./store.js";
 
-  async function replace() {
-    /**@type {RipgrepResultApi}*/
-    await Replace($selected_match, "utils", "foo");
+  /**
+   * @param {KeyboardEvent & { target: HTMLInputElement }} e
+   */
+  async function debounced_search_term(e) {
+    $search_term = await debounce(e.target.value);
   }
 
-  function foo(event) {
-    if (event.key === "Enter") {
-      console.log("replacing");
-      replace();
-    }
+  /**
+   * @param {KeyboardEvent & { target: HTMLInputElement }} e
+   */
+  async function debounced_dir(e) {
+    $dir = await debounce(e.target.value);
+  }
+
+  /**
+   * @param {KeyboardEvent & { target: HTMLInputElement }} e
+   */
+  async function debounced_exclude(e) {
+    $exclude = await debounce(e.target.value);
+  }
+
+  /**
+   * @param {KeyboardEvent & { target: HTMLInputElement }} e
+   */
+  async function debounced_include({ target: { value } }) {
+    $include = await debounce(value);
   }
 </script>
 
-<form on:submit|preventDefault={replace}>
-  <div class="flex">
-    <div class="w-full">
-      <input
-        autofocus
-        on:keyup={async ({ target: { value } }) =>
-          (search_term = await debounce(value))}
-        value={search_term}
-        type="text"
-        placeholder="Search..."
-        class="w-full input input-primary bg-surface0 text-text rounded-sm px-2 py-1"
-      />
-    </div>
-    <div class="w-full pl-2">
-      <input
-        on:keyup={foo}
-        bind:value={replace_term}
-        type="text"
-        placeholder="Replace..."
-        class="w-full input input-primary bg-surface0 text-text rounded-sm px-2 py-1"
-      />
-    </div>
+<div class="flex">
+  <div class="w-full">
+    <input
+      autofocus
+      on:keyup={debounced_search_term}
+      value={$search_term}
+      type="text"
+      placeholder="Search..."
+      class="w-full input input-primary bg-surface0 text-text rounded-sm px-2 py-1"
+    />
   </div>
-  <div class="py-2 flex">
-    <div class="w-full">
-      <input
-        bind:value={dir}
-        type="text"
-        placeholder="Search..."
-        class="w-full input input-primary bg-surface0 text-text rounded-sm px-2 py-1"
-      />
-    </div>
-    <div class="w-full flex">
-      <input
-        bind:value={exclude}
-        type="text"
-        placeholder="eg *service.go,src/**/exclude"
-        class="w-full ml-2 input input-primary bg-surface0 text-text rounded-sm px-2 py-1"
-      />
-      <input
-        bind:value={include}
-        type="text"
-        placeholder="eg *service.go,src/**/include"
-        class="w-full ml-2 input input-primary bg-surface0 text-text rounded-sm px-2 py-1"
-      />
-    </div>
+  <div class="w-full pl-2">
+    <input
+      bind:value={$replace_term}
+      type="text"
+      placeholder="Replace..."
+      class="w-full input input-primary bg-surface0 text-text rounded-sm px-2 py-1"
+    />
   </div>
-</form>
+</div>
+<div class="py-2 flex">
+  <div class="w-full">
+    <input
+      on:keyup={debounced_dir}
+      value={$dir}
+      type="text"
+      placeholder="Search..."
+      class="w-full input input-primary bg-surface0 text-text rounded-sm px-2 py-1"
+    />
+  </div>
+  <div class="w-full flex">
+    <input
+      on:keyup={debounced_exclude}
+      value={$exclude}
+      type="text"
+      placeholder="eg *service.go,src/**/exclude"
+      class="w-full ml-2 input input-primary bg-surface0 text-text rounded-sm px-2 py-1"
+    />
+    <input
+      on:keyup={debounced_include}
+      value={$include}
+      type="text"
+      placeholder="eg *service.go,src/**/include"
+      class="w-full ml-2 input input-primary bg-surface0 text-text rounded-sm px-2 py-1"
+    />
+  </div>
+</div>

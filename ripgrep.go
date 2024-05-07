@@ -8,11 +8,15 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type RipgrepResult = map[string][]RipgrepMatch
 
 type RipgrepMatch struct {
+	Id           string
 	Path         string
 	AbsolutePath string
 	MatchedLine  string
@@ -35,6 +39,34 @@ func map_glob_pattern(patterns string, exclude bool) []string {
 	return Flatten(patterns2d)
 }
 
+func retryCommand(command string, args []string, retries int, delay time.Duration) (*string, error) {
+	Log(fmt.Sprintf("Attempting to run %s", command))
+	var err error
+	for i := 0; i < retries; i++ {
+		cmd := exec.Command(command, args...)
+		cmd.Stderr = os.Stderr
+		bytes, cmdErr := cmd.Output()
+
+		if cmdErr == nil {
+			output := string(bytes)
+			Log(fmt.Sprintf("Successfully ran %s", command))
+			Log(fmt.Sprintf("Output: %s", output))
+			return &output, nil
+		}
+		fmt.Printf("Attempt %d failed: %s\n", i+1, cmdErr)
+		fmt.Printf("Command: %s %s\n", command, strings.Join(args, " "))
+
+		if i < retries-1 {
+			fmt.Println("Waiting before retry...")
+			time.Sleep(delay)
+		}
+
+		err = cmdErr
+	}
+
+	return nil, fmt.Errorf("command failed after %d attempts with error: %s", retries, err)
+}
+
 func Ripgrep(search_term string, dir string, include string, exclude string) []RipgrepMatch {
 	includeArgs := map_glob_pattern(include, false)
 	excludeArgs := map_glob_pattern(exclude, true)
@@ -48,14 +80,12 @@ func Ripgrep(search_term string, dir string, include string, exclude string) []R
 	}...)
 	args = append(args, search_term)
 	args = append(args, dir)
-	rg_cmd := exec.Command("rg", args...)
-	rg_cmd.Stderr = os.Stderr
-	bytes, err := rg_cmd.Output()
+	output, err := retryCommand("rg", args, 3, 1000)
 	if err != nil {
-		Log(err.Error())
 		return []RipgrepMatch{}
 	}
-	lines := strings.Split(string(bytes), "\n")
+
+	lines := strings.Split(*output, "\n")
 	lines = Filter(lines, func(line string) bool {
 		return line != ""
 	})
@@ -90,7 +120,12 @@ func map_ripgrep_match(line string) RipgrepMatch {
 		panic(err)
 	}
 	path := submatches[1]
+	uuid, err := uuid.NewUUID()
+	if err != nil {
+		panic(err)
+	}
 	match := RipgrepMatch{
+		uuid.String(),
 		filepath.Base(path),
 		path,
 		matched_line,

@@ -20,15 +20,15 @@ func ObserveFiles(ctx context.Context,
 	var err error
 	watcher, err = fsnotify.NewWatcher()
 	if err != nil {
-		Log(err.Error())
+		Log("error creating filewatcher: " + err.Error())
 		panic(err)
 	}
-	debouncedWrite := debounce.New(2000 * time.Millisecond)
-	debouncedDelete := debounce.New(2000 * time.Millisecond)
+	debouncedWrite := debounce.New(100 * time.Millisecond)
+	debouncedDelete := debounce.New(100 * time.Millisecond)
 	defer watcher.Close()
-	err = watch_files(match_groups, dir)
+	err = watch_files(match_groups)
 	if err != nil {
-		Log(err.Error())
+		Log("error watching files: " + err.Error())
 		panic(err)
 	}
 	err = watcher.Add(dir)
@@ -62,7 +62,7 @@ func ObserveFiles(ctx context.Context,
 	}
 }
 
-func watch_files(match_groups map[string][]RipgrepMatch, dir string) error {
+func watch_files(match_groups map[string][]RipgrepMatch) error {
 	var dirs []string
 	for path := range match_groups {
 		current_dir := filepath.Dir(match_groups[path][0].AbsolutePath)
@@ -75,7 +75,7 @@ func watch_files(match_groups map[string][]RipgrepMatch, dir string) error {
 	}
 
 	for _, dir := range dirs {
-		Log("Adding watcher for " + dir + "\n")
+		Log("Adding watcher for " + dir)
 		filepath.Dir(dir)
 		err := watcher.Add(dir)
 		if err != nil {

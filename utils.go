@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-
-	"github.com/charmbracelet/lipgloss"
 )
 
 func Find[T any](array []T, find_func func(T) bool) (T, error) {
@@ -40,8 +38,4 @@ func Flatten[T any](slice [][]T) []T {
 		flatSlice = append(flatSlice, innerSlice...)
 	}
 	return flatSlice
-}
-
-func Log(text string) {
-	fmt.Print(lipgloss.NewStyle().Background(lipgloss.Color("#fff")).Foreground(lipgloss.Color("#000")).Render(text))
 }

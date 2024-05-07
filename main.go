@@ -4,6 +4,7 @@ import (
 	"embed"
 
 	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/logger"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
@@ -17,9 +18,11 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "spectre-gui",
-		Width:  1024,
-		Height: 768,
+		Title:              "spectre-gui",
+		LogLevel:           logger.ERROR,
+		LogLevelProduction: logger.ERROR,
+		Width:              1024,
+		Height:             768,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
@@ -29,7 +32,6 @@ func main() {
 			app,
 		},
 	})
-
 	if err != nil {
 		println("Error:", err.Error())
 	}

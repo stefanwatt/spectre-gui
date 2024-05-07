@@ -1,7 +1,7 @@
 import { get } from "svelte/store";
 import { Replace } from "../wailsjs/go/main/App"
 import { get_next_match, get_prev_match } from "./results.service";
-import { selected_match, results } from "./store";
+import { selected_match, results, search_term, replace_term } from "./store";
 
 /** @type {Modifier[]}*/
 let mods = []
@@ -34,6 +34,14 @@ export function setup_keymaps() {
           console.log("selected match:", next_match)
         }
         break
+
+      case "Enter":
+        if (is_mod("s")) {
+          //replace all
+        }
+        if (mods.length != 0) return
+        Replace(get(selected_match), get(search_term), get(replace_term));
+
     }
   });
 
