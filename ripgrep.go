@@ -67,31 +67,51 @@ func retryCommand(command string, args []string, retries int, delay time.Duratio
 	return nil, fmt.Errorf("command failed after %d attempts with error: %s", retries, err)
 }
 
-func Ripgrep(search_term string, dir string, include string, exclude string) []RipgrepMatch {
+func Ripgrep(search_term string, dir string, include string, exclude string, flags []string) (*[]RipgrepMatch, error) {
 	includeArgs := map_glob_pattern(include, false)
 	excludeArgs := map_glob_pattern(exclude, true)
 	args := append(includeArgs, excludeArgs...)
 	args = append(args, []string{
-		"-F",
 		"--line-number",
 		"--column",
 		"--no-heading",
-		"--smart-case",
 	}...)
+	_, err := Find(flags, func(flag string) bool {
+		return flag == "case_sensitive"
+	})
+	if err == nil {
+		args = append(args, "--case-sensitive")
+	} else {
+		args = append(args, "--smart-case")
+	}
+	_, err = Find(flags, func(flag string) bool {
+		return flag == "match_whole_word"
+	})
+
+	if err == nil {
+		args = append(args, "--word-regexp")
+	}
+	_, err = Find(flags, func(flag string) bool {
+		return flag == "regex"
+	})
+	if err != nil {
+		args = append(args, "--fixed-strings")
+	}
 	args = append(args, search_term)
 	args = append(args, dir)
 	output, err := retryCommand("rg", args, 3, 1000)
 	if err != nil {
-		return []RipgrepMatch{}
+		return nil, err
 	}
 
 	lines := strings.Split(*output, "\n")
 	lines = Filter(lines, func(line string) bool {
 		return line != ""
 	})
-	return MapArray(lines, func(line string) RipgrepMatch {
+	matches := MapArray(lines, func(line string) RipgrepMatch {
 		return map_ripgrep_match(line)
 	})
+	return &matches, nil
 }
 
 func map_ripgrep_match(line string) RipgrepMatch {

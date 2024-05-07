@@ -6,10 +6,11 @@ import { selected_match, results } from "./store";
 * @param {string} dir 
 * @param {string} include 
 * @param {string} exclude 
+* @param {string[]} flags 
  * */
-export function search(search_term, dir, include, exclude) {
+export function search(search_term, dir, include, exclude, flags) {
   try {
-    Search(search_term, dir, include, exclude).then(
+    Search(search_term, dir, include, exclude, flags).then(
         /**@param {RipgrepResultApi} res */(res) => {
         selected_match.set(null)
         const mapped = map_results(res);

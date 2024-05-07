@@ -1,4 +1,12 @@
+import MatchWholeWord from "./icons/MatchWholeWord.svelte"
+import CaseSensitive from "./icons/CaseSensitive.svelte"
+import Regex from "./icons/Regex.svelte"
+
 type NotificationLevel = "info" | "success" | "warning" | "error"
+interface SearchFlag {
+  icon: MatchWholeWord | CaseSensitive | Regex
+  value: "match_whole_word" | "case_sensitive" | "regex"
+}
 
 interface Toast {
   level: NotificationLevel;

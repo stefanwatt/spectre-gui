@@ -16,3 +16,9 @@ export const dir = writable("/home/stefan/Projects/bubbletube");
 export const include = writable("**/*.go");
 /**@type {import("svelte/store").Writable<string>}*/
 export const exclude = writable("**/*.sh");
+
+/**@type {import("svelte/store").Writable<boolean>}*/
+export const preserve_case = writable(true);
+
+/**@type {import("svelte/store").Writable<SearchFlag[]>}*/
+export const search_flags = writable([]);

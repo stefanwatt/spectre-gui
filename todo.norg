@@ -20,10 +20,11 @@
 
 *** ( ) maybe refactor go model so we don't have to do mapping in svelte
 *** (x) debounce all inputs
-** ( ) Features
-*** ( ) replace all
-*** ( ) make directoriy a comma separated list as well
+** (-) Features
+*** (x) replace all
+*** ( ) make directory a comma separated list as well
 *** ( ) remember last inputs
+    will get interesting when hooked up to neovim
 *** ( ) allow selection of multiple items
     - now we have not only /selected/,but /marked/ and /cursor/ 
       or something like that
@@ -32,13 +33,16 @@
 
 *** ( ) Keyboard first
     make sure everything is fully keyboard navigable
-*** ( ) search and replace behavior flags
+*** (-) search and replace behavior flags
+**** ( ) highlighting
+     - highlighting in regex mode needs to show the matched text not the search term
+     - with match whole word its not clear what is matched
 
-**** ( ) search
+**** (x) search
      - ignore case
      - regex
      - match whole word
-**** ( ) replace
+**** (-) replace
      - preserve case
 ** (-) UI/UX
 *** ( ) BUG: highlighting is broken around search term highlight

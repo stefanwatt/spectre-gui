@@ -8,11 +8,20 @@
   import { search } from "./results.service";
   import { onMount } from "svelte";
   import { fade } from "svelte/transition";
-  import { toast, search_term, dir, include, exclude } from "./store";
+  import {
+    toast,
+    search_term,
+    dir,
+    include,
+    exclude,
+    search_flags,
+  } from "./store";
 
   /**@type {RipgrepMatch} */
   $: {
-    search($search_term, $dir, $include, $exclude);
+    const flags = $search_flags.map((f) => f.text);
+    console.log("searching with flags ", flags);
+    search($search_term, $dir, $include, $exclude, flags);
   }
 
   onMount(() => {
@@ -24,7 +33,10 @@
     });
     EventsOn("files-changed", () => {
       show_toast("info", "File replaced");
-      search($search_term, $dir, $include, $exclude);
+
+      const flags = $search_flags.map((f) => f.text);
+      console.log("searching with flags ", flags);
+      search($search_term, $dir, $include, $exclude, flags);
     });
   });
 </script>

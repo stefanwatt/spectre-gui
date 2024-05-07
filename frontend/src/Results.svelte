@@ -1,8 +1,8 @@
 <script>
   import { onMount } from "svelte";
   import "./assets/prism.css";
-  import ChevronDown from "./ChevronDown.svelte";
-  import ChevronUp from "./ChevronUp.svelte";
+  import ChevronDown from "./icons/ChevronDown.svelte";
+  import ChevronUp from "./icons/ChevronUp.svelte";
   import ResultsHeader from "./ResultsHeader.svelte";
   import { highlight_all } from "./results.service";
   import { results } from "./store";
@@ -24,7 +24,7 @@
   ></script>
 </svelte:head>
 <div class="flex flex-col w-full">
-  {#each $results as item(item.path)}
+  {#each $results as item (item.path)}
     <div class="grid grid-cols-[1fr,15fr] pt-2 snap-start">
       <div class="mb-2 text-blue flex justify-end items-center w-full">
         {#if !collapsed}
@@ -34,7 +34,8 @@
         {/if}
       </div>
       <div class="mb-2">
-        <ResultsHeader path ={item.path} match_count={item.matches.length}></ResultsHeader>
+        <ResultsHeader path={item.path} match_count={item.matches.length}
+        ></ResultsHeader>
       </div>
       {#each item.matches as match (match.Id)}
         {#if match.Col < 10000}
