@@ -42,14 +42,14 @@
 
 <div class="flex">
   <div class="w-full">
-    <label class="input input-bordered bg-mantle flex items-center gap-2">
+    <label class="input input-bordered bg-mantle flex items-center">
       <input
         autofocus
         on:keyup={debounced_search_term}
         value={$search_term}
         type="text"
         placeholder="Search..."
-        class="grow w-full bg-surface0 text-text rounded-sm px-2 py-1"
+        class="grow"
       />
       {#each $search_flags as flag}
         <svelte:component this={flag.icon} />
@@ -62,7 +62,7 @@
         bind:value={$replace_term}
         type="text"
         placeholder="Replace..."
-        class="w-full bg-surface0 text-text rounded-sm px-2 py-1"
+        class="grow"
       />
       {#if $preserve_case}
         <PreserveCase></PreserveCase>
@@ -72,28 +72,31 @@
 </div>
 <div class="py-2 flex">
   <div class="w-full">
-    <input
-      on:keyup={debounced_dir}
-      value={$dir}
-      type="text"
-      placeholder="Search..."
-      class="w-full input input-bordered bg-mantle text-text rounded-md px-2 py-1"
-    />
+    <label class="input input-bordered bg-mantle flex items-center">
+      <input
+        on:keyup={debounced_dir}
+        value={$dir}
+        type="text"
+        placeholder="Search..."
+      />
+    </label>
   </div>
   <div class="w-full flex">
-    <input
-      on:keyup={debounced_exclude}
-      value={$exclude}
-      type="text"
-      placeholder="eg *service.go,src/**/exclude"
-      class="w-full ml-2 input input-bordered bg-mantle text-text rounded-md px-2 py-1"
-    />
-    <input
-      on:keyup={debounced_include}
-      value={$include}
-      type="text"
-      placeholder="eg *service.go,src/**/include"
-      class="w-full ml-2 input input-bordered bg-mantle text-text rounded-md px-2 py-1"
-    />
+    <label class="ml-2 input input-bordered bg-mantle flex items-center w-full">
+      <input
+        on:keyup={debounced_exclude}
+        value={$exclude}
+        type="text"
+        placeholder="eg *service.go,src/**/exclude"
+      />
+    </label>
+    <label class="ml-2 input input-bordered bg-mantle flex items-center w-full">
+      <input
+        on:keyup={debounced_include}
+        value={$include}
+        type="text"
+        placeholder="eg *service.go,src/**/include"
+      />
+    </label>
   </div>
 </div>

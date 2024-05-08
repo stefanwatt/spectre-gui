@@ -62,8 +62,8 @@ func (a *App) Search(search_term string, dir string, include string, exclude str
 	return grouped
 }
 
-func (a *App) Replace(replaced_match RipgrepMatch, search_term string, replace_term string) {
-	Log(fmt.Sprintf("replacing in file: %s\nmatched line: %s\nsearch_term: %s\nreplace_term: %s", replaced_match.Path, replaced_match.MatchedLine, search_term, replace_term))
+func (a *App) Replace(replaced_match RipgrepMatch, search_term string, replace_term string, preserve_case bool) {
+	Log(fmt.Sprintf("replacing in file: %s\nmatched line: %s\nsearch_term: %s\nreplace_term: %s\npreserve_case: %v", replaced_match.Path, replaced_match.MatchedLine, search_term, replace_term, preserve_case))
 	Log("calling sed")
 	Sed(replaced_match, search_term, replace_term)
 	a.current_matches = Filter(a.current_matches, func(m RipgrepMatch) bool {
