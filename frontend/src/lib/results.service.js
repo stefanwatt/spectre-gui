@@ -1,4 +1,4 @@
-import { Search } from "../wailsjs/go/main/App";
+import { Search } from "$lib/wailsjs/go/main/App";
 import { selected_match, results } from "./store";
 
 /**

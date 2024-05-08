@@ -2,7 +2,7 @@ import MatchWholeWord from "./icons/MatchWholeWord.svelte"
 import CaseSensitive from "./icons/CaseSensitive.svelte"
 import Regex from "./icons/Regex.svelte"
 import { get } from "svelte/store";
-import { Replace, ReplaceAll } from "../wailsjs/go/main/App"
+import { Replace, ReplaceAll } from "$lib/wailsjs/go/main/App"
 import { get_next_match, get_prev_match } from "./results.service";
 import {
   selected_match,
@@ -52,7 +52,7 @@ export function setup_keymaps() {
 
       case "Enter":
         if (is_mod("s")) {
-          ReplaceAll(get(search_term), get(replace_term), get(dir), get(include), get(exclude), get(search_flags),get(preserve_case))
+          ReplaceAll(get(search_term), get(replace_term), get(dir), get(include), get(exclude), get(search_flags), get(preserve_case))
         }
         if (mods.length != 0) return
         Replace(get(selected_match), get(search_term), get(replace_term), get(preserve_case));
@@ -63,7 +63,7 @@ export function setup_keymaps() {
             if (flags.find(flag => flag.text === CASE_SENSITIVE)) {
               return flags.filter(x => x.text !== CASE_SENSITIVE)
             }
-            const updated = Array.from(new Set([...flags, { text: CASE_SENSITIVE, icon: CaseSensitive }])) 
+            const updated = Array.from(new Set([...flags, { text: CASE_SENSITIVE, icon: CaseSensitive }]))
             console.log("updated flags ", updated)
             return updated
           })

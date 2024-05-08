@@ -36,13 +36,12 @@
 *** (-) search and replace behavior flags
 **** ( ) highlighting
      - highlighting in regex mode needs to show the matched text not the search term
-     - with match whole word its not clear what is matched
 
 **** (x) search
      - ignore case
      - regex
      - match whole word
-**** (-) replace
+**** (x) replace
      - preserve case
 ** (-) UI/UX
 *** ( ) BUG: highlighting is broken around search term highlight

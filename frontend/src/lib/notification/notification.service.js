@@ -1,7 +1,7 @@
 import { toast as toast$ } from "../store";
 
 /**
- * @param {NotificationLevel} level
+ * @param {App.NotificationLevel} level
  * @param {string} text
  * */
 export function show_toast(level, text) {
