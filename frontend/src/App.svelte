@@ -11,17 +11,26 @@
   import {
     toast,
     search_term,
+    replace_term,
     dir,
     include,
     exclude,
     search_flags,
+    preserve_case,
   } from "./store";
 
   /**@type {RipgrepMatch} */
   $: {
     const flags = $search_flags.map((f) => f.text);
-    console.log("searching with flags ", flags);
-    search($search_term, $dir, $include, $exclude, flags);
+    search(
+      $search_term,
+      $dir,
+      $include,
+      $exclude,
+      flags,
+      $replace_term,
+      $preserve_case
+    );
   }
 
   onMount(() => {
@@ -33,10 +42,17 @@
     });
     EventsOn("files-changed", () => {
       show_toast("info", "File replaced");
-
       const flags = $search_flags.map((f) => f.text);
       console.log("searching with flags ", flags);
-      search($search_term, $dir, $include, $exclude, flags);
+      search(
+        $search_term,
+        $dir,
+        $include,
+        $exclude,
+        flags,
+        $replace_term,
+        $preserve_case
+      );
     });
   });
 </script>

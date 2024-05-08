@@ -7,9 +7,9 @@ export const results = writable([]);
 /**@type {import("svelte/store").Writable<Toast>}*/
 export const toast = writable();
 /**@type {import("svelte/store").Writable<string>}*/
-export const search_term = writable("utils");
+export const search_term = writable("foo");
 /**@type {import("svelte/store").Writable<string>}*/
-export const replace_term = writable("foo");
+export const replace_term = writable("bar");
 /**@type {import("svelte/store").Writable<string>}*/
 export const dir = writable("/home/stefan/Projects/bubbletube");
 /**@type {import("svelte/store").Writable<string>}*/

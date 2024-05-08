@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-func Sed(match RipgrepMatch, search_term string, replace_term string) {
+func Sed(match RipgrepMatch, search_term string, replace_term string, preserve_case bool) {
 	cmd := exec.Command(
 		"sed",
 		"-i",

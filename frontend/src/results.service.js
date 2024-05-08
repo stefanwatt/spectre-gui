@@ -7,10 +7,20 @@ import { selected_match, results } from "./store";
 * @param {string} include 
 * @param {string} exclude 
 * @param {string[]} flags 
+* @param {string} replace_term 
+* @param {boolean} preserve_case 
  * */
-export function search(search_term, dir, include, exclude, flags) {
+export function search(search_term, dir, include, exclude, flags, replace_term, preserve_case) {
   try {
-    Search(search_term, dir, include, exclude, flags).then(
+    Search(
+      search_term,
+      dir,
+      include,
+      exclude,
+      flags,
+      replace_term,
+      preserve_case,
+    ).then(
         /**@param {RipgrepResultApi} res */(res) => {
         selected_match.set(null)
         const mapped = map_results(res);

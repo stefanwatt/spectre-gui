@@ -37,8 +37,16 @@ func on_delete(event fsnotify.Event, ctx context.Context) {
 	})
 }
 
-func (a *App) Search(search_term string, dir string, include string, exclude string, flags []string) RipgrepResult {
-	Log(fmt.Sprintf("searching...\nsearch_term: %s\ndir: %s\ninclude: %s\nexclude: %s\nflags: %s", search_term, dir, include, exclude, flags))
+func (a *App) Search(
+	search_term string,
+	dir string,
+	include string,
+	exclude string,
+	flags []string,
+	replace_term string,
+	preserve_case bool,
+) RipgrepResult {
+	Log(fmt.Sprintf("searching...\nsearch_term: %s\ndir: %s\ninclude: %s\nexclude: %s\nflags: %s\nreplace_term:%s\npreserve_case:%v", search_term, dir, include, exclude, flags, replace_term, preserve_case))
 	if a.dir != dir && a.close_dir_watcher != nil {
 		a.close_dir_watcher()
 		a.dir = dir
@@ -48,7 +56,15 @@ func (a *App) Search(search_term string, dir string, include string, exclude str
 	if search_term == "" {
 		return RipgrepResult{}
 	}
-	matches, err := Ripgrep(search_term, dir, include, exclude, flags)
+	matches, err := Ripgrep(
+		search_term,
+		dir,
+		include,
+		exclude,
+		flags,
+		replace_term,
+		preserve_case,
+	)
 	if err != nil {
 		Log(fmt.Sprintf("ripgrep error: %s", err))
 		return RipgrepResult{}
@@ -62,25 +78,53 @@ func (a *App) Search(search_term string, dir string, include string, exclude str
 	return grouped
 }
 
-func (a *App) Replace(replaced_match RipgrepMatch, search_term string, replace_term string, preserve_case bool) {
-	Log(fmt.Sprintf("replacing in file: %s\nmatched line: %s\nsearch_term: %s\nreplace_term: %s\npreserve_case: %v", replaced_match.Path, replaced_match.MatchedLine, search_term, replace_term, preserve_case))
+func (a *App) Replace(
+	replaced_match RipgrepMatch,
+	search_term string,
+	replace_term string,
+	preserve_case bool,
+) {
+	Log(fmt.Sprintf(
+		"replacing in file: %s\nmatched line: %s\nsearch_term: %s\nreplace_term: %s\npreserve_case: %v",
+		replaced_match.Path,
+		replaced_match.MatchedLine,
+		search_term,
+		replace_term,
+		preserve_case,
+	))
 	Log("calling sed")
-	Sed(replaced_match, search_term, replace_term)
+	Sed(replaced_match, search_term, replace_term, preserve_case)
 	a.current_matches = Filter(a.current_matches, func(m RipgrepMatch) bool {
 		return m.Path != replaced_match.Path || m.Row != replaced_match.Row || m.Col != replaced_match.Col
 	})
 }
 
-func (a *App) ReplaceAll(search_term string, replace_term string, dir string, include string, exclude string, flags []string) {
+func (a *App) ReplaceAll(
+	search_term string,
+	replace_term string,
+	dir string,
+	include string,
+	exclude string,
+	flags []string,
+	preserve_case bool,
+) {
 	Log(fmt.Sprintf("replacing all: \nsearch_term: %s\nreplace_term: %s", search_term, replace_term))
 	Log("calling sed")
-	matches, err := Ripgrep(search_term, dir, include, exclude, flags)
+	matches, err := Ripgrep(
+		search_term,
+		dir,
+		include,
+		exclude,
+		flags,
+		replace_term,
+		preserve_case,
+	)
 	if err != nil {
 		Log(fmt.Sprintf("ripgrep error: %s", err))
 		return
 	}
 	for _, match := range *matches {
-		Sed(match, search_term, replace_term)
+		Sed(match, search_term, replace_term, preserve_case)
 	}
 }
 

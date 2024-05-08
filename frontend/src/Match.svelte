@@ -6,13 +6,6 @@
   function replace_match(match) {
     console.log("replace_match", match);
   }
-
-  // TODO: this should really be match.Col
-  // this will always highlight the first occurence
-  // but that might not be the matched one
-  $: start_index = match.MatchedLine.indexOf($search_term);
-  $: start = match.MatchedLine.slice(0, start_index);
-  $: end = match.MatchedLine.slice(start_index + $search_term.length);
 </script>
 
 <button
@@ -24,7 +17,7 @@
 >
   <div class="flex items-center h-full">
     <code class="language-go">
-      <div>{start}</div>
+      <div>{match.TextBeforeMatch}</div>
     </code>
   </div>
 
@@ -32,17 +25,17 @@
     <div
       class="font-mono px-1 spectre-match line-through bg-flamingo text-surface1 rounded-sm flex whitespace-pre-wrap"
     >
-      {$search_term}
+      {match.MatchedText}
     </div>
     <div
       class="ml-1 px-1 spectre-match whitespace-pre bg-surface1 text-flamingo rounded-sm"
     >
-      {$replace_term}
+      {match.ReplacementText}
     </div>
   </div>
   <div class="flex items-center h-full">
     <code class="language-go bg-transparent">
-      <div>{end}</div>
+      <div>{match.TextAfterMatch}</div>
     </code>
   </div>
 </button>
