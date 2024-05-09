@@ -48,6 +48,7 @@ func Ripgrep(
 		"--column",
 		"--no-heading",
 		"--vimgrep",
+		"--only-matching",
 	}...)
 	_, err := Find(flags, func(flag string) bool {
 		return flag == "case_sensitive"
@@ -77,45 +78,47 @@ func Ripgrep(
 		return nil, err
 	}
 
-	lines := strings.Split(*output, "\n")
-	lines = Filter(lines, func(line string) bool {
+	rg_output_lines := strings.Split(*output, "\n")
+	rg_output_lines = Filter(rg_output_lines, func(line string) bool {
 		return line != ""
 	})
-	matches := MapArray(lines, func(line string) RipgrepMatch {
-		return map_ripgrep_match(line, search_term, replace_term, preserve_case)
+	_, err = Find(flags, func(flag string) bool {
+		return flag == "regex"
+	})
+	matches := MapArray(rg_output_lines, func(rg_output_line string) RipgrepMatch {
+		return map_ripgrep_match(rg_output_line, search_term, replace_term, preserve_case, err != nil)
 	})
 	return &matches, nil
 }
 
-func map_ripgrep_match(line string, search_term string, replace_term string, preserve_case bool) RipgrepMatch {
+func map_ripgrep_match(output string, search_term string, replace_term string, preserve_case bool, use_regex bool) RipgrepMatch {
 	regexpattern := `^(.*):(\d+):(\d+):(.*)$`
 	re := regexp.MustCompile(regexpattern)
-	submatches := re.FindStringSubmatch(line)
+	submatches := re.FindStringSubmatch(output)
 	if len(submatches) != 5 {
-		fmt.Println("Error parsing line:", line)
+		fmt.Println("Error parsing line:", output)
 		panic("incorrect format from ripgrep output")
 	}
-	matched_line := strings.TrimSpace(submatches[4])
-	re_match := regexp.MustCompile(`(?i)` + regexp.QuoteMeta(search_term))
-	matched_text := re_match.FindString(matched_line)
-
+	path := submatches[1]
+	matched_text := submatches[4]
 	row, err := strconv.Atoi(submatches[2])
 	if err != nil {
 		panic(err)
 	}
+	matched_line := GetLine(path, row)
 	col, err := strconv.Atoi(submatches[3])
 	if err != nil {
 		panic(err)
 	}
-	path := submatches[1]
 	uuid, err := uuid.NewUUID()
 	if err != nil {
 		panic(err)
 	}
-	replacement_text := replace_term
+	case_corrected_replace_term := replace_term
 	if preserve_case {
-		replacement_text = map_replacement_text_preserve_case(matched_text, replace_term)
+		case_corrected_replace_term = map_replacement_text_preserve_case(matched_text, replace_term)
 	}
+	replacement_text := GetReplacementText(matched_line, search_term, case_corrected_replace_term)
 	before, after := map_before_and_after(matched_line, matched_text)
 	match := RipgrepMatch{
 		uuid.String(),

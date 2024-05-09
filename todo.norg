@@ -33,8 +33,8 @@
 
 *** ( ) Keyboard first
     make sure everything is fully keyboard navigable
-*** (-) search and replace behavior flags
-**** ( ) highlighting
+*** (x) search and replace behavior flags
+**** (x) highlighting
      - highlighting in regex mode needs to show the matched text not the search term
 
 **** (x) search

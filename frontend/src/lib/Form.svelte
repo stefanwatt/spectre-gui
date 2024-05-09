@@ -42,7 +42,7 @@
 
 <div class="flex">
 	<div class="w-full">
-		<label class="input input-ghost flex items-center bg-mantle">
+		<label class="input input-bordered flex items-center bg-mantle">
 			<input
 				autofocus
 				on:keyup={debounced_search_term}
@@ -57,7 +57,7 @@
 		</label>
 	</div>
 	<div class="w-full pl-2">
-		<label class="input input-ghost flex items-center gap-2 bg-mantle">
+		<label class="input input-bordered flex items-center gap-2 bg-mantle">
 			<input bind:value={$replace_term} type="text" placeholder="Replace..." class="grow" />
 			{#if $preserve_case}
 				<PreserveCase></PreserveCase>
@@ -67,7 +67,7 @@
 </div>
 <div class="flex py-2">
 	<div class="w-full">
-		<label class="input input-ghost flex items-center bg-mantle">
+		<label class="input input-bordered flex items-center bg-mantle">
 			<input
 				on:keyup={debounced_dir}
 				value={$dir}
@@ -78,7 +78,7 @@
 		</label>
 	</div>
 	<div class="flex w-full">
-		<label class="input input-ghost ml-2 flex w-full items-center bg-mantle">
+		<label class="input input-bordered ml-2 flex w-full items-center bg-mantle">
 			<input
 				on:keyup={debounced_exclude}
 				value={$exclude}
@@ -87,7 +87,7 @@
 				class="grow"
 			/>
 		</label>
-		<label class="input input-ghost ml-2 flex w-full items-center bg-mantle">
+		<label class="input input-bordered ml-2 flex w-full items-center bg-mantle">
 			<input
 				on:keyup={debounced_include}
 				value={$include}

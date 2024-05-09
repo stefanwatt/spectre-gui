@@ -19,7 +19,6 @@
 		search_flags,
 		preserve_case
 	} from '$lib/store';
-	import {} from '$lib/consts';
 
 	/**@type {App.RipgrepMatch} */
 	$: {
