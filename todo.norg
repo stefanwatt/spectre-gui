@@ -1,5 +1,9 @@
 * (-) Todo
 ** (-) Technical
+*** tests
+    - this is actually very testable
+    - come up with scenarios and mock input files
+    - probably just test api.go ?
 *** (x) fix delay on replacing
 *** (x) BUG: replace does nothing
     generally works on first try and subsequent ones with same search term.
@@ -18,7 +22,13 @@
     - the rest was due to incorrect checks when running replace
 
 
-*** ( ) maybe refactor go model so we don't have to do mapping in svelte
+*** ( ) refactoring
+**** response model
+     - maybe struct instead of map so we don't have to do mapping in svelte
+
+**** separation of concerns
+     - ripgrep should not be handling the match struct
+       we need a new module for that
 *** (x) debounce all inputs
 ** (-) Features
 *** (x) replace all

@@ -18,28 +18,26 @@
 	});
 </script>
 
-<div class="flex w-full flex-col">
+<div class="grid w-full grid-cols-[1fr,15fr] overflow-x-hidden md:grid-cols-[5rem,auto]">
 	{#each $results as item (item.path)}
-		<div class="grid snap-start grid-cols-[1fr,15fr] pt-2">
-			<div class="mb-2 flex w-full items-center justify-end text-blue">
-				{#if !collapsed}
-					<ChevronDown></ChevronDown>
-				{:else}
-					<ChevronUp></ChevronUp>
-				{/if}
-			</div>
-			<div class="mb-2">
-				<ResultsHeader path={item.path} match_count={item.matches.length}></ResultsHeader>
-			</div>
-			{#each item.matches as match (match.Id)}
-				{#if match.Col < 10000}
-					<div class="flex w-full items-center justify-end pr-2 text-overlay0">
-						{match.Row}:{match.Col}
-					</div>
-					<Match {match}></Match>
-				{/if}
-			{/each}
+		<div class="mb-2 flex w-full items-center justify-end text-blue">
+			{#if !collapsed}
+				<ChevronDown></ChevronDown>
+			{:else}
+				<ChevronUp></ChevronUp>
+			{/if}
 		</div>
+		<div class="mb-2">
+			<ResultsHeader path={item.path} match_count={item.matches.length}></ResultsHeader>
+		</div>
+		{#each item.matches as match (match.Id)}
+			{#if match.Col < 10000}
+				<div class="flex w-full items-center justify-end pr-2 text-overlay0">
+					{match.Row}:{match.Col}
+				</div>
+				<Match {match}></Match>
+			{/if}
+		{/each}
 	{:else}
 		<NoResults></NoResults>
 	{/each}

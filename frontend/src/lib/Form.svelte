@@ -41,7 +41,7 @@
 </script>
 
 <div class="flex">
-	<div class="w-full">
+	<div class="w-1/2">
 		<label class="input input-bordered flex items-center bg-mantle">
 			<input
 				autofocus
@@ -56,7 +56,7 @@
 			{/each}
 		</label>
 	</div>
-	<div class="w-full pl-2">
+	<div class="ml-2 w-1/2 pr-2">
 		<label class="input input-bordered flex items-center gap-2 bg-mantle">
 			<input bind:value={$replace_term} type="text" placeholder="Replace..." class="grow" />
 			{#if $preserve_case}
@@ -65,7 +65,7 @@
 		</label>
 	</div>
 </div>
-<div class="flex py-2">
+<div class="flex flex-wrap py-2 md:flex-nowrap">
 	<div class="w-full">
 		<label class="input input-bordered flex items-center bg-mantle">
 			<input
@@ -77,8 +77,8 @@
 			/>
 		</label>
 	</div>
-	<div class="flex w-full">
-		<label class="input input-bordered ml-2 flex w-full items-center bg-mantle">
+	<div class="mt-2 flex w-full pr-2 md:mt-0 md:w-1/2 md:pr-0">
+		<label class="input input-bordered flex w-1/2 items-center bg-mantle md:ml-2">
 			<input
 				on:keyup={debounced_exclude}
 				value={$exclude}
@@ -87,7 +87,7 @@
 				class="grow"
 			/>
 		</label>
-		<label class="input input-bordered ml-2 flex w-full items-center bg-mantle">
+		<label class="input input-bordered ml-2 flex w-1/2 items-center bg-mantle">
 			<input
 				on:keyup={debounced_include}
 				value={$include}
