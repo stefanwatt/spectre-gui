@@ -56,7 +56,10 @@ func MapMatch(
 	preserve_case bool,
 	use_regex bool,
 ) Match {
-	matched_line := ext.GetLine(path, row)
+	matched_line, err := ext.GetLine(path, row)
+	if err != nil {
+		panic(err)
+	}
 	uuid, err := uuid.NewUUID()
 	if err != nil {
 		panic(err)
@@ -65,7 +68,10 @@ func MapMatch(
 	if preserve_case {
 		case_corrected_replace_term = map_replacement_text_preserve_case(matched_text, replace_term)
 	}
-	replacement_text := ext.GetReplacementText(matched_line, search_term, case_corrected_replace_term)
+	replacement_text, err := ext.GetReplacementText(matched_line, search_term, case_corrected_replace_term)
+	if err != nil {
+		panic(err)
+	}
 	before, after := map_before_and_after(matched_line, matched_text)
 	match := Match{
 		Id:              uuid.String(),

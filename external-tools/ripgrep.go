@@ -2,12 +2,9 @@ package externaltools
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 	"unicode"
 
 	utils "spectre-gui/utils"
@@ -27,32 +24,16 @@ func Ripgrep(
 	match_whole_word bool,
 	preserve_case bool,
 ) ([]string, error) {
-	includeArgs := map_glob_pattern(include, false)
-	excludeArgs := map_glob_pattern(exclude, true)
-	args := append(includeArgs, excludeArgs...)
-	args = append(args, []string{
-		"--line-number",
-		"--column",
-		"--no-heading",
-		"--vimgrep",
-		"--only-matching",
-	}...)
-
-	if case_sensitive {
-		args = append(args, "--case-sensitive")
-	} else {
-		args = append(args, "--smart-case")
-	}
-
-	if match_whole_word {
-		args = append(args, "--word-regexp")
-	}
-	if !regex {
-		args = append(args, "--fixed-strings")
-	}
-	args = append(args, search_term)
-	args = append(args, dir)
-	output, err := retryCommand("rg", args, 3, 1000)
+	args := map_rg_args(
+		search_term,
+		dir,
+		include,
+		exclude,
+		case_sensitive,
+		regex,
+		match_whole_word,
+	)
+	output, err := utils.RetryCommand("rg", args, 3, 1000)
 	if err != nil {
 		return []string{}, err
 	}
@@ -109,34 +90,6 @@ func map_glob_pattern(patterns string, exclude bool) []string {
 	return utils.Flatten(patterns2d)
 }
 
-func retryCommand(command string, args []string, retries int, delay time.Duration) (*string, error) {
-	utils.Log(fmt.Sprintf("Attempting to run %s", command))
-	var err error
-	for i := 0; i < retries; i++ {
-		cmd := exec.Command(command, args...)
-		cmd.Stderr = os.Stderr
-		bytes, cmdErr := cmd.Output()
-
-		if cmdErr == nil {
-			output := string(bytes)
-			utils.Log(fmt.Sprintf("Successfully ran %s", command))
-			utils.Log(fmt.Sprintf("Output: %s", output))
-			return &output, nil
-		}
-		fmt.Printf("Attempt %d failed: %s\n", i+1, cmdErr)
-		fmt.Printf("Command: %s %s\n", command, strings.Join(args, " "))
-
-		if i < retries-1 {
-			fmt.Println("Waiting before retry...")
-			time.Sleep(delay)
-		}
-
-		err = cmdErr
-	}
-
-	return nil, fmt.Errorf("command failed after %d attempts with error: %s", retries, err)
-}
-
 func map_replacement_text_preserve_case(matched_text string, replace_term string) string {
 	utils.Log(fmt.Sprintf("mapping replacement text: \nmatched_text:%s\nreplace_term:%s", matched_text, replace_term))
 	titleCaser := cases.Title(language.English)
@@ -177,4 +130,41 @@ func map_before_and_after(matched_line, matched_text string) (string, string) {
 	}
 
 	return textBeforeMatch, textAfterMatch
+}
+
+func map_rg_args(
+	search_term string,
+	dir string,
+	include string,
+	exclude string,
+	case_sensitive bool,
+	regex bool,
+	match_whole_word bool,
+) []string {
+	includeArgs := map_glob_pattern(include, false)
+	excludeArgs := map_glob_pattern(exclude, true)
+	args := append(includeArgs, excludeArgs...)
+	args = append(args, []string{
+		"--line-number",
+		"--column",
+		"--no-heading",
+		"--vimgrep",
+		"--only-matching",
+	}...)
+
+	if case_sensitive {
+		args = append(args, "--case-sensitive")
+	} else {
+		args = append(args, "--smart-case")
+	}
+
+	if match_whole_word {
+		args = append(args, "--word-regexp")
+	}
+	if !regex {
+		args = append(args, "--fixed-strings")
+	}
+	args = append(args, search_term)
+	args = append(args, dir)
+	return args
 }
