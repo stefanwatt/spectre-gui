@@ -1,18 +1,18 @@
 <script>
 	import { onMount } from 'svelte';
 	import '$lib/assets/prism.css';
-	import ChevronDown from './icons/ChevronDown.svelte';
-	import ChevronUp from './icons/ChevronUp.svelte';
+	import ChevronDown from '$lib/icons/ChevronDown.svelte';
+	import ChevronUp from '$lib/icons/ChevronUp.svelte';
 	import ResultsHeader from './ResultsHeader.svelte';
 	import { highlight_all } from './results.service';
-	import { results } from './store';
-	import Match from './Match.svelte';
+	import { results } from '$lib/store';
+	import Match from '$lib/Match.svelte';
 	import NoResults from './NoResults.svelte';
 
 	let collapsed = false;
 	onMount(async () => {
 		console.log('results', $results);
-		await import('./assets/prism.js');
+		await import('$lib/assets/prism.js');
 		setTimeout(() => {
 			highlight_all();
 		});

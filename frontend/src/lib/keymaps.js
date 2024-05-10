@@ -3,10 +3,9 @@ import CaseSensitive from "./icons/CaseSensitive.svelte"
 import Regex from "./icons/Regex.svelte"
 import { get } from "svelte/store";
 import { Replace, ReplaceAll } from "$lib/wailsjs/go/main/App"
-import { get_next_match, get_prev_match } from "./results.service";
+import { cursor_to_next_match, cursor_to_prev_match } from "$lib/results/results.service";
 import {
   selected_match,
-  results,
   search_term,
   replace_term,
   dir,
@@ -18,7 +17,7 @@ import {
 
 import { CASE_SENSITIVE, MATCH_WHOLE_WORD, REGEX } from "./consts";
 
-/** @type {Modifier[]}*/
+/** @type {App.Modifier[]}*/
 let mods = []
 
 export function setup_keymaps() {
@@ -35,18 +34,12 @@ export function setup_keymaps() {
         break
       case "ArrowDown":
         if (is_mod("c")) {
-          const next_match = get_next_match(get(selected_match), get(results))
-          if (!next_match) return
-          selected_match.set(next_match)
-          console.log("selected match:", next_match)
+          cursor_to_next_match()
         }
         break
       case "ArrowUp":
         if (is_mod("c")) {
-          const next_match = get_prev_match(get(selected_match), get(results))
-          if (!next_match) return
-          selected_match.set(next_match)
-          console.log("selected match:", next_match)
+          cursor_to_prev_match()
         }
         break
 

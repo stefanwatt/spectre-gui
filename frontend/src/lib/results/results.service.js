@@ -1,5 +1,6 @@
 import { Search } from "$lib/wailsjs/go/main/App";
-import { selected_match, results } from "./store";
+import { selected_match, results } from "$lib/store";
+import { get } from "svelte/store";
 
 /**
 * @param {string} search_term
@@ -44,17 +45,19 @@ export function search(search_term, dir, include, exclude, flags, replace_term, 
 }
 
 export function highlight_all() {
+  // @ts-ignore
   if (!window.Prism) return
+  // @ts-ignore
   window.Prism.highlightAll(false);
 }
 
-/** @param {RipgrepMatch}selected_match
- * @param {RipgrepResult[]} results
- * @returns {RipgrepMatch}
+/** @param {App.RipgrepMatch}selected_match
+ * @param {App.RipgrepResult[]} results
+ * @returns {App.RipgrepMatch}
  * */
 export function get_next_match(selected_match, results) {
   if (!results?.length) return selected_match
-  const matches = results.flatMap(result => result.matches)
+  const matches = results.flatMap(result => result.Matches)
   if (!matches?.length) return selected_match
   const current_index = matches.indexOf(selected_match)
   if (current_index === -1) return selected_match
@@ -64,13 +67,13 @@ export function get_next_match(selected_match, results) {
   return matches[next_index]
 }
 
-/** @param {RipgrepMatch}selected_match
- * @param {RipgrepResult[]} results
- * @returns {RipgrepMatch}
+/** @param {App.RipgrepMatch}selected_match
+ * @param {App.RipgrepResult[]} results
+ * @returns {App.RipgrepMatch}
  * */
 export function get_prev_match(selected_match, results) {
   if (!results?.length) return selected_match
-  const matches = results.flatMap(result => result.matches)
+  const matches = results.flatMap(result => result.Matches)
   if (!matches?.length) return selected_match
   const current_index = matches.indexOf(selected_match)
   if (current_index === -1) return selected_match
@@ -78,3 +81,33 @@ export function get_prev_match(selected_match, results) {
   if (prev_index < 0) return matches[matches.length - 1]
   return matches[prev_index]
 }
+
+
+export function cursor_to_next_match() {
+  let current_match = get(selected_match)
+  if (!current_match) {
+    current_match = get(results)[0]?.Matches[0]
+    if (!current_match) return
+    selected_match.set(current_match)
+    console.log("selected match:", current_match)
+  }
+  const next_match = get_next_match(current_match, get(results))
+  if (!next_match) return
+  selected_match.set(next_match)
+  console.log("selected match:", next_match)
+}
+
+export function cursor_to_prev_match() {
+  let current_match = get(selected_match)
+  if (!current_match) {
+    current_match = get(results)[0]?.Matches[0]
+    if (!current_match) return
+    selected_match.set(current_match)
+    console.log("selected match:", current_match)
+  }
+  const prev_match = get_prev_match(current_match, get(results))
+  if (!prev_match) return
+  selected_match.set(prev_match)
+  console.log("selected match:", prev_match)
+}
+
