@@ -22,13 +22,15 @@
     - the rest was due to incorrect checks when running replace
 
 
-*** ( ) refactoring
-**** response model
+*** (-) refactoring
+**** ( ) frontend
+**** (x) response model
      - maybe struct instead of map so we don't have to do mapping in svelte
 
-**** separation of concerns
+**** (x) separation of concerns
      - ripgrep should not be handling the match struct
        we need a new module for that
+
 *** (x) debounce all inputs
 ** (-) Features
 *** (x) replace all

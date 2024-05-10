@@ -3,43 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
 
 	ext "spectre-gui/external-tools"
 	"spectre-gui/match"
 	utils "spectre-gui/utils"
-
-	"github.com/bep/debounce"
-	"github.com/fsnotify/fsnotify"
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
-
-var debounced_files_changed = debounce.New(100 * time.Millisecond)
-
-var start time.Time
-
-func on_write(event fsnotify.Event, ctx context.Context) {
-	path := event.Name
-	if path[len(path)-1:] == "~" {
-		return
-	}
-	utils.Log("on_write")
-	debounced_files_changed(func() {
-		Runtime.EventsEmit(ctx, "files-changed")
-	})
-}
-
-func on_delete(event fsnotify.Event, ctx context.Context) {
-	path := event.Name
-	if path[len(path)-1:] == "~" {
-		return
-	}
-
-	utils.Log("on_delete")
-	debounced_files_changed(func() {
-		Runtime.EventsEmit(ctx, "files-changed")
-	})
-}
 
 func (a *App) Search(
 	search_term string,
@@ -94,7 +62,7 @@ func (a *App) Search(
 	a.current_matches = matches
 	search_results := match.MapSearchResult(matches)
 	dirs := match.MapDirs(search_results)
-	go utils.ObserveFiles(ctx, dirs, dir, on_write, on_delete)
+	go utils.ObserveFiles(ctx, dirs, dir, utils.OnWrite, utils.OnDelete)
 	return search_results
 }
 

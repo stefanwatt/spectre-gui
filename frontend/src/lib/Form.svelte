@@ -41,8 +41,8 @@
 </script>
 
 <div class="flex">
-	<div class="w-1/2">
-		<label class="input input-bordered flex items-center bg-mantle">
+	<div class="w-1/2 pr-1">
+		<label class="input input-bordered mr-1 flex w-full items-center bg-mantle">
 			<input
 				autofocus
 				on:keyup={debounced_search_term}
@@ -56,8 +56,8 @@
 			{/each}
 		</label>
 	</div>
-	<div class="ml-2 w-1/2 pr-2">
-		<label class="input input-bordered flex items-center gap-2 bg-mantle">
+	<div class="w-1/2 pl-1">
+		<label class="input input-bordered flex w-full items-center gap-2 bg-mantle">
 			<input bind:value={$replace_term} type="text" placeholder="Replace..." class="grow" />
 			{#if $preserve_case}
 				<PreserveCase></PreserveCase>
@@ -65,36 +65,30 @@
 		</label>
 	</div>
 </div>
-<div class="flex flex-wrap py-2 md:flex-nowrap">
-	<div class="w-full">
-		<label class="input input-bordered flex items-center bg-mantle">
-			<input
-				on:keyup={debounced_dir}
-				value={$dir}
-				type="text"
-				placeholder="Search..."
-				class="grow"
-			/>
-		</label>
+<div class="flex flex-wrap py-2 sm:grid sm:grid-cols-[2fr,1fr,1fr] sm:gap-1">
+	<input
+		class="input input-bordered w-full"
+		on:keyup={debounced_dir}
+		value={$dir}
+		type="text"
+		placeholder="Search..."
+	/>
+	<div class="w-1/2 pr-1 pt-2 sm:w-auto sm:pl-1 sm:pr-0 sm:pt-0">
+		<input
+			on:keyup={debounced_exclude}
+			value={$exclude}
+			type="text"
+			placeholder="eg *service.go,src/**/exclude"
+			class="input input-bordered w-full bg-mantle"
+		/>
 	</div>
-	<div class="mt-2 flex w-full pr-2 md:mt-0 md:w-1/2 md:pr-0">
-		<label class="input input-bordered flex w-1/2 items-center bg-mantle md:ml-2">
-			<input
-				on:keyup={debounced_exclude}
-				value={$exclude}
-				type="text"
-				placeholder="eg *service.go,src/**/exclude"
-				class="grow"
-			/>
-		</label>
-		<label class="input input-bordered ml-2 flex w-1/2 items-center bg-mantle">
-			<input
-				on:keyup={debounced_include}
-				value={$include}
-				type="text"
-				placeholder="eg *service.go,src/**/include"
-				class="grow"
-			/>
-		</label>
+	<div class="w-1/2 pl-1 pt-2 sm:w-auto sm:pt-0">
+		<input
+			on:keyup={debounced_include}
+			value={$include}
+			type="text"
+			placeholder="eg *service.go,src/**/include"
+			class="input input-bordered w-full"
+		/>
 	</div>
 </div>

@@ -7,9 +7,37 @@ import (
 
 	"github.com/bep/debounce"
 	"github.com/fsnotify/fsnotify"
+	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 var watcher *fsnotify.Watcher
+
+var debounced_files_changed = debounce.New(100 * time.Millisecond)
+
+var start time.Time
+
+func OnWrite(event fsnotify.Event, ctx context.Context) {
+	path := event.Name
+	if path[len(path)-1:] == "~" {
+		return
+	}
+	Log("on_write")
+	debounced_files_changed(func() {
+		Runtime.EventsEmit(ctx, "files-changed")
+	})
+}
+
+func OnDelete(event fsnotify.Event, ctx context.Context) {
+	path := event.Name
+	if path[len(path)-1:] == "~" {
+		return
+	}
+
+	Log("on_delete")
+	debounced_files_changed(func() {
+		Runtime.EventsEmit(ctx, "files-changed")
+	})
+}
 
 func ObserveFiles(ctx context.Context,
 	dirs []string,
