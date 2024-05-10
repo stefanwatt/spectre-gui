@@ -45,7 +45,8 @@ export function setup_keymaps() {
 
       case "Enter":
         if (is_mod("s")) {
-          ReplaceAll(get(search_term), get(replace_term), get(dir), get(include), get(exclude), get(search_flags), get(preserve_case))
+          const flags = get(search_flags).map(flag => flag.text)
+          ReplaceAll(get(search_term), get(replace_term), get(dir), get(include), get(exclude), flags, get(preserve_case))
         }
         if (mods.length != 0) return
         Replace(get(selected_match), get(search_term), get(replace_term), get(preserve_case));
@@ -56,6 +57,8 @@ export function setup_keymaps() {
             if (flags.find(flag => flag.text === CASE_SENSITIVE)) {
               return flags.filter(x => x.text !== CASE_SENSITIVE)
             }
+            /**@type {App.SearchFlag[]}*/
+            // @ts-ignore
             const updated = Array.from(new Set([...flags, { text: CASE_SENSITIVE, icon: CaseSensitive }]))
             console.log("updated flags ", updated)
             return updated
@@ -64,6 +67,7 @@ export function setup_keymaps() {
         break
       case "w":
         if (is_mod("a")) {
+          // @ts-ignore
           search_flags.update(flags => {
             if (flags.find(flag => flag.text === MATCH_WHOLE_WORD)) {
               return flags.filter(x => x.text !== MATCH_WHOLE_WORD)
@@ -76,6 +80,7 @@ export function setup_keymaps() {
         break
       case "r":
         if (is_mod("a")) {
+          // @ts-ignore
           search_flags.update(flags => {
             if (flags.find(flag => flag.text === REGEX)) {
               return flags.filter(x => x.text !== REGEX)
@@ -110,7 +115,7 @@ export function setup_keymaps() {
 
 }
 
-/**@param {Modifier} mod*/
+/**@param {App.Modifier} mod*/
 function is_mod(mod) {
   return mods.includes(mod)
 }

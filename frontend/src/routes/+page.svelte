@@ -3,7 +3,7 @@
 	import { EventsOn } from '$lib/wailsjs/runtime/runtime.js';
 	import Form from '$lib/Form.svelte';
 	import Results from '$lib/results/Results.svelte';
-	import { setup_keymaps } from '$lib/keymaps';
+	import { setup_keymaps } from '$lib/keymaps.service.js';
 	import Toast from '$lib/notification/Toast.svelte';
 	import { show_toast } from '$lib/notification/notification.service.js';
 	import { search } from '$lib/results/results.service';

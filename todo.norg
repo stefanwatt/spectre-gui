@@ -1,5 +1,5 @@
 * (-) Todo
-** (-) Technical
+** (x) Technical
 *** tests
     - this is actually very testable
     - come up with scenarios and mock input files
@@ -22,8 +22,8 @@
     - the rest was due to incorrect checks when running replace
 
 
-*** (-) refactoring
-**** ( ) frontend
+*** (x) refactoring
+**** (x) frontend
 **** (x) response model
      - maybe struct instead of map so we don't have to do mapping in svelte
 

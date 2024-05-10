@@ -1,5 +1,5 @@
 <script>
-	import { selected_match, search_term, replace_term } from './store';
+	import { selected_match } from './store';
 	/** @type {App.RipgrepMatch}*/
 	export let match;
 	/** @param {App.RipgrepMatch} match*/

@@ -4,7 +4,7 @@ import { writable } from "svelte/store";
 export const selected_match = writable(null);
 /**@type {import("svelte/store").Writable<App.RipgrepResult[]>}*/
 export const results = writable([]);
-/**@type {import("svelte/store").Writable<App.Toast>}*/
+/**@type {import("svelte/store").Writable<App.Toast|null>}*/
 export const toast = writable();
 /**@type {import("svelte/store").Writable<string>}*/
 export const search_term = writable("foo");
