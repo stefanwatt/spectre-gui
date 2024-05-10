@@ -18,11 +18,13 @@ import (
 
 func Ripgrep(
 	search_term string,
+	replace_term string,
 	dir string,
 	include string,
 	exclude string,
-	flags []string,
-	replace_term string,
+	case_sensitive bool,
+	regex bool,
+	match_whole_word bool,
 	preserve_case bool,
 ) ([]string, error) {
 	includeArgs := map_glob_pattern(include, false)
@@ -35,25 +37,17 @@ func Ripgrep(
 		"--vimgrep",
 		"--only-matching",
 	}...)
-	_, err := utils.Find(flags, func(flag string) bool {
-		return flag == "case_sensitive"
-	})
-	if err == nil {
+
+	if case_sensitive {
 		args = append(args, "--case-sensitive")
 	} else {
 		args = append(args, "--smart-case")
 	}
-	_, err = utils.Find(flags, func(flag string) bool {
-		return flag == "match_whole_word"
-	})
 
-	if err == nil {
+	if match_whole_word {
 		args = append(args, "--word-regexp")
 	}
-	_, err = utils.Find(flags, func(flag string) bool {
-		return flag == "regex"
-	})
-	if err != nil {
+	if !regex {
 		args = append(args, "--fixed-strings")
 	}
 	args = append(args, search_term)

@@ -1,45 +1,33 @@
-package utils
+package filewatcher
 
 import (
 	"context"
 	"path/filepath"
 	"time"
 
+	"spectre-gui/utils"
+
 	"github.com/bep/debounce"
 	"github.com/fsnotify/fsnotify"
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-var watcher *fsnotify.Watcher
+var (
+	watcher           *fsnotify.Watcher
+	close_dir_watcher context.CancelFunc
+)
 
-var debounced_files_changed = debounce.New(100 * time.Millisecond)
-
-var start time.Time
-
-func OnWrite(event fsnotify.Event, ctx context.Context) {
-	path := event.Name
-	if path[len(path)-1:] == "~" {
-		return
+func InitContext(current_dir string, new_dir string, ctx context.Context) (context.Context, string) {
+	updated_dir := current_dir
+	if current_dir != new_dir && close_dir_watcher != nil {
+		close_dir_watcher()
+		updated_dir = new_dir
 	}
-	Log("on_write")
-	debounced_files_changed(func() {
-		Runtime.EventsEmit(ctx, "files-changed")
-	})
+	ctx, cancel := context.WithCancel(ctx)
+	close_dir_watcher = cancel
+	return ctx, updated_dir
 }
 
-func OnDelete(event fsnotify.Event, ctx context.Context) {
-	path := event.Name
-	if path[len(path)-1:] == "~" {
-		return
-	}
-
-	Log("on_delete")
-	debounced_files_changed(func() {
-		Runtime.EventsEmit(ctx, "files-changed")
-	})
-}
-
-func ObserveFiles(ctx context.Context,
+func WatchFiles(ctx context.Context,
 	dirs []string,
 	dir string,
 	on_write func(fsnotify.Event, context.Context),
@@ -48,7 +36,7 @@ func ObserveFiles(ctx context.Context,
 	var err error
 	watcher, err = fsnotify.NewWatcher()
 	if err != nil {
-		Log("error creating filewatcher: " + err.Error())
+		utils.Log("error creating filewatcher: " + err.Error())
 		panic(err)
 	}
 	debouncedWrite := debounce.New(100 * time.Millisecond)
@@ -56,13 +44,13 @@ func ObserveFiles(ctx context.Context,
 	defer watcher.Close()
 	err = watch_dirs(dirs)
 	if err != nil {
-		Log("error watching files: " + err.Error())
+		utils.Log("error watching files: " + err.Error())
 		panic(err)
 	}
 	err = watcher.Add(dir)
 	if err != nil {
-		Log("skipping directory " + dir + " because of error")
-		Log(err.Error())
+		utils.Log("skipping directory " + dir + " because of error")
+		utils.Log(err.Error())
 		panic(err)
 	}
 	for {
@@ -85,14 +73,14 @@ func ObserveFiles(ctx context.Context,
 			if !ok {
 				return
 			}
-			Log(err.Error())
+			utils.Log(err.Error())
 		}
 	}
 }
 
 func watch_dirs(dirs []string) error {
 	for _, dir := range dirs {
-		Log("Adding watcher for " + dir)
+		utils.Log("Adding watcher for " + dir)
 		filepath.Dir(dir)
 		err := watcher.Add(dir)
 		if err != nil {

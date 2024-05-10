@@ -9,10 +9,9 @@ import (
 var ctx context.Context
 
 type App struct {
-	ctx               context.Context
-	close_dir_watcher func()
-	dir               string
-	current_matches   []match.Match
+	ctx             context.Context
+	dir             string
+	current_matches []match.Match
 }
 
 func NewApp() *App {
