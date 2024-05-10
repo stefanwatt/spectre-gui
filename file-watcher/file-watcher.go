@@ -2,6 +2,7 @@ package filewatcher
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -32,32 +33,32 @@ func WatchFiles(ctx context.Context,
 	dir string,
 	on_write func(fsnotify.Event, context.Context),
 	on_delete func(fsnotify.Event, context.Context),
-) {
+) error {
 	var err error
 	watcher, err = fsnotify.NewWatcher()
 	if err != nil {
 		utils.Log("error creating filewatcher: " + err.Error())
-		panic(err)
+		return err
 	}
-	debouncedWrite := debounce.New(100 * time.Millisecond)
-	debouncedDelete := debounce.New(100 * time.Millisecond)
 	defer watcher.Close()
 	err = watch_dirs(dirs)
 	if err != nil {
 		utils.Log("error watching files: " + err.Error())
-		panic(err)
+		return err
 	}
 	err = watcher.Add(dir)
 	if err != nil {
 		utils.Log("skipping directory " + dir + " because of error")
 		utils.Log(err.Error())
-		panic(err)
+		return err
 	}
+	debouncedWrite := debounce.New(100 * time.Millisecond)
+	debouncedDelete := debounce.New(100 * time.Millisecond)
 	for {
 		select {
 		case event, ok := <-watcher.Events:
 			if !ok {
-				return
+				return fmt.Errorf("watcher.Events channel closed")
 			}
 			if event.Op&fsnotify.Write != 0 || event.Op&fsnotify.Create != 0 {
 				debouncedWrite(func() {
@@ -71,7 +72,7 @@ func WatchFiles(ctx context.Context,
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
-				return
+				return err
 			}
 			utils.Log(err.Error())
 		}

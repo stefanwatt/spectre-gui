@@ -63,6 +63,7 @@ func (a *App) Search(
 	a.current_matches = matches
 	search_results := match.MapSearchResult(matches)
 	dirs := match.MapDirs(search_results)
+	// TODO: how to handle errors in a go routine?
 	go filewatcher.WatchFiles(ctx, dirs, dir, on_write, on_delete)
 	return search_results
 }
