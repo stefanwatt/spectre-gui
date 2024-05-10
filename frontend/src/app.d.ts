@@ -18,8 +18,8 @@ declare global {
     type Modifier = 'c' | 's' | 'a'
 
     interface RipgrepResult {
-      path: string;
-      matches: RipgrepMatch[]
+      Path: string;
+      Matches: RipgrepMatch[]
     }
 
     interface RipgrepMatch {

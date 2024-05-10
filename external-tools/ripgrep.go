@@ -1,35 +1,20 @@
-package main
+package externaltools
 
 import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
-	"github.com/google/uuid"
+	utils "spectre-gui/utils"
+
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
-
-type RipgrepResult = map[string][]RipgrepMatch
-
-type RipgrepMatch struct {
-	Id              string
-	Path            string
-	AbsolutePath    string
-	MatchedLine     string
-	TextBeforeMatch string
-	TextAfterMatch  string
-	MatchedText     string
-	ReplacementText string
-	Row             int
-	Col             int
-}
 
 func Ripgrep(
 	search_term string,
@@ -39,7 +24,7 @@ func Ripgrep(
 	flags []string,
 	replace_term string,
 	preserve_case bool,
-) (*[]RipgrepMatch, error) {
+) ([]string, error) {
 	includeArgs := map_glob_pattern(include, false)
 	excludeArgs := map_glob_pattern(exclude, true)
 	args := append(includeArgs, excludeArgs...)
@@ -50,7 +35,7 @@ func Ripgrep(
 		"--vimgrep",
 		"--only-matching",
 	}...)
-	_, err := Find(flags, func(flag string) bool {
+	_, err := utils.Find(flags, func(flag string) bool {
 		return flag == "case_sensitive"
 	})
 	if err == nil {
@@ -58,14 +43,14 @@ func Ripgrep(
 	} else {
 		args = append(args, "--smart-case")
 	}
-	_, err = Find(flags, func(flag string) bool {
+	_, err = utils.Find(flags, func(flag string) bool {
 		return flag == "match_whole_word"
 	})
 
 	if err == nil {
 		args = append(args, "--word-regexp")
 	}
-	_, err = Find(flags, func(flag string) bool {
+	_, err = utils.Find(flags, func(flag string) bool {
 		return flag == "regex"
 	})
 	if err != nil {
@@ -75,26 +60,28 @@ func Ripgrep(
 	args = append(args, dir)
 	output, err := retryCommand("rg", args, 3, 1000)
 	if err != nil {
-		return nil, err
+		return []string{}, err
 	}
 
 	rg_output_lines := strings.Split(*output, "\n")
-	rg_output_lines = Filter(rg_output_lines, func(line string) bool {
+	rg_output_lines = utils.Filter(rg_output_lines, func(line string) bool {
 		return line != ""
 	})
-	_, err = Find(flags, func(flag string) bool {
-		return flag == "regex"
-	})
-	matches := MapArray(rg_output_lines, func(rg_output_line string) RipgrepMatch {
-		return map_ripgrep_match(rg_output_line, search_term, replace_term, preserve_case, err != nil)
-	})
-	return &matches, nil
+	return rg_output_lines, nil
 }
 
-func map_ripgrep_match(output string, search_term string, replace_term string, preserve_case bool, use_regex bool) RipgrepMatch {
+type RipgrepInfo struct {
+	Path        string
+	MatchedText string
+	Row         int
+	Col         int
+}
+
+func MapRipgrepInfo(output string) RipgrepInfo {
 	regexpattern := `^(.*):(\d+):(\d+):(.*)$`
 	re := regexp.MustCompile(regexpattern)
 	submatches := re.FindStringSubmatch(output)
+
 	if len(submatches) != 5 {
 		fmt.Println("Error parsing line:", output)
 		panic("incorrect format from ripgrep output")
@@ -105,53 +92,31 @@ func map_ripgrep_match(output string, search_term string, replace_term string, p
 	if err != nil {
 		panic(err)
 	}
-	matched_line := GetLine(path, row)
+
 	col, err := strconv.Atoi(submatches[3])
 	if err != nil {
 		panic(err)
 	}
-	uuid, err := uuid.NewUUID()
-	if err != nil {
-		panic(err)
-	}
-	case_corrected_replace_term := replace_term
-	if preserve_case {
-		case_corrected_replace_term = map_replacement_text_preserve_case(matched_text, replace_term)
-	}
-	replacement_text := GetReplacementText(matched_line, search_term, case_corrected_replace_term)
-	before, after := map_before_and_after(matched_line, matched_text)
-	match := RipgrepMatch{
-		uuid.String(),
-		filepath.Base(path),
-		path,
-		matched_line,
-		before,
-		after,
-		matched_text,
-		replacement_text,
-		row,
-		col,
-	}
-	return match
+	return RipgrepInfo{path, matched_text, row, col}
 }
 
 func map_glob_pattern(patterns string, exclude bool) []string {
 	parts := strings.Split(patterns, ",")
-	parts = Filter(parts, func(part string) bool { return part != "" })
+	parts = utils.Filter(parts, func(part string) bool { return part != "" })
 	if len(parts) == 0 {
 		return []string{}
 	}
-	patterns2d := MapArray(parts, func(pattern string) []string {
+	patterns2d := utils.MapArray(parts, func(pattern string) []string {
 		if exclude {
 			pattern = fmt.Sprintf("!%s", pattern)
 		}
 		return []string{"--glob", pattern}
 	})
-	return Flatten(patterns2d)
+	return utils.Flatten(patterns2d)
 }
 
 func retryCommand(command string, args []string, retries int, delay time.Duration) (*string, error) {
-	Log(fmt.Sprintf("Attempting to run %s", command))
+	utils.Log(fmt.Sprintf("Attempting to run %s", command))
 	var err error
 	for i := 0; i < retries; i++ {
 		cmd := exec.Command(command, args...)
@@ -160,8 +125,8 @@ func retryCommand(command string, args []string, retries int, delay time.Duratio
 
 		if cmdErr == nil {
 			output := string(bytes)
-			Log(fmt.Sprintf("Successfully ran %s", command))
-			Log(fmt.Sprintf("Output: %s", output))
+			utils.Log(fmt.Sprintf("Successfully ran %s", command))
+			utils.Log(fmt.Sprintf("Output: %s", output))
 			return &output, nil
 		}
 		fmt.Printf("Attempt %d failed: %s\n", i+1, cmdErr)
@@ -179,7 +144,7 @@ func retryCommand(command string, args []string, retries int, delay time.Duratio
 }
 
 func map_replacement_text_preserve_case(matched_text string, replace_term string) string {
-	Log(fmt.Sprintf("mapping replacement text: \nmatched_text:%s\nreplace_term:%s", matched_text, replace_term))
+	utils.Log(fmt.Sprintf("mapping replacement text: \nmatched_text:%s\nreplace_term:%s", matched_text, replace_term))
 	titleCaser := cases.Title(language.English)
 	// ALL UPPERCASE
 	if matched_text == "" {

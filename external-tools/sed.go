@@ -1,24 +1,26 @@
-package main
+package externaltools
 
 import (
 	"bytes"
 	"fmt"
 	"os/exec"
+
+	utils "spectre-gui/utils"
 )
 
-func Sed(match RipgrepMatch, search_term string, replace_term string, preserve_case bool) {
+func Sed(row int, col int, path string, search_term string, replace_term string, preserve_case bool) {
 	cmd := exec.Command(
 		"sed",
 		"-i",
 		"-e",
 		fmt.Sprintf(
 			`%ds/^\(.\{%d\}\)%s/\1%s/`,
-			match.Row,
-			match.Col-1,
+			row,
+			col-1,
 			search_term,
 			replace_term,
 		),
-		match.AbsolutePath,
+		path,
 	)
 	err := cmd.Run()
 	if err != nil {
@@ -37,7 +39,7 @@ func GetLine(path string, row int) string {
 }
 
 func GetReplacementText(matched_line string, search_term string, replace_term string) string {
-	Log("Gettting replacement text")
+	utils.Log("Gettting replacement text")
 	cmd_echo := exec.Command("echo", matched_line)
 	cmd_sed := exec.Command("sed", "-n", "-E", fmt.Sprintf("s/.*%s.*/%s/ip", search_term, replace_term))
 	var output bytes.Buffer
@@ -45,20 +47,20 @@ func GetReplacementText(matched_line string, search_term string, replace_term st
 	cmd_sed.Stdin, _ = cmd_echo.StdoutPipe()
 
 	if err := cmd_sed.Start(); err != nil {
-		Log("Error starting sed command:")
-		Log(err.Error())
+		utils.Log("Error starting sed command:")
+		utils.Log(err.Error())
 		return ""
 	}
 
 	if err := cmd_echo.Run(); err != nil {
-		Log("Error running echo command:")
-		Log(err.Error())
+		utils.Log("Error running echo command:")
+		utils.Log(err.Error())
 		return ""
 	}
 
 	if err := cmd_sed.Wait(); err != nil {
-		Log("Error waiting for sed command:")
-		Log(err.Error())
+		utils.Log("Error waiting for sed command:")
+		utils.Log(err.Error())
 		return ""
 	}
 	return output.String()

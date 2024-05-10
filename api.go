@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	ext "spectre-gui/external-tools"
+	"spectre-gui/match"
+	utils "spectre-gui/utils"
+
 	"github.com/bep/debounce"
 	"github.com/fsnotify/fsnotify"
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -19,7 +23,7 @@ func on_write(event fsnotify.Event, ctx context.Context) {
 	if path[len(path)-1:] == "~" {
 		return
 	}
-	Log("on_write")
+	utils.Log("on_write")
 	debounced_files_changed(func() {
 		Runtime.EventsEmit(ctx, "files-changed")
 	})
@@ -31,7 +35,7 @@ func on_delete(event fsnotify.Event, ctx context.Context) {
 		return
 	}
 
-	Log("on_delete")
+	utils.Log("on_delete")
 	debounced_files_changed(func() {
 		Runtime.EventsEmit(ctx, "files-changed")
 	})
@@ -45,8 +49,8 @@ func (a *App) Search(
 	flags []string,
 	replace_term string,
 	preserve_case bool,
-) RipgrepResult {
-	Log(fmt.Sprintf("searching...\nsearch_term: %s\ndir: %s\ninclude: %s\nexclude: %s\nflags: %s\nreplace_term:%s\npreserve_case:%v", search_term, dir, include, exclude, flags, replace_term, preserve_case))
+) []match.SearchResult {
+	utils.Log(fmt.Sprintf("searching...\nsearch_term: %s\ndir: %s\ninclude: %s\nexclude: %s\nflags: %s\nreplace_term:%s\npreserve_case:%v", search_term, dir, include, exclude, flags, replace_term, preserve_case))
 	if a.dir != dir && a.close_dir_watcher != nil {
 		a.close_dir_watcher()
 		a.dir = dir
@@ -54,9 +58,9 @@ func (a *App) Search(
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.close_dir_watcher = cancel
 	if search_term == "" {
-		return RipgrepResult{}
+		return []match.SearchResult{}
 	}
-	matches, err := Ripgrep(
+	rg_lines, err := ext.Ripgrep(
 		search_term,
 		dir,
 		include,
@@ -66,36 +70,59 @@ func (a *App) Search(
 		preserve_case,
 	)
 	if err != nil {
-		Log(fmt.Sprintf("ripgrep error: %s", err))
-		return RipgrepResult{}
+		utils.Log(fmt.Sprintf("ripgrep error: %s", err))
+		return []match.SearchResult{}
 	}
-
-	a.current_matches = *matches
-	grouped := group_by_property(*matches, func(match RipgrepMatch) string {
-		return match.Path
+	_, err = utils.Find(flags, func(flag string) bool {
+		return flag == "regex"
 	})
-	go ObserveFiles(ctx, grouped, dir, on_write, on_delete)
-	return grouped
+	use_regex := err == nil
+	matches := utils.MapArray(rg_lines, func(line string) match.Match {
+		rg_info := ext.MapRipgrepInfo(line)
+		return match.MapMatch(
+			line,
+			rg_info.Path,
+			rg_info.MatchedText,
+			rg_info.Row,
+			rg_info.Col,
+			search_term,
+			replace_term,
+			preserve_case,
+			use_regex,
+		)
+	})
+	a.current_matches = matches
+	search_results := match.MapSearchResult(matches)
+	dirs := match.MapDirs(search_results)
+	go utils.ObserveFiles(ctx, dirs, dir, on_write, on_delete)
+	return search_results
 }
 
 func (a *App) Replace(
-	replaced_match RipgrepMatch,
+	replaced_match match.Match,
 	search_term string,
 	replace_term string,
 	preserve_case bool,
 ) {
-	Log(fmt.Sprintf(
+	utils.Log(fmt.Sprintf(
 		"replacing in file: %s\nmatched line: %s\nsearch_term: %s\nreplace_term: %s\npreserve_case: %v",
-		replaced_match.Path,
+		replaced_match.FileName,
 		replaced_match.MatchedLine,
 		search_term,
 		replace_term,
 		preserve_case,
 	))
-	Log("calling sed")
-	Sed(replaced_match, search_term, replace_term, preserve_case)
-	a.current_matches = Filter(a.current_matches, func(m RipgrepMatch) bool {
-		return m.Path != replaced_match.Path || m.Row != replaced_match.Row || m.Col != replaced_match.Col
+	utils.Log("calling sed")
+	ext.Sed(
+		replaced_match.Row,
+		replaced_match.Col,
+		replaced_match.AbsolutePath,
+		search_term,
+		replace_term,
+		preserve_case,
+	)
+	a.current_matches = utils.Filter(a.current_matches, func(m match.Match) bool {
+		return m.FileName != replaced_match.FileName || m.Row != replaced_match.Row || m.Col != replaced_match.Col
 	})
 }
 
@@ -108,9 +135,9 @@ func (a *App) ReplaceAll(
 	flags []string,
 	preserve_case bool,
 ) {
-	Log(fmt.Sprintf("replacing all: \nsearch_term: %s\nreplace_term: %s", search_term, replace_term))
-	Log("calling sed")
-	matches, err := Ripgrep(
+	utils.Log(fmt.Sprintf("replacing all: \nsearch_term: %s\nreplace_term: %s", search_term, replace_term))
+	utils.Log("calling sed")
+	rg_lines, err := ext.Ripgrep(
 		search_term,
 		dir,
 		include,
@@ -120,21 +147,28 @@ func (a *App) ReplaceAll(
 		preserve_case,
 	)
 	if err != nil {
-		Log(fmt.Sprintf("ripgrep error: %s", err))
+		utils.Log(fmt.Sprintf("ripgrep error: %s", err))
 		return
 	}
-	for _, match := range *matches {
-		Sed(match, search_term, replace_term, preserve_case)
+	_, err = utils.Find(flags, func(flag string) bool {
+		return flag == "regex"
+	})
+	use_regex := err == nil
+	matches := utils.MapArray(rg_lines, func(line string) match.Match {
+		rg_info := ext.MapRipgrepInfo(line)
+		return match.MapMatch(
+			line,
+			rg_info.Path,
+			rg_info.MatchedText,
+			rg_info.Row,
+			rg_info.Col,
+			search_term,
+			replace_term,
+			preserve_case,
+			use_regex,
+		)
+	})
+	for _, match := range matches {
+		ext.Sed(match.Row, match.Col, match.AbsolutePath, search_term, replace_term, preserve_case)
 	}
-}
-
-func group_by_property[T any, K comparable](items []T, getProperty func(T) K) map[K][]T {
-	grouped := make(map[K][]T)
-
-	for _, item := range items {
-		key := getProperty(item)
-		grouped[key] = append(grouped[key], item)
-	}
-
-	return grouped
 }

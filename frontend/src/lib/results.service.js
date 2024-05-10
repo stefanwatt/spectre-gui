@@ -21,11 +21,11 @@ export function search(search_term, dir, include, exclude, flags, replace_term, 
       replace_term,
       preserve_case,
     ).then(
-        /**@param {RipgrepResultApi} res */(res) => {
+        /**@param {App.RipgrepResult[]} res*/(res) => {
+        console.log("response:", res)
         selected_match.set(null)
-        const mapped = map_results(res);
-        results.set(mapped);
-        const matches = mapped[0]?.matches;
+        results.set(res);
+        const matches = res[0]?.Matches;
         if (!matches?.length || !matches[0]) {
           selected_match.set(null)
           return;
@@ -41,21 +41,6 @@ export function search(search_term, dir, include, exclude, flags, replace_term, 
   } catch (error) {
     console.error(error)
   }
-}
-
-/**
- * @param {RipgrepResultApi} results
- * @returns {RipgrepResult[]}
- */
-export function map_results(results) {
-  if (!results) return [];
-  const mapped = Object.entries(results).map(([path, matches]) => {
-    return {
-      path,
-      matches,
-    };
-  });
-  return mapped;
 }
 
 export function highlight_all() {

@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 var watcher *fsnotify.Watcher
 
 func ObserveFiles(ctx context.Context,
-	match_groups map[string][]RipgrepMatch,
+	dirs []string,
 	dir string,
 	on_write func(fsnotify.Event, context.Context),
 	on_delete func(fsnotify.Event, context.Context),
@@ -26,7 +26,7 @@ func ObserveFiles(ctx context.Context,
 	debouncedWrite := debounce.New(100 * time.Millisecond)
 	debouncedDelete := debounce.New(100 * time.Millisecond)
 	defer watcher.Close()
-	err = watch_files(match_groups)
+	err = watch_dirs(dirs)
 	if err != nil {
 		Log("error watching files: " + err.Error())
 		panic(err)
@@ -62,18 +62,7 @@ func ObserveFiles(ctx context.Context,
 	}
 }
 
-func watch_files(match_groups map[string][]RipgrepMatch) error {
-	var dirs []string
-	for path := range match_groups {
-		current_dir := filepath.Dir(match_groups[path][0].AbsolutePath)
-		_, err := Find(dirs, func(dir string) bool {
-			return dir == current_dir
-		})
-		if err != nil {
-			dirs = append(dirs, current_dir)
-		}
-	}
-
+func watch_dirs(dirs []string) error {
 	for _, dir := range dirs {
 		Log("Adding watcher for " + dir)
 		filepath.Dir(dir)
