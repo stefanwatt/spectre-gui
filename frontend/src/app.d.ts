@@ -38,7 +38,14 @@ declare global {
       level: NotificationLevel;
       message: string;
     }
+    interface FormValues {
+      SearchTerm: string
+      ReplaceTerm: string
+      Dir: string
+      Include: string
+      Exclude: string
 
+    }
   }
 }
 

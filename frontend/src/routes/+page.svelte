@@ -18,6 +18,7 @@
 		results
 	} from '$lib/store';
 	import { listen_for_events } from '$lib/runtime-events.service';
+	import {GetFormValues} from "$lib/wailsjs/go/main/App"
 
 	/**@type {App.RipgrepMatch} */
 	$: {
@@ -25,9 +26,16 @@
 		search($search_term, $dir, $include, $exclude, flags, $replace_term, $preserve_case);
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		setup_keymaps();
 		listen_for_events();
+		/**@type {App.FormValues}*/
+		const form_values = await GetFormValues()
+		$search_term = form_values.SearchTerm
+		$replace_term = form_values.ReplaceTerm
+		$dir = form_values.Dir
+		$include = form_values.Include
+		$exclude = form_values.Exclude
 	});
 	$: total_matches = $results?.flatMap((result) => result.Matches)?.length || 0;
 </script>

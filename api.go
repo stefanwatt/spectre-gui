@@ -30,6 +30,24 @@ var (
 	write_event   = REPLACE
 )
 
+type FormValues struct {
+	SearchTerm  string
+	ReplaceTerm string
+	Dir         string
+	Include     string
+	Exclude     string
+}
+
+func (a *App) GetFormValues() FormValues {
+	return FormValues{
+		SearchTerm:  a.search_term,
+		ReplaceTerm: a.replace_term,
+		Dir:         a.dir,
+		Include:     a.include,
+		Exclude:     a.exclude,
+	}
+}
+
 func (a *App) Search(
 	search_term string,
 	dir string,

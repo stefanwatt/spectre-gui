@@ -1,5 +1,7 @@
 * (-) Todo
 ** (-) Technical
+*** command line args
+    add args for all the input fields and flags
 *** ( ) integrate with neovim
 *** tests
     - this is actually very testable
