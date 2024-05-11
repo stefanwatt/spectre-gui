@@ -1,6 +1,3 @@
-import daisyui from "daisyui";
-import catppuccin from "@catppuccin/tailwindcss";
-
 /** @type {import('tailwindcss').Config}*/
 const config = {
   content: ["./src/**/*.{html,js,svelte,ts}"],
@@ -10,8 +7,8 @@ const config = {
   },
 
   plugins: [
-    daisyui,
-    catppuccin({
+    require("daisyui"),
+    require("@catppuccin/tailwindcss")({
       defaultFlavour: 'frappe',
     })
   ],

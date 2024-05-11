@@ -42,7 +42,7 @@
     - now we have not only /selected/,but /marked/ and /cursor/ 
       or something like that
     - space to mark
-*** ( ) undo 
+*** (x) undo 
     - keep a stack of replace actions in go
     - actions have an array of replaced lines and their original text
     - push to stack on replace/replace all

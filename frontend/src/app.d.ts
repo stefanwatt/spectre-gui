@@ -34,7 +34,10 @@ declare global {
       ReplacementText: string;
     }
 
-    type RipgrepResultApi = { [key: string]: Array<RipgrepMatch> };
+    interface ToastEvent {
+      level: NotificationLevel;
+      message: string;
+    }
 
   }
 }

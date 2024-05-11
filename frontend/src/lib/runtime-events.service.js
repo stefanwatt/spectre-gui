@@ -31,7 +31,10 @@ export function listen_for_events() {
     search(get(search_term), get(dir), get(include), get(exclude), flags, get(replace_term), get(preserve_case));
   });
 
-  EventsOn(TOAST, (data) => {
-    show_toast('info', data);
-  });
+  EventsOn(TOAST, /** 
+    @param {App.NotificationLevel} level 
+    @param {string} message 
+  */(level, message) => {
+      show_toast(level, message);
+    });
 }

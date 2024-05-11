@@ -17,7 +17,7 @@
 		search_flags,
 		preserve_case
 	} from '$lib/store';
-	import {listen_for_events} from '$lib/runtime-events.service';
+	import { listen_for_events } from '$lib/runtime-events.service';
 
 	/**@type {App.RipgrepMatch} */
 	$: {
@@ -27,7 +27,7 @@
 
 	onMount(() => {
 		setup_keymaps();
-		listen_for_events()
+		listen_for_events();
 	});
 </script>
 

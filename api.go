@@ -17,13 +17,17 @@ import (
 )
 
 var (
-	undo_stack  = undo.UndoStack{}
-	DELETE      = "file-deleted"
-	REPLACE     = "file-replaced"
-	REPLACE_ALL = "replaced-all"
-	UNDO        = "undo"
-	TOAST       = "toast"
-	write_event = REPLACE
+	undo_stack    = undo.UndoStack{}
+	INFO_LEVEL    = "info"
+	SUCCESS_LEVEL = "success"
+	WARNING_LEVEL = "warning"
+	ERROR_LEVEL   = "error"
+	DELETE        = "file-deleted"
+	REPLACE       = "file-replaced"
+	REPLACE_ALL   = "replaced-all"
+	UNDO          = "undo"
+	TOAST         = "toast"
+	write_event   = REPLACE
 )
 
 func (a *App) Search(
@@ -115,7 +119,7 @@ func (a *App) Replace(
 	undo_stack.Push(undo.ReplaceAction{
 		Actions: replace_actions,
 	})
-	Runtime.EventsEmit(a.ctx, TOAST, "Match replaced")
+	spawn_toast(a.ctx, SUCCESS_LEVEL, "Match replaced")
 }
 
 func (a *App) ReplaceAll(
@@ -173,13 +177,13 @@ func (a *App) ReplaceAll(
 	undo_stack.Push(undo.ReplaceAction{
 		Actions: replace_actions,
 	})
-	Runtime.EventsEmit(a.ctx, TOAST, "Replaced all matches")
+	spawn_toast(a.ctx, SUCCESS_LEVEL, "Replaced all matches")
 }
 
 func (a *App) Undo() {
 	if undo_stack.IsEmpty() {
 		utils.Log("undo stack is empty - cannot pop")
-		Runtime.EventsEmit(a.ctx, TOAST, "Nothing to undo")
+		spawn_toast(a.ctx, INFO_LEVEL, "Nothing to undo")
 		return
 	}
 	undo_action := undo_stack.Pop()
@@ -187,6 +191,7 @@ func (a *App) Undo() {
 	for _, action := range undo_action.Actions {
 		ext.ReplaceLine(action.Path, action.Row, action.OriginalText)
 	}
+	spawn_toast(a.ctx, SUCCESS_LEVEL, "Reverted last action")
 }
 
 var debounced_files_changed = debounce.New(100 * time.Millisecond)
@@ -221,4 +226,8 @@ func has_flag(flag string, flags []string) bool {
 		return f == flag
 	})
 	return err == nil
+}
+
+func spawn_toast(ctx context.Context, level string, message string) {
+	Runtime.EventsEmit(ctx, TOAST, level, message)
 }
