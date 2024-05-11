@@ -14,7 +14,8 @@
 		include,
 		exclude,
 		search_flags,
-		preserve_case
+		preserve_case,
+		results
 	} from '$lib/store';
 	import { listen_for_events } from '$lib/runtime-events.service';
 
@@ -28,12 +29,21 @@
 		setup_keymaps();
 		listen_for_events();
 	});
+	$: total_matches = $results?.flatMap((result) => result.Matches)?.length || 0;
 </script>
 
 <div
 	class="min-w-screen flex h-full min-h-screen w-full flex-col overflow-hidden bg-base px-2 py-4"
 >
 	<Form></Form>
+	{#if total_matches !== 0}
+		<div class="mt-2 pl-1 text-overlay2">
+			<span class="font-bold text-blue">{total_matches}</span>
+			<span>Results in </span>
+			<span class="font-bold text-blue">{$results.length}</span>
+			<span>files</span>
+		</div>
+	{/if}
 	<div class="h-0 grow snap-y snap-mandatory overflow-x-hidden overflow-y-scroll pt-2">
 		<Results></Results>
 	</div>
