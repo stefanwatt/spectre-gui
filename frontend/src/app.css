@@ -33,6 +33,7 @@
 .spectre-chroma {
   color: #c6d0f5;
   background-color: transparent;
+  white-space: nowrap;
 }
 
 /* Error */

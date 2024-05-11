@@ -24,7 +24,11 @@ func Highlight(_code string, filename string, col int, matched_text string, repl
 		}
 	}
 	var bytes bytes.Buffer
-	formatter := html.New(html.WithClasses(true), html.ClassPrefix("spectre-"))
+	formatter := html.New(
+		html.WithClasses(true),
+		html.ClassPrefix("spectre-"),
+		html.InlineCode(true),
+	)
 	iterator, err := lexer.Tokenise(nil, code)
 	if err != nil {
 		log.Fatal(err)
