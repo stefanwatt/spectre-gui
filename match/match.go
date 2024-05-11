@@ -113,17 +113,19 @@ func map_replacement_text_preserve_case(matched_text string, replace_term string
 	titleCaser := cases.Title(language.English)
 	// ALL UPPERCASE
 	if matched_text == "" {
-		return replace_term
+		return strings.Trim(replace_term, "\n")
 	}
 	if matched_text == strings.ToUpper(matched_text) {
-		return strings.ToUpper(replace_term)
+		value := strings.ToUpper(replace_term)
+		return strings.Trim(value, "\n")
 	}
 	// FIRST LETTER UPPER
 	if len(matched_text) > 0 && unicode.IsUpper(rune(matched_text[0])) && matched_text[1:] == strings.ToLower(matched_text[1:]) {
-		return titleCaser.String(replace_term)
+		value := titleCaser.String(replace_term)
+		return strings.Trim(value, "\n")
 	}
 	// DEFAULT
-	return replace_term
+	return strings.Trim(replace_term, "\n")
 }
 
 func map_before_and_after(matched_line, matched_text string) (string, string) {

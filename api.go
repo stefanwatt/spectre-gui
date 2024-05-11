@@ -99,13 +99,12 @@ func (a *App) Replace(
 	))
 	utils.Log("calling sed")
 	write_event = REPLACE
-	ext.Sed(
+	ext.Replace(
 		replaced_match.Row,
 		replaced_match.Col,
 		replaced_match.AbsolutePath,
-		search_term,
-		replace_term,
-		preserve_case,
+		replaced_match.MatchedText,
+		replaced_match.ReplacementText,
 	)
 	a.current_matches = utils.Filter(a.current_matches, func(m match.Match) bool {
 		return m.FileName != replaced_match.FileName || m.Row != replaced_match.Row || m.Col != replaced_match.Col
@@ -165,7 +164,13 @@ func (a *App) ReplaceAll(
 	})
 	write_event = REPLACE_ALL
 	for _, match := range matches {
-		ext.Sed(match.Row, match.Col, match.AbsolutePath, search_term, replace_term, preserve_case)
+		ext.Replace(
+			match.Row,
+			match.Col,
+			match.AbsolutePath,
+			match.MatchedText,
+			match.ReplacementText,
+		)
 	}
 	replace_actions := utils.MapArray(matches, func(match match.Match) undo.ReplaceOp {
 		return undo.ReplaceOp{

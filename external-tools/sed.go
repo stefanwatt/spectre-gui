@@ -4,26 +4,31 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"strings"
 
 	utils "spectre-gui/utils"
 )
 
-func Sed(row int, col int, path string, search_term string, replace_term string, preserve_case bool) error {
+func Replace(row int, col int, path string, search_term string, replace_term string) error {
+	utils.Log(fmt.Sprintf("replacing: %s with %s", search_term, replace_term))
 	regex := fmt.Sprintf(
-		`%ds/^\(.\{%d\}\)%s/\1%s/`,
+		`%ds/^(.{%d})%s/\1%s/`,
 		row,
 		col-1,
 		search_term,
-		replace_term,
+		// HACK: this shouldnt be necessary
+		// where is the line break coming from?
+		strings.Trim(replace_term, "\n"),
 	)
 
 	cmd := exec.Command(
 		"sed",
 		"-i",
-		"-e",
+		"-E",
 		regex,
 		path,
 	)
+	utils.Log(fmt.Sprintf("sed command: %s", cmd.String()))
 	return cmd.Run()
 }
 

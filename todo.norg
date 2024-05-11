@@ -34,6 +34,7 @@
 
 *** (x) debounce all inputs
 ** (-) Features
+*** sqlite
 *** (x) replace all
 *** ( ) make directory a comma separated list as well
 *** ( ) remember last inputs

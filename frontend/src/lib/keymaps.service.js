@@ -33,14 +33,12 @@ export function setup_keymaps() {
         mods.push("a")
         break
       case "ArrowDown":
-        if (is_mod("c")) {
-          cursor_to_next_match()
-        }
+        event.preventDefault()
+        cursor_to_next_match()
         break
       case "ArrowUp":
-        if (is_mod("c")) {
-          cursor_to_prev_match()
-        }
+        event.preventDefault()
+        cursor_to_prev_match()
         break
 
       case "Enter":
