@@ -14,8 +14,15 @@ import (
 )
 
 func Highlight(_code string, filename string, col int, matched_text string, replacement string) (string, string) {
+	utils.Log(fmt.Sprintf("Highlighting code \n'%s' \nwith replacement: %s\non file%s", _code, replacement, filename))
 	code, delimiter := add_delimiter(_code, col, matched_text)
 	lexer := lexers.Match(filename)
+	if lexer == nil {
+		lexer = lexers.Get("plaintext")
+		if lexer == nil {
+			panic("Plaintext lexer not available")
+		}
+	}
 	var bytes bytes.Buffer
 	formatter := html.New(html.WithClasses(true), html.ClassPrefix("spectre-"))
 	iterator, err := lexer.Tokenise(nil, code)

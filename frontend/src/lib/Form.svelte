@@ -71,7 +71,7 @@
 		on:keyup={debounced_dir}
 		value={$dir}
 		type="text"
-		placeholder="Search..."
+		placeholder="eg. /home/user/Projects"
 	/>
 	<div class="w-1/2 pr-1 pt-2 sm:w-auto sm:pl-1 sm:pr-0 sm:pt-0">
 		<input
