@@ -1,22 +1,12 @@
 <script>
-	import { onMount } from 'svelte';
-	import '$lib/assets/prism.css';
 	import ChevronDown from '$lib/icons/ChevronDown.svelte';
 	import ChevronUp from '$lib/icons/ChevronUp.svelte';
 	import ResultsHeader from './ResultsHeader.svelte';
-	import { highlight_all } from './results.service';
 	import { results } from '$lib/store';
 	import Match from '$lib/Match.svelte';
 	import NoResults from './NoResults.svelte';
 
 	let collapsed = false;
-	onMount(async () => {
-		console.log('results', $results);
-		await import('$lib/assets/prism.js');
-		setTimeout(() => {
-			highlight_all();
-		});
-	});
 </script>
 
 <div class="grid w-full grid-cols-[1fr,15fr] overflow-x-hidden md:grid-cols-[5rem,auto]">

@@ -1,5 +1,4 @@
 <script>
-	import '$lib/assets/prism.css';
 	import Form from '$lib/Form.svelte';
 	import Results from '$lib/results/Results.svelte';
 	import { setup_keymaps } from '$lib/keymaps.service.js';

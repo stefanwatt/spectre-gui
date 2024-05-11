@@ -7,6 +7,7 @@ import (
 	"unicode"
 
 	ext "spectre-gui/external-tools"
+	"spectre-gui/highlighting"
 	"spectre-gui/utils"
 
 	"github.com/google/uuid"
@@ -24,6 +25,8 @@ type Match struct {
 	FileName        string
 	AbsolutePath    string
 	MatchedLine     string
+	Html            string
+	Css             string
 	TextBeforeMatch string
 	TextAfterMatch  string
 	MatchedText     string
@@ -72,12 +75,15 @@ func MapMatch(
 	if err != nil {
 		panic(err)
 	}
+	html, css := highlighting.Highlight(matched_line, path, col, matched_text, replacement_text)
 	before, after := map_before_and_after(matched_line, matched_text)
 	match := Match{
 		Id:              uuid.String(),
 		FileName:        filepath.Base(path),
 		AbsolutePath:    path,
 		MatchedLine:     matched_line,
+		Html:            html,
+		Css:             css,
 		TextBeforeMatch: before,
 		TextAfterMatch:  after,
 		MatchedText:     matched_text,
@@ -113,19 +119,19 @@ func map_replacement_text_preserve_case(matched_text string, replace_term string
 	titleCaser := cases.Title(language.English)
 	// ALL UPPERCASE
 	if matched_text == "" {
-		return strings.Trim(replace_term, "\n")
+		return replace_term
 	}
 	if matched_text == strings.ToUpper(matched_text) {
 		value := strings.ToUpper(replace_term)
-		return strings.Trim(value, "\n")
+		return value
 	}
 	// FIRST LETTER UPPER
 	if len(matched_text) > 0 && unicode.IsUpper(rune(matched_text[0])) && matched_text[1:] == strings.ToLower(matched_text[1:]) {
 		value := titleCaser.String(replace_term)
-		return strings.Trim(value, "\n")
+		return value
 	}
 	// DEFAULT
-	return strings.Trim(replace_term, "\n")
+	return replace_term
 }
 
 func map_before_and_after(matched_line, matched_text string) (string, string) {

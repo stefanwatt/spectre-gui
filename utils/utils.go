@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"os"
 	"os/exec"
 	"strings"
@@ -70,4 +72,17 @@ func RetryCommand(command string, args []string, retries int, delay time.Duratio
 	}
 
 	return nil, fmt.Errorf("command failed after %d attempts with error: %s", retries, err)
+}
+
+func RandomString(n int) (string, error) {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	result := make([]byte, n)
+	for i := range result {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			return "", err // Return the error if there's a problem generating the random number
+		}
+		result[i] = letters[num.Int64()]
+	}
+	return string(result), nil
 }

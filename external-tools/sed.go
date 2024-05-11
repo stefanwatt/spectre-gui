@@ -78,5 +78,5 @@ func GetReplacementText(matched_line string, search_term string, replace_term st
 		utils.Log(err.Error())
 		return "", err
 	}
-	return output.String(), nil
+	return strings.Trim(output.String(), "\n"), nil
 }

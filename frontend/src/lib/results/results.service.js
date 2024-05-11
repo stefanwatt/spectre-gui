@@ -34,21 +34,11 @@ export function search(search_term, dir, include, exclude, flags, replace_term, 
         const first_match = matches[0];
         console.assert(!!first_match, first_match);
         selected_match.set(first_match)
-        setTimeout(() => {
-          highlight_all();
-        });
       },
     );
   } catch (error) {
     console.error(error)
   }
-}
-
-export function highlight_all() {
-  // @ts-ignore
-  if (!window.Prism) return
-  // @ts-ignore
-  window.Prism.highlightAll(false);
 }
 
 /** @param {App.RipgrepMatch}selected_match

@@ -65,8 +65,8 @@
      - preserve case
 ** (-) UI/UX
 *** BUG: daisyui/tailwind catppucin theme  colors not working
-*** ( ) BUG: highlighting is broken around search term highlight
-*** ( ) allow all languages for prism highlighting
+*** (x) BUG: highlighting is broken around search term highlight
+    use go pkg chroma instead of prism
 
 *** ( ) scroll when selected match is out of viewport
 *** (x) create file watchers on current matches

@@ -1,3 +1,434 @@
 @tailwind utilities;
 @tailwind components;
 @tailwind base;
+
+.spectre-matched,
+.spectre-replacement {
+  padding: 0.2rem;
+  text-align: center;
+  line-height: 100%;
+  margin: 0px 0.2rem;
+  font-family: monospace;
+  border-radius: 0.15rem;
+}
+
+.spectre-matched {
+  background-color: #eebebe;
+  color: #51576d;
+  text-decoration: line-through;
+}
+
+.spectre-replacement {
+  color: #eebebe;
+  background-color: #51576d;
+}
+
+/* Background */
+.spectre-bg {
+  color: #c6d0f5;
+  background-color: transparent;
+}
+
+/* PreWrapper */
+.spectre-chroma {
+  color: #c6d0f5;
+  background-color: transparent;
+}
+
+/* Error */
+.spectre-chroma .spectre-err {
+  color: #e78284
+}
+
+/* LineLink */
+.spectre-chroma .spectre-lnlinks {
+  outline: none;
+  text-decoration: none;
+  color: inherit
+}
+
+/* LineTableTD */
+.spectre-chroma .spectre-lntd {
+  vertical-align: top;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+/* LineTable */
+.spectre-chroma .spectre-lntable {
+  border-spacing: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+/* LineHighlight */
+.spectre-chroma .spectre-hl {
+  background-color: #51576d
+}
+
+/* LineNumbersTable */
+.spectre-chroma .spectre-lnt {
+  white-space: pre;
+  -webkit-user-select: none;
+  user-select: none;
+  margin-right: 0.4em;
+  padding: 0 0.4em 0 0.4em;
+  color: #838ba7
+}
+
+/* LineNumbers */
+.spectre-chroma .spectre-ln {
+  white-space: pre;
+  -webkit-user-select: none;
+  user-select: none;
+  margin-right: 0.4em;
+  padding: 0 0.4em 0 0.4em;
+  color: #838ba7
+}
+
+/* Line */
+.spectre-chroma .spectre-line {
+  display: flex;
+}
+
+/* Keyword */
+.spectre-chroma .spectre-k {
+  color: #ca9ee6
+}
+
+/* KeywordConstant */
+.spectre-chroma .spectre-kc {
+  color: #ef9f76
+}
+
+/* KeywordDeclaration */
+.spectre-chroma .spectre-kd {
+  color: #e78284
+}
+
+/* KeywordNamespace */
+.spectre-chroma .spectre-kn {
+  color: #81c8be
+}
+
+/* KeywordPseudo */
+.spectre-chroma .spectre-kp {
+  color: #ca9ee6
+}
+
+/* KeywordReserved */
+.spectre-chroma .spectre-kr {
+  color: #ca9ee6
+}
+
+/* KeywordType */
+.spectre-chroma .spectre-kt {
+  color: #e78284
+}
+
+/* NameAttribute */
+.spectre-chroma .spectre-na {
+  color: #8caaee
+}
+
+/* NameBuiltin */
+.spectre-chroma .spectre-nb {
+  color: #99d1db
+}
+
+/* NameBuiltinPseudo */
+.spectre-chroma .spectre-bp {
+  color: #99d1db
+}
+
+/* NameClass */
+.spectre-chroma .spectre-nc {
+  color: #e5c890
+}
+
+/* NameConstant */
+.spectre-chroma .spectre-no {
+  color: #e5c890
+}
+
+/* NameDecorator */
+.spectre-chroma .spectre-nd {
+  color: #8caaee;
+  font-weight: bold
+}
+
+/* NameEntity */
+.spectre-chroma .spectre-ni {
+  color: #81c8be
+}
+
+/* NameException */
+.spectre-chroma .spectre-ne {
+  color: #ef9f76
+}
+
+/* NameFunction */
+.spectre-chroma .spectre-nf {
+  color: #8caaee
+}
+
+/* NameFunctionMagic */
+.spectre-chroma .spectre-fm {
+  color: #8caaee
+}
+
+/* NameLabel */
+.spectre-chroma .spectre-nl {
+  color: #99d1db
+}
+
+/* NameNamespace */
+.spectre-chroma .spectre-nn {
+  color: #ef9f76
+}
+
+/* NameProperty */
+.spectre-chroma .spectre-py {
+  color: #ef9f76
+}
+
+/* NameTag */
+.spectre-chroma .spectre-nt {
+  color: #ca9ee6
+}
+
+/* NameVariable */
+.spectre-chroma .spectre-nv {
+  color: #f2d5cf
+}
+
+/* NameVariableClass */
+.spectre-chroma .spectre-vc {
+  color: #f2d5cf
+}
+
+/* NameVariableGlobal */
+.spectre-chroma .spectre-vg {
+  color: #f2d5cf
+}
+
+/* NameVariableInstance */
+.spectre-chroma .spectre-vi {
+  color: #f2d5cf
+}
+
+/* NameVariableMagic */
+.spectre-chroma .spectre-vm {
+  color: #f2d5cf
+}
+
+/* LiteralString */
+.spectre-chroma .spectre-s {
+  color: #a6d189
+}
+
+/* LiteralStringAffix */
+.spectre-chroma .spectre-sa {
+  color: #e78284
+}
+
+/* LiteralStringBacktick */
+.spectre-chroma .spectre-sb {
+  color: #a6d189
+}
+
+/* LiteralStringChar */
+.spectre-chroma .spectre-sc {
+  color: #a6d189
+}
+
+/* LiteralStringDelimiter */
+.spectre-chroma .spectre-dl {
+  color: #8caaee
+}
+
+/* LiteralStringDoc */
+.spectre-chroma .spectre-sd {
+  color: #737994
+}
+
+/* LiteralStringDouble */
+.spectre-chroma .spectre-s2 {
+  color: #a6d189
+}
+
+/* LiteralStringEscape */
+.spectre-chroma .spectre-se {
+  color: #8caaee
+}
+
+/* LiteralStringHeredoc */
+.spectre-chroma .spectre-sh {
+  color: #737994
+}
+
+/* LiteralStringInterpol */
+.spectre-chroma .spectre-si {
+  color: #a6d189
+}
+
+/* LiteralStringOther */
+.spectre-chroma .spectre-sx {
+  color: #a6d189
+}
+
+/* LiteralStringRegex */
+.spectre-chroma .spectre-sr {
+  color: #81c8be
+}
+
+/* LiteralStringSingle */
+.spectre-chroma .spectre-s1 {
+  color: #a6d189
+}
+
+/* LiteralStringSymbol */
+.spectre-chroma .spectre-ss {
+  color: #a6d189
+}
+
+/* LiteralNumber */
+.spectre-chroma .spectre-m {
+  color: #ef9f76
+}
+
+/* LiteralNumberBin */
+.spectre-chroma .spectre-mb {
+  color: #ef9f76
+}
+
+/* LiteralNumberFloat */
+.spectre-chroma .spectre-mf {
+  color: #ef9f76
+}
+
+/* LiteralNumberHex */
+.spectre-chroma .spectre-mh {
+  color: #ef9f76
+}
+
+/* LiteralNumberInteger */
+.spectre-chroma .spectre-mi {
+  color: #ef9f76
+}
+
+/* LiteralNumberIntegerLong */
+.spectre-chroma .spectre-il {
+  color: #ef9f76
+}
+
+/* LiteralNumberOct */
+.spectre-chroma .spectre-mo {
+  color: #ef9f76
+}
+
+/* Operator */
+.spectre-chroma .spectre-o {
+  color: #99d1db;
+  font-weight: bold
+}
+
+/* OperatorWord */
+.spectre-chroma .spectre-ow {
+  color: #99d1db;
+  font-weight: bold
+}
+
+/* Comment */
+.spectre-chroma .spectre-c {
+  color: #737994;
+  font-style: italic
+}
+
+/* CommentHashbang */
+.spectre-chroma .spectre-ch {
+  color: #737994;
+  font-style: italic
+}
+
+/* CommentMultiline */
+.spectre-chroma .spectre-cm {
+  color: #737994;
+  font-style: italic
+}
+
+/* CommentSingle */
+.spectre-chroma .spectre-c1 {
+  color: #737994;
+  font-style: italic
+}
+
+/* CommentSpecial */
+.spectre-chroma .spectre-cs {
+  color: #737994;
+  font-style: italic
+}
+
+/* CommentPreproc */
+.spectre-chroma .spectre-cp {
+  color: #737994;
+  font-style: italic
+}
+
+/* CommentPreprocFile */
+.spectre-chroma .spectre-cpf {
+  color: #737994;
+  font-weight: bold;
+  font-style: italic
+}
+
+/* GenericDeleted */
+.spectre-chroma .spectre-gd {
+  color: #e78284;
+  background-color: #414559
+}
+
+/* GenericEmph */
+.spectre-chroma .spectre-ge {
+  font-style: italic
+}
+
+/* GenericError */
+.spectre-chroma .spectre-gr {
+  color: #e78284
+}
+
+/* GenericHeading */
+.spectre-chroma .spectre-gh {
+  color: #ef9f76;
+  font-weight: bold
+}
+
+/* GenericInserted */
+.spectre-chroma .spectre-gi {
+  color: #a6d189;
+  background-color: #414559
+}
+
+/* GenericStrong */
+.spectre-chroma .spectre-gs {
+  font-weight: bold
+}
+
+/* GenericSubheading */
+.spectre-chroma .spectre-gu {
+  color: #ef9f76;
+  font-weight: bold
+}
+
+/* GenericTraceback */
+.spectre-chroma .spectre-gt {
+  color: #e78284
+}
+
+/* GenericUnderline */
+.spectre-chroma .spectre-gl {
+  text-decoration: underline
+}

@@ -11,6 +11,7 @@ require (
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+	github.com/dlclark/regexp2 v1.11.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
@@ -18,6 +19,7 @@ require (
 )
 
 require (
+	github.com/alecthomas/chroma/v2 v2.13.0
 	github.com/bep/debounce v1.2.1
 	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/go-ole/go-ole v1.2.6 // indirect
