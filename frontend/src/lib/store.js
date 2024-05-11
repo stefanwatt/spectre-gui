@@ -11,11 +11,11 @@ export const search_term = writable("foo");
 /**@type {import("svelte/store").Writable<string>}*/
 export const replace_term = writable("bar");
 /**@type {import("svelte/store").Writable<string>}*/
-export const dir = writable("/home/stefan/Projects/bubbletube");
+export const dir = writable("/home/stefan/Projects/spectre-gui");
 /**@type {import("svelte/store").Writable<string>}*/
-export const include = writable("**/*.go");
+export const include = writable("");
 /**@type {import("svelte/store").Writable<string>}*/
-export const exclude = writable("**/*.sh");
+export const exclude = writable("*.js,*.norg,*.json");
 
 /**@type {import("svelte/store").Writable<boolean>}*/
 export const preserve_case = writable(true);
