@@ -13,3 +13,7 @@ export function ReplaceAll(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
 export function Search(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
   return window['go']['main']['App']['Search'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
+
+export function Undo() {
+  return window['go']['main']['App']['Undo']();
+}

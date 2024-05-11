@@ -8,11 +8,22 @@ import (
 	ext "spectre-gui/external-tools"
 	filewatcher "spectre-gui/file-watcher"
 	"spectre-gui/match"
-	utils "spectre-gui/utils"
+	"spectre-gui/undo"
+	"spectre-gui/utils"
 
 	"github.com/bep/debounce"
 	"github.com/fsnotify/fsnotify"
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
+)
+
+var (
+	undo_stack  = undo.UndoStack{}
+	DELETE      = "file-deleted"
+	REPLACE     = "file-replaced"
+	REPLACE_ALL = "replaced-all"
+	UNDO        = "undo"
+	TOAST       = "toast"
+	write_event = REPLACE
 )
 
 func (a *App) Search(
@@ -83,6 +94,7 @@ func (a *App) Replace(
 		preserve_case,
 	))
 	utils.Log("calling sed")
+	write_event = REPLACE
 	ext.Sed(
 		replaced_match.Row,
 		replaced_match.Col,
@@ -94,6 +106,16 @@ func (a *App) Replace(
 	a.current_matches = utils.Filter(a.current_matches, func(m match.Match) bool {
 		return m.FileName != replaced_match.FileName || m.Row != replaced_match.Row || m.Col != replaced_match.Col
 	})
+	replace_op := undo.ReplaceOp{
+		Path:         replaced_match.AbsolutePath,
+		Row:          replaced_match.Row,
+		OriginalText: replaced_match.MatchedLine,
+	}
+	replace_actions := []undo.ReplaceOp{replace_op}
+	undo_stack.Push(undo.ReplaceAction{
+		Actions: replace_actions,
+	})
+	Runtime.EventsEmit(a.ctx, TOAST, "Match replaced")
 }
 
 func (a *App) ReplaceAll(
@@ -137,8 +159,33 @@ func (a *App) ReplaceAll(
 			use_regex,
 		)
 	})
+	write_event = REPLACE_ALL
 	for _, match := range matches {
 		ext.Sed(match.Row, match.Col, match.AbsolutePath, search_term, replace_term, preserve_case)
+	}
+	replace_actions := utils.MapArray(matches, func(match match.Match) undo.ReplaceOp {
+		return undo.ReplaceOp{
+			Path:         match.AbsolutePath,
+			Row:          match.Row,
+			OriginalText: match.MatchedLine,
+		}
+	})
+	undo_stack.Push(undo.ReplaceAction{
+		Actions: replace_actions,
+	})
+	Runtime.EventsEmit(a.ctx, TOAST, "Replaced all matches")
+}
+
+func (a *App) Undo() {
+	if undo_stack.IsEmpty() {
+		utils.Log("undo stack is empty - cannot pop")
+		Runtime.EventsEmit(a.ctx, TOAST, "Nothing to undo")
+		return
+	}
+	undo_action := undo_stack.Pop()
+	write_event = UNDO
+	for _, action := range undo_action.Actions {
+		ext.ReplaceLine(action.Path, action.Row, action.OriginalText)
 	}
 }
 
@@ -153,7 +200,7 @@ func on_write(event fsnotify.Event, ctx context.Context) {
 	}
 	utils.Log("on_write")
 	debounced_files_changed(func() {
-		Runtime.EventsEmit(ctx, "files-changed")
+		Runtime.EventsEmit(ctx, write_event)
 	})
 }
 
@@ -165,7 +212,7 @@ func on_delete(event fsnotify.Event, ctx context.Context) {
 
 	utils.Log("on_delete")
 	debounced_files_changed(func() {
-		Runtime.EventsEmit(ctx, "files-changed")
+		Runtime.EventsEmit(ctx, DELETE)
 	})
 }
 

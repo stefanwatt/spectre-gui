@@ -27,6 +27,17 @@ func Sed(row int, col int, path string, search_term string, replace_term string,
 	return cmd.Run()
 }
 
+func ReplaceLine(path string, row int, replacement string) error {
+	regex := fmt.Sprintf(`%dc\%s`, row, replacement)
+	cmd := exec.Command("sed", "-i", regex, path)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	return nil
+}
+
 func GetLine(path string, row int) (string, error) {
 	regex := fmt.Sprintf("%dp", row)
 	cmd := exec.Command("sed", "-n", regex, path)

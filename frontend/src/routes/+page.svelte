@@ -1,11 +1,9 @@
 <script>
 	import '$lib/assets/prism.css';
-	import { EventsOn } from '$lib/wailsjs/runtime/runtime.js';
 	import Form from '$lib/Form.svelte';
 	import Results from '$lib/results/Results.svelte';
 	import { setup_keymaps } from '$lib/keymaps.service.js';
 	import Toast from '$lib/notification/Toast.svelte';
-	import { show_toast } from '$lib/notification/notification.service.js';
 	import { search } from '$lib/results/results.service';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
@@ -19,6 +17,7 @@
 		search_flags,
 		preserve_case
 	} from '$lib/store';
+	import {listen_for_events} from '$lib/runtime-events.service';
 
 	/**@type {App.RipgrepMatch} */
 	$: {
@@ -28,17 +27,7 @@
 
 	onMount(() => {
 		setup_keymaps();
-
-		window.addEventListener('keyup', async (e) => {
-			if (e.key === 'Enter') {
-			}
-		});
-		EventsOn('files-changed', () => {
-			show_toast('info', 'File replaced');
-			const flags = $search_flags.map((f) => f.text);
-			console.log('searching with flags ', flags);
-			search($search_term, $dir, $include, $exclude, flags, $replace_term, $preserve_case);
-		});
+		listen_for_events()
 	});
 </script>
 

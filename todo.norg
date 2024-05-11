@@ -1,5 +1,6 @@
 * (-) Todo
-** (x) Technical
+** (-) Technical
+*** ( ) integrate with neovim
 *** tests
     - this is actually very testable
     - come up with scenarios and mock input files
@@ -42,9 +43,15 @@
       or something like that
     - space to mark
 *** ( ) undo 
+    - keep a stack of replace actions in go
+    - actions have an array of replaced lines and their original text
+    - push to stack on replace/replace all
+    - pop from stack on undo
+    - replace with original text
 
 *** ( ) Keyboard first
     make sure everything is fully keyboard navigable
+    what does that even mean?
 *** (x) search and replace behavior flags
 **** (x) highlighting
      - highlighting in regex mode needs to show the matched text not the search term
@@ -56,6 +63,7 @@
 **** (x) replace
      - preserve case
 ** (-) UI/UX
+*** BUG: daisyui/tailwind catppucin theme  colors not working
 *** ( ) BUG: highlighting is broken around search term highlight
 *** ( ) allow all languages for prism highlighting
 

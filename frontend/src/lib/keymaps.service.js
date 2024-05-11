@@ -2,7 +2,7 @@ import MatchWholeWord from "./icons/MatchWholeWord.svelte"
 import CaseSensitive from "./icons/CaseSensitive.svelte"
 import Regex from "./icons/Regex.svelte"
 import { get } from "svelte/store";
-import { Replace, ReplaceAll } from "$lib/wailsjs/go/main/App"
+import { Replace, ReplaceAll, Undo } from "$lib/wailsjs/go/main/App"
 import { cursor_to_next_match, cursor_to_prev_match } from "$lib/results/results.service";
 import {
   selected_match,
@@ -52,46 +52,46 @@ export function setup_keymaps() {
         Replace(get(selected_match), get(search_term), get(replace_term), get(preserve_case));
         break
       case "i":
-        if (is_mod("a")) {
-          search_flags.update(flags => {
-            if (flags.find(flag => flag.text === CASE_SENSITIVE)) {
-              return flags.filter(x => x.text !== CASE_SENSITIVE)
-            }
-            /**@type {App.SearchFlag[]}*/
-            // @ts-ignore
-            const updated = Array.from(new Set([...flags, { text: CASE_SENSITIVE, icon: CaseSensitive }]))
-            console.log("updated flags ", updated)
-            return updated
-          })
-        }
+        if (!is_mod("a")) return
+        search_flags.update(flags => {
+          if (flags.find(flag => flag.text === CASE_SENSITIVE)) {
+            return flags.filter(x => x.text !== CASE_SENSITIVE)
+          }
+          /**@type {App.SearchFlag[]}*/
+          // @ts-ignore
+          const updated = Array.from(new Set([...flags, { text: CASE_SENSITIVE, icon: CaseSensitive }]))
+          console.log("updated flags ", updated)
+          return updated
+        })
         break
       case "w":
-        if (is_mod("a")) {
-          // @ts-ignore
-          search_flags.update(flags => {
-            if (flags.find(flag => flag.text === MATCH_WHOLE_WORD)) {
-              return flags.filter(x => x.text !== MATCH_WHOLE_WORD)
-            }
-            const updated = Array.from(new Set([...flags, { text: MATCH_WHOLE_WORD, icon: MatchWholeWord }]))
-            console.log("updated flags ", updated)
-            return updated
-          })
-        }
+        if (!is_mod("a")) return
+        // @ts-ignore
+        search_flags.update(flags => {
+          if (flags.find(flag => flag.text === MATCH_WHOLE_WORD)) {
+            return flags.filter(x => x.text !== MATCH_WHOLE_WORD)
+          }
+          const updated = Array.from(new Set([...flags, { text: MATCH_WHOLE_WORD, icon: MatchWholeWord }]))
+          console.log("updated flags ", updated)
+          return updated
+        })
         break
       case "r":
-        if (is_mod("a")) {
-          // @ts-ignore
-          search_flags.update(flags => {
-            if (flags.find(flag => flag.text === REGEX)) {
-              return flags.filter(x => x.text !== REGEX)
-            }
-            const updated = Array.from(new Set([...flags, { text: REGEX, icon: Regex }]))
-            console.log("updated flags ", updated)
-            return updated
-          })
-        }
+        if (!is_mod("a")) return
+        // @ts-ignore
+        search_flags.update(flags => {
+          if (flags.find(flag => flag.text === REGEX)) {
+            return flags.filter(x => x.text !== REGEX)
+          }
+          const updated = Array.from(new Set([...flags, { text: REGEX, icon: Regex }]))
+          console.log("updated flags ", updated)
+          return updated
+        })
         break
-
+      case "z":
+        if (!is_mod("c")) return
+        Undo()
+        break;
       case "p":
         if (is_mod("a")) {
           preserve_case.update(x => !x)
