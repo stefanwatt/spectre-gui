@@ -8,14 +8,22 @@ import (
 
 var ctx context.Context
 
+type AppState struct {
+	SearchTerm     string
+	ReplaceTerm    string
+	Dir            string
+	Include        string
+	Exclude        string
+	CurrentMatches []match.Match
+	CaseSensitive  bool
+	Regex          bool
+	MatchWholeWord bool
+	PreserveCase   bool
+}
+
 type App struct {
-	ctx             context.Context
-	search_term     string
-	replace_term    string
-	dir             string
-	include         string
-	exclude         string
-	current_matches []match.Match
+	ctx   context.Context
+	State AppState
 }
 
 func NewApp() *App {

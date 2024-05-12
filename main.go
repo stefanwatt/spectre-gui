@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 
+	"spectre-gui/lua"
+	"spectre-gui/utils"
+
 	"github.com/jessevdk/go-flags"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/logger"
@@ -33,11 +36,24 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	app.search_term = opts.SearchTerm
-	app.replace_term = opts.ReplaceTerm
-	app.dir = opts.Dir
-	app.include = opts.Include
-	app.exclude = opts.Exclude
+	config := lua.LoadConfig()
+	utils.Log("LUA CONFIG")
+	fmt.Println("config.CaseSensitive", config.CaseSensitive)
+	fmt.Println("config.Regex", config.Regex)
+	fmt.Println("config.MatchWholeWord", config.MatchWholeWord)
+	fmt.Println("config.PreserveCase", config.PreserveCase)
+	state := AppState{
+		SearchTerm:     opts.SearchTerm,
+		ReplaceTerm:    opts.ReplaceTerm,
+		Dir:            opts.Dir,
+		Include:        opts.Include,
+		Exclude:        opts.Exclude,
+		CaseSensitive:  config.CaseSensitive,
+		Regex:          config.Regex,
+		MatchWholeWord: config.MatchWholeWord,
+		PreserveCase:   config.PreserveCase,
+	}
+	app.State = state
 	err = wails.Run(&options.App{
 		Title:              "spectre-gui",
 		LogLevel:           logger.ERROR,

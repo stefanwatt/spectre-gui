@@ -13,29 +13,48 @@
 		dir,
 		include,
 		exclude,
-		search_flags,
+		case_sensitive,
+		regex,
+		match_whole_word,
 		preserve_case,
 		results
 	} from '$lib/store';
 	import { listen_for_events } from '$lib/runtime-events.service';
-	import {GetFormValues} from "$lib/wailsjs/go/main/App"
+	import { GetAppState } from '$lib/wailsjs/go/main/App';
 
 	/**@type {App.RipgrepMatch} */
 	$: {
-		const flags = $search_flags.map((f) => f.text);
-		search($search_term, $dir, $include, $exclude, flags, $replace_term, $preserve_case);
+		search(
+			$search_term,
+			$replace_term,
+			$dir,
+			$exclude,
+			$include,
+			$case_sensitive,
+			$regex,
+			$match_whole_word,
+			$preserve_case
+		);
 	}
 
 	onMount(async () => {
 		setup_keymaps();
 		listen_for_events();
-		/**@type {App.FormValues}*/
-		const form_values = await GetFormValues()
-		$search_term = form_values.SearchTerm
-		$replace_term = form_values.ReplaceTerm
-		$dir = form_values.Dir
-		$include = form_values.Include
-		$exclude = form_values.Exclude
+		/**@type {App.State}*/
+		const app_state = await GetAppState();
+		$search_term = app_state.SearchTerm;
+		$replace_term = app_state.ReplaceTerm;
+		$dir = app_state.Dir;
+		$include = app_state.Include;
+		$exclude = app_state.Exclude;
+		// @ts-ignore
+		$case_sensitive = app_state.CaseSensitive;
+		// @ts-ignore
+		$regex = app_state.Regex;
+		// @ts-ignore
+		$match_whole_word = app_state.MatchWholeWord;
+		// @ts-ignore
+		$preserve_case = app_state.PreserveCase;
 	});
 	$: total_matches = $results?.flatMap((result) => result.Matches)?.length || 0;
 </script>

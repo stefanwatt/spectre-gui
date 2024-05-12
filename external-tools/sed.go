@@ -56,27 +56,42 @@ func GetLine(path string, row int) (string, error) {
 
 func GetReplacementText(matched_line string, search_term string, replace_term string) (string, error) {
 	cmd_echo := exec.Command("echo", matched_line)
-	cmd_sed := exec.Command("sed", "-n", "-E", fmt.Sprintf("s/.*%s.*/%s/ip", search_term, replace_term))
+	escaped := escape_special_chars(search_term)
+	utils.Log(fmt.Sprintf("search term: %s escaped:  %s", search_term, escaped))
+	regex := fmt.Sprintf("s/.*%s.*/%s/ip", escaped, replace_term)
+	cmd_sed := exec.Command("sed", "-n", "-E", regex)
+	utils.Log(fmt.Sprintf("sed command: %s", cmd_sed.String()))
 	var output bytes.Buffer
 	cmd_sed.Stdout = &output
 	cmd_sed.Stdin, _ = cmd_echo.StdoutPipe()
 
 	if err := cmd_sed.Start(); err != nil {
-		utils.Log("Error starting sed command:")
+		utils.Log("[GetReplacementText] Error starting sed command:")
 		utils.Log(err.Error())
 		return "", err
 	}
 
 	if err := cmd_echo.Run(); err != nil {
-		utils.Log("Error running echo command:")
+		utils.Log("[GetReplacementText] Error running echo command:")
 		utils.Log(err.Error())
 		return "", err
 	}
 
 	if err := cmd_sed.Wait(); err != nil {
-		utils.Log("Error waiting for sed command:")
+		utils.Log("[GetReplacementText]E rror waiting for sed command:")
 		utils.Log(err.Error())
 		return "", err
 	}
 	return strings.Trim(output.String(), "\n"), nil
+}
+
+func escape_special_chars(search_term string) string {
+	specialChars := []string{`/`, `\`, `&`, `.`, `(`, `)`, `*`, `^`, `$`, `[`, `]`}
+	escaped := search_term
+
+	for _, char := range specialChars {
+		escaped = strings.ReplaceAll(escaped, char, `\`+char)
+	}
+
+	return escaped
 }

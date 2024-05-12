@@ -31,7 +31,17 @@ func TestSearch(t *testing.T) {
 }
 
 func TestSearchSimple(t *testing.T) {
-	result := app.Search("foo", "/tmp/spectre-gui-test", "", "", []string{}, "", false)
+	result := app.Search(
+		"foo",
+		"",
+		"/tmp/spectre-gui-test",
+		"",
+		"",
+		false,
+		false,
+		false,
+		false,
+	)
 
 	if len(result) != 1 {
 		t.Errorf("Expected results to have 1 file, got %d", len(result))
@@ -42,7 +52,17 @@ func TestSearchSimple(t *testing.T) {
 }
 
 func TestSearchPreserveCase(t *testing.T) {
-	result := app.Search("foo", "/tmp/spectre-gui-test", "", "", []string{}, "bar", true)
+	result := app.Search(
+		"foo",
+		"bar",
+		"/tmp/spectre-gui-test",
+		"",
+		"",
+		false,
+		false,
+		false,
+		true,
+	)
 
 	matches := result[0].Matches
 	expected := "bar"

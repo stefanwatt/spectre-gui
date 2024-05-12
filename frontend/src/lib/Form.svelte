@@ -6,10 +6,15 @@
 		dir,
 		include,
 		exclude,
-		search_flags,
-		preserve_case
+		preserve_case,
+		case_sensitive,
+		regex,
+		match_whole_word
 	} from './store.js';
 	import PreserveCase from './icons/PreserveCase.svelte';
+	import CaseSensitive from './icons/CaseSensitive.svelte';
+	import Regex from './icons/Regex.svelte';
+	import MatchWholeWord from './icons/MatchWholeWord.svelte';
 
 	/**
 	 * @param {KeyboardEvent & { target: HTMLInputElement }} e
@@ -51,9 +56,15 @@
 				placeholder="Search..."
 				class="grow"
 			/>
-			{#each $search_flags as flag}
-				<svelte:component this={flag.icon} />
-			{/each}
+			{#if $case_sensitive}
+				<CaseSensitive></CaseSensitive>
+			{/if}
+			{#if $regex}
+				<Regex></Regex>
+			{/if}
+			{#if $match_whole_word}
+				<MatchWholeWord></MatchWholeWord>
+			{/if}
 		</label>
 	</div>
 	<div class="w-1/2 pl-1">

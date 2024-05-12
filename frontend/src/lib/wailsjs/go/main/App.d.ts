@@ -3,12 +3,12 @@
 import {main} from '../models';
 import {match} from '../models';
 
-export function GetFormValues():Promise<main.FormValues>;
+export function GetAppState():Promise<main.AppState>;
 
 export function Replace(arg1:match.Match,arg2:string,arg3:string,arg4:boolean):Promise<void>;
 
-export function ReplaceAll(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:Array<string>,arg7:boolean):Promise<void>;
+export function ReplaceAll(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean,arg7:boolean,arg8:boolean,arg9:boolean):Promise<void>;
 
-export function Search(arg1:string,arg2:string,arg3:string,arg4:string,arg5:Array<string>,arg6:string,arg7:boolean):Promise<Array<match.SearchResult>>;
+export function Search(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean,arg7:boolean,arg8:boolean,arg9:boolean):Promise<Array<match.SearchResult>>;
 
 export function Undo():Promise<void>;

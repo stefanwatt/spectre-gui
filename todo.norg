@@ -8,6 +8,10 @@
     - come up with scenarios and mock input files
     - probably just test api.go ?
 *** (x) fix delay on replacing
+*** ( ) BUG: search not working
+    search for "re(nvim"
+*** ( ) BUG: flickering while typing
+    maybe something with the debounce?
 *** (x) BUG: replace does nothing
     generally works on first try and subsequent ones with same search term.
     but following scenario generally doesnt work:

@@ -30,55 +30,42 @@ var (
 	write_event   = REPLACE
 )
 
-type FormValues struct {
-	SearchTerm  string
-	ReplaceTerm string
-	Dir         string
-	Include     string
-	Exclude     string
-}
-
-func (a *App) GetFormValues() FormValues {
-	return FormValues{
-		SearchTerm:  a.search_term,
-		ReplaceTerm: a.replace_term,
-		Dir:         a.dir,
-		Include:     a.include,
-		Exclude:     a.exclude,
-	}
+func (a *App) GetAppState() AppState {
+	return a.State
 }
 
 func (a *App) Search(
 	search_term string,
-	dir string,
-	include string,
-	exclude string,
-	flags []string,
 	replace_term string,
+	dir string,
+	exclude string,
+	include string,
+	case_sensitive bool,
+	regex bool,
+	match_whole_word bool,
 	preserve_case bool,
 ) []match.SearchResult {
-	utils.Log(fmt.Sprintf("searching...\nsearch_term: %s\ndir: %s\ninclude: %s\nexclude: %s\nflags: %s\nreplace_term:%s\npreserve_case:%v", search_term, dir, include, exclude, flags, replace_term, preserve_case))
+	utils.Log(fmt.Sprintf("searching...\nsearch_term: %s\ndir: %s\ninclude: %s\nexclude: %s\nreplace_term:%s\npreserve_case:%v", search_term, dir, include, exclude, replace_term, preserve_case))
 	if search_term == "" {
 		return []match.SearchResult{}
 	}
-	ctx, update_dir := filewatcher.InitContext(a.dir, dir, a.ctx)
-	a.dir = update_dir
+	ctx, update_dir := filewatcher.InitContext(a.State.Dir, dir, a.ctx)
+	a.State.Dir = update_dir
 	rg_lines, err := ext.Ripgrep(
 		search_term,
 		replace_term,
 		dir,
 		include,
 		exclude,
-		has_flag("case-sensitive", flags),
-		has_flag("regex", flags),
-		has_flag("match_whole_word", flags),
+		case_sensitive,
+		regex,
+		match_whole_word,
 		preserve_case,
 	)
 	if err != nil {
 		utils.Log(fmt.Sprintf("ripgrep error: %s", err))
 		return []match.SearchResult{}
 	}
-	use_regex := has_flag("regex", flags)
 	matches := utils.MapArray(rg_lines, func(line string) match.Match {
 		rg_info := ext.MapRipgrepInfo(line)
 		return match.MapMatch(
@@ -90,10 +77,10 @@ func (a *App) Search(
 			search_term,
 			replace_term,
 			preserve_case,
-			use_regex,
+			regex,
 		)
 	})
-	a.current_matches = matches
+	a.State.CurrentMatches = matches
 	search_results := match.MapSearchResult(matches)
 	dirs := match.MapDirs(search_results)
 	// TODO: how to handle errors in a go routine?
@@ -124,7 +111,7 @@ func (a *App) Replace(
 		replaced_match.MatchedText,
 		replaced_match.ReplacementText,
 	)
-	a.current_matches = utils.Filter(a.current_matches, func(m match.Match) bool {
+	a.State.CurrentMatches = utils.Filter(a.State.CurrentMatches, func(m match.Match) bool {
 		return m.FileName != replaced_match.FileName || m.Row != replaced_match.Row || m.Col != replaced_match.Col
 	})
 	replace_op := undo.ReplaceOp{
@@ -143,9 +130,11 @@ func (a *App) ReplaceAll(
 	search_term string,
 	replace_term string,
 	dir string,
-	include string,
 	exclude string,
-	flags []string,
+	include string,
+	case_sensitive bool,
+	regex bool,
+	match_whole_word bool,
 	preserve_case bool,
 ) {
 	utils.Log(fmt.Sprintf("replacing all: \nsearch_term: %s\nreplace_term: %s", search_term, replace_term))
@@ -156,16 +145,15 @@ func (a *App) ReplaceAll(
 		dir,
 		include,
 		exclude,
-		has_flag("case-sensitive", flags),
-		has_flag("regex", flags),
-		has_flag("match_whole_word", flags),
+		case_sensitive,
+		regex,
+		match_whole_word,
 		preserve_case,
 	)
 	if err != nil {
 		utils.Log(fmt.Sprintf("ripgrep error: %s", err))
 		return
 	}
-	use_regex := has_flag("regex", flags)
 	matches := utils.MapArray(rg_lines, func(line string) match.Match {
 		rg_info := ext.MapRipgrepInfo(line)
 		return match.MapMatch(
@@ -177,7 +165,7 @@ func (a *App) ReplaceAll(
 			search_term,
 			replace_term,
 			preserve_case,
-			use_regex,
+			regex,
 		)
 	})
 	write_event = REPLACE_ALL

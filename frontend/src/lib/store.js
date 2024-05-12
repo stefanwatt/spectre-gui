@@ -18,7 +18,11 @@ export const include = writable("");
 export const exclude = writable("");
 
 /**@type {import("svelte/store").Writable<boolean>}*/
+export const case_sensitive = writable(false);
+/**@type {import("svelte/store").Writable<boolean>}*/
+export const regex = writable(false);
+/**@type {import("svelte/store").Writable<boolean>}*/
+export const match_whole_word = writable(false);
+/**@type {import("svelte/store").Writable<boolean>}*/
 export const preserve_case = writable(true);
-
 /**@type {import("svelte/store").Writable<App.SearchFlag[]>}*/
-export const search_flags = writable([]);

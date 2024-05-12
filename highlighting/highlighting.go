@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"strings"
 
 	"spectre-gui/utils"
 
@@ -13,9 +12,8 @@ import (
 	"github.com/alecthomas/chroma/v2/styles"
 )
 
-func Highlight(_code string, filename string, col int, matched_text string, replacement string) (string, string) {
-	utils.Log(fmt.Sprintf("Highlighting code \n'%s' \nwith replacement: %s\non file%s", _code, replacement, filename))
-	code, delimiter := add_delimiter(_code, col, matched_text)
+func Highlight(code string, filename string, col int, matched_text string, replacement string) (string, string) {
+	utils.Log(fmt.Sprintf("Highlighting code \n'%s' \nwith replacement: %s\non file%s", code, replacement, filename))
 	lexer := lexers.Match(filename)
 	if lexer == nil {
 		lexer = lexers.Get("plaintext")
@@ -42,18 +40,17 @@ func Highlight(_code string, filename string, col int, matched_text string, repl
 		log.Fatal(err)
 	}
 	highlighted := bytes.String()
-	html := inject_match(highlighted, delimiter, matched_text, replacement)
+	html := inject_match(highlighted, matched_text, replacement)
 	formatter.WriteCSS(&bytes, style)
 	return html, bytes.String()
 }
 
-func inject_match(html string, delimiter string, matched_text string, replacement string) string {
-	match_html := fmt.Sprintf("<span class=\"spectre-matched\">%s</span><span class=\"spectre-replacement\">%s</span>", matched_text, replacement)
-	parts := strings.Split(html, delimiter)
-	if len(parts) != 3 {
-		panic("Failed to inject match into highlighted html")
-	}
-	return fmt.Sprintf("%s%s%s", parts[0], match_html, parts[2])
+func inject_match(html string, matched_text string, replacement string) string {
+	// match_html := fmt.Sprintf("<span class=\"spectre-matched\">%s</span><span class=\"spectre-replacement\">%s</span>", matched_text, replacement)
+	// before:=""
+	// after:=""
+	// return fmt.Sprintf("%s%s%s", before, match_html, after)
+	return html
 }
 
 func add_delimiter(code string, col int, matched_text string) (string, string) {

@@ -38,13 +38,16 @@ declare global {
       level: NotificationLevel;
       message: string;
     }
-    interface FormValues {
+    interface State {
       SearchTerm: string
       ReplaceTerm: string
       Dir: string
       Include: string
       Exclude: string
-
+      CaseSensitive: string
+      Regex: string
+      MatchWholeWord: string
+      PreserveCase: string
     }
   }
 }

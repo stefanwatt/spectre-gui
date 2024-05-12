@@ -7,19 +7,33 @@ import { get } from "svelte/store";
 * @param {string} dir 
 * @param {string} include 
 * @param {string} exclude 
-* @param {string[]} flags 
+* @param {boolean} case_sensitive 
+* @param {boolean} regex 
+* @param {boolean} match_whole_word 
 * @param {string} replace_term 
 * @param {boolean} preserve_case 
  * */
-export function search(search_term, dir, include, exclude, flags, replace_term, preserve_case) {
+export function search(
+  search_term,
+  replace_term,
+  dir,
+  exclude,
+  include,
+  case_sensitive,
+  regex,
+  match_whole_word,
+  preserve_case
+) {
   try {
     Search(
       search_term,
-      dir,
-      include,
-      exclude,
-      flags,
       replace_term,
+      dir,
+      exclude,
+      include,
+      case_sensitive,
+      regex,
+      match_whole_word,
       preserve_case,
     ).then(
         /**@param {App.RipgrepResult[]} res*/(res) => {
