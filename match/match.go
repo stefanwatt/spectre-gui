@@ -71,9 +71,9 @@ func MapMatch(
 	if preserve_case {
 		case_corrected_replace_term = map_replacement_text_preserve_case(matched_text, replace_term)
 	}
-	replacement_text, err := ext.GetReplacementText(matched_line, search_term, case_corrected_replace_term)
+	replacement_text, err := ext.GetReplacementText(matched_line, search_term, case_corrected_replace_term, use_regex)
 	if err != nil {
-		panic(err)
+		replacement_text = case_corrected_replace_term
 	}
 	html, css := highlighting.Highlight(matched_line, path, col, matched_text, replacement_text)
 	before, after := map_before_and_after(matched_line, matched_text)

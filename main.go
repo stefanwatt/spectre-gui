@@ -43,14 +43,19 @@ func main() {
 	fmt.Println("config.MatchWholeWord", config.MatchWholeWord)
 	fmt.Println("config.PreserveCase", config.PreserveCase)
 	state := AppState{
-		SearchTerm:     opts.SearchTerm,
-		ReplaceTerm:    opts.ReplaceTerm,
-		Dir:            opts.Dir,
-		Include:        opts.Include,
-		Exclude:        opts.Exclude,
-		CaseSensitive:  config.CaseSensitive,
-		Regex:          config.Regex,
-		MatchWholeWord: config.MatchWholeWord,
+		// SearchTerm:     opts.SearchTerm,
+		SearchTerm: `func\s([A-Z]\w*)\(`,
+		// ReplaceTerm: opts.ReplaceTerm,
+		ReplaceTerm: `fn \1(`,
+		// Dir:            opts.Dir,
+		Dir:           "/home/stefan/Projects/spectre-gui",
+		Include:       opts.Include,
+		Exclude:       opts.Exclude,
+		CaseSensitive: config.CaseSensitive,
+		// Regex:         config.Regex,
+		Regex: true,
+		// MatchWholeWord: config.MatchWholeWord,
+		MatchWholeWord: false,
 		PreserveCase:   config.PreserveCase,
 	}
 	app.State = state

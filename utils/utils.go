@@ -86,3 +86,11 @@ func RandomString(n int) (string, error) {
 	}
 	return string(result), nil
 }
+
+func SliceString(s string, index int) string {
+	runes := []rune(s)
+	if index < 0 || index > len(runes) {
+		return ""
+	}
+	return string(runes[index:])
+}

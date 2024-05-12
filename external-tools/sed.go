@@ -54,9 +54,14 @@ func GetLine(path string, row int) (string, error) {
 	return string(bytes), nil
 }
 
-func GetReplacementText(matched_line string, search_term string, replace_term string) (string, error) {
+func GetReplacementText(
+	matched_line string,
+	search_term string,
+	replace_term string,
+	use_regex bool,
+) (string, error) {
 	cmd_echo := exec.Command("echo", matched_line)
-	escaped := escape_special_chars(search_term)
+	escaped := EscapeSpecialChars(search_term, use_regex)
 	utils.Log(fmt.Sprintf("search term: %s escaped:  %s", search_term, escaped))
 	regex := fmt.Sprintf("s/.*%s.*/%s/ip", escaped, replace_term)
 	cmd_sed := exec.Command("sed", "-n", "-E", regex)
@@ -85,8 +90,11 @@ func GetReplacementText(matched_line string, search_term string, replace_term st
 	return strings.Trim(output.String(), "\n"), nil
 }
 
-func escape_special_chars(search_term string) string {
-	specialChars := []string{`/`, `\`, `&`, `.`, `(`, `)`, `*`, `^`, `$`, `[`, `]`}
+func EscapeSpecialChars(search_term string, use_regex bool) string {
+	specialChars := []string{`/`, `&`}
+	if !use_regex {
+		specialChars = append(specialChars, `(`, `)`, `\`, `.`, `*`, `$`, `[`, `]`, `^`)
+	}
 	escaped := search_term
 
 	for _, char := range specialChars {
