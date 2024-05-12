@@ -10,7 +10,9 @@
 </script>
 
 {#if $results?.length}
-	<div class="grid w-full grid-cols-[1fr,15fr] overflow-x-hidden md:grid-cols-[5rem,auto]">
+	<div
+		class="grid h-full w-full snap-y snap-mandatory grid-cols-[1fr,15fr] overflow-x-hidden overflow-y-scroll md:grid-cols-[5rem,auto]"
+	>
 		{#each $results as item (item.Path)}
 			<div class="mb-2 flex w-full items-center justify-end text-blue">
 				{#if !collapsed}
@@ -19,12 +21,12 @@
 					<ChevronUp></ChevronUp>
 				{/if}
 			</div>
-			<div class="mb-2">
+			<div class="mb-2 snap-start">
 				<ResultsHeader path={item.Path} match_count={item.Matches.length}></ResultsHeader>
 			</div>
 			{#each item.Matches as match (match.Id)}
 				{#if match.Col < 10000}
-					<div class="flex w-full items-center justify-end pr-2 text-overlay0">
+					<div class="flex w-full snap-start items-center justify-end pr-2 text-overlay0">
 						{match.Row}:{match.Col}
 					</div>
 					<Match {match}></Match>

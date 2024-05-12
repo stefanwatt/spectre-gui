@@ -71,7 +71,7 @@
 			<span>files</span>
 		</div>
 	{/if}
-	<div class="h-0 grow snap-y snap-mandatory overflow-x-hidden overflow-y-scroll pt-2">
+	<div class="h-0 grow overflow-y-hidden pt-2">
 		<Results></Results>
 	</div>
 </div>

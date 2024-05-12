@@ -43,20 +43,20 @@ func main() {
 	fmt.Println("config.MatchWholeWord", config.MatchWholeWord)
 	fmt.Println("config.PreserveCase", config.PreserveCase)
 	state := AppState{
-		// SearchTerm:     opts.SearchTerm,
-		SearchTerm: `func\s([A-Z]\w*)\(`,
-		// ReplaceTerm: opts.ReplaceTerm,
-		ReplaceTerm: `fn \1(`,
-		// Dir:            opts.Dir,
-		Dir:           "/home/stefan/Projects/spectre-gui",
+		SearchTerm: opts.SearchTerm,
+		// SearchTerm: `func\s([A-Z]\w*)\(`,
+		ReplaceTerm: opts.ReplaceTerm,
+		// ReplaceTerm: `fn \1(`,
+		Dir: opts.Dir,
+		// Dir:           "/home/stefan/Projects/spectre-gui",
 		Include:       opts.Include,
 		Exclude:       opts.Exclude,
 		CaseSensitive: config.CaseSensitive,
-		// Regex:         config.Regex,
-		Regex: true,
-		// MatchWholeWord: config.MatchWholeWord,
-		MatchWholeWord: false,
-		PreserveCase:   config.PreserveCase,
+		Regex:         config.Regex,
+		// Regex: true,
+		MatchWholeWord: config.MatchWholeWord,
+		// MatchWholeWord: false,
+		PreserveCase: config.PreserveCase,
 	}
 	app.State = state
 	err = wails.Run(&options.App{
