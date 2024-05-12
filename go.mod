@@ -5,6 +5,7 @@ go 1.21
 toolchain go1.22.2
 
 require (
+	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/wailsapp/wails/v2 v2.8.1
 )
@@ -21,7 +22,6 @@ require (
 require (
 	github.com/alecthomas/chroma/v2 v2.13.0
 	github.com/bep/debounce v1.2.1
-	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/uuid v1.3.0

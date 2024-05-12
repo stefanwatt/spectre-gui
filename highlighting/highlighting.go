@@ -65,17 +65,13 @@ func inject_match(html string, matched_text string, replacement string) string {
 	if err != nil {
 		utils.Log(err.Error())
 	} else {
-		utils.Log("children:")
-		fmt.Println(children)
+		utils.Log("children:", children)
 	}
 	before, middle, after := split_spans(matched_text, children)
 	utils.Log("inject match ; matched text: " + matched_text)
-	utils.Log("inject match;before:")
-	fmt.Println(before)
-	utils.Log("inject match;middle:")
-	fmt.Println(middle)
-	utils.Log("inject match;after:")
-	fmt.Println(after)
+	utils.Log("inject match;before:", before)
+	utils.Log("inject match;middle:", middle)
+	utils.Log("inject match;after:", after)
 	before_html := concat_outer_html(before)
 	middle_html := get_middle_html(middle, matched_text, match_html)
 	utils.Log(fmt.Sprintf("middle html: %s", middle_html))

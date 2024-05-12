@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"spectre-gui/lua"
-	"spectre-gui/utils"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/wailsapp/wails/v2"
@@ -37,11 +36,6 @@ func main() {
 		os.Exit(1)
 	}
 	config := lua.LoadConfig()
-	utils.Log("LUA CONFIG")
-	fmt.Println("config.CaseSensitive", config.CaseSensitive)
-	fmt.Println("config.Regex", config.Regex)
-	fmt.Println("config.MatchWholeWord", config.MatchWholeWord)
-	fmt.Println("config.PreserveCase", config.PreserveCase)
 	state := AppState{
 		SearchTerm: opts.SearchTerm,
 		// SearchTerm: `func\s([A-Z]\w*)\(`,

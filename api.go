@@ -49,9 +49,17 @@ func (a *App) Search(
 	if search_term == "" {
 		return []match.SearchResult{}
 	}
+	utils.StartTime = time.Now()
+	if a.search_ctx.cancel_func != nil {
+		a.search_ctx.cancel_func()
+	}
+	var search_ctx context.Context
+	search_ctx, a.search_ctx.cancel_func = context.WithCancel(context.Background())
 	ctx, update_dir := filewatcher.InitContext(a.State.Dir, dir, a.ctx)
 	a.State.Dir = update_dir
+	utils.LogTime("until ripgrep")
 	rg_lines, err := ext.Ripgrep(
+		search_ctx,
 		search_term,
 		replace_term,
 		dir,
@@ -62,13 +70,18 @@ func (a *App) Search(
 		match_whole_word,
 		preserve_case,
 	)
+	utils.LogTime("after ripgrep")
 	if err != nil {
 		utils.Log(fmt.Sprintf("ripgrep error: %s", err))
-		return []match.SearchResult{}
+		if ctx.Err() == context.Canceled {
+			utils.Log("Search was canceled")
+		}
+		return match.MapSearchResult(a.State.CurrentMatches)
 	}
-	matches := utils.MapArray(rg_lines, func(line string) match.Match {
+	matches := utils.MapArrayConcurrent(rg_lines, func(line string) match.Match {
 		rg_info := ext.MapRipgrepInfo(line)
-		return match.MapMatch(
+		utils.LogTime(fmt.Sprintf("after map ripgrep info for line %s", line))
+		m := match.MapMatch(
 			line,
 			rg_info.Path,
 			rg_info.MatchedText,
@@ -79,12 +92,17 @@ func (a *App) Search(
 			preserve_case,
 			regex,
 		)
+		utils.LogTime("after map match")
+		return m
 	})
+	utils.LogTime("after map array")
 	a.State.CurrentMatches = matches
 	search_results := match.MapSearchResult(matches)
+	utils.LogTime("after map search results")
 	dirs := match.MapDirs(search_results)
 	// TODO: how to handle errors in a go routine?
 	go filewatcher.WatchFiles(ctx, dirs, dir, on_write, on_delete)
+	utils.LogTime("before returning")
 	return search_results
 }
 
@@ -139,7 +157,14 @@ func (a *App) ReplaceAll(
 ) {
 	utils.Log(fmt.Sprintf("replacing all: \nsearch_term: %s\nreplace_term: %s", search_term, replace_term))
 	utils.Log("calling sed")
+
+	if a.search_ctx.cancel_func != nil {
+		a.search_ctx.cancel_func()
+	}
+	var search_ctx context.Context
+	search_ctx, a.search_ctx.cancel_func = context.WithCancel(context.Background())
 	rg_lines, err := ext.Ripgrep(
+		search_ctx,
 		search_term,
 		replace_term,
 		dir,

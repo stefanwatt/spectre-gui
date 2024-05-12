@@ -1,7 +1,10 @@
 package externaltools
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -14,6 +17,7 @@ import (
 )
 
 func Ripgrep(
+	ctx context.Context,
 	search_term string,
 	replace_term string,
 	dir string,
@@ -33,15 +37,19 @@ func Ripgrep(
 		regex,
 		match_whole_word,
 	)
-	output, err := utils.RetryCommand("rg", args, 3, 1000)
-	if err != nil {
-		return []string{}, err
-	}
+	cmd := exec.CommandContext(ctx, "rg", args...)
+	var output bytes.Buffer
+	cmd.Stdout = &output
 
-	rg_output_lines := strings.Split(*output, "\n")
+	err := cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+	rg_output_lines := strings.Split(output.String(), "\n")
 	rg_output_lines = utils.Filter(rg_output_lines, func(line string) bool {
 		return line != ""
 	})
+
 	return rg_output_lines, nil
 }
 
@@ -58,7 +66,7 @@ func MapRipgrepInfo(output string) RipgrepInfo {
 	submatches := re.FindStringSubmatch(output)
 
 	if len(submatches) != 5 {
-		fmt.Println("Error parsing line:", output)
+		utils.Log("Error parsing line:", output)
 		panic("incorrect format from ripgrep output")
 	}
 	path := submatches[1]

@@ -37,7 +37,7 @@ func ReplaceLine(path string, row int, replacement string) error {
 	cmd := exec.Command("sed", "-i", regex, path)
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println(err)
+		utils.Log(err.Error())
 		return err
 	}
 	return nil

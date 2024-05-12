@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -26,6 +27,40 @@ func MapArray[T any, U any](array []T, map_func func(T) U) []U {
 		result = append(result, map_func(value))
 	}
 	return result
+}
+
+func MapArrayConcurrent[T any, U any](items []T, transform func(T) U) []U {
+	results := make([]U, len(items))
+	var wg sync.WaitGroup
+	wg.Add(len(items))
+
+	// Result channel to collect transformation results in order
+	type result struct {
+		index int
+		value U
+	}
+	resultChan := make(chan result, len(items))
+
+	for i, item := range items {
+		go func(index int, val T) {
+			defer wg.Done()
+			transformedValue := transform(val)
+			resultChan <- result{index: index, value: transformedValue}
+		}(i, item)
+	}
+
+	// Close the channel in a goroutine after all goroutines finish
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// Collect results from the channel
+	for res := range resultChan {
+		results[res.index] = res.value
+	}
+
+	return results
 }
 
 func Filter[T any](array []T, filter_func func(T) bool) []T {
@@ -60,11 +95,11 @@ func RetryCommand(command string, args []string, retries int, delay time.Duratio
 			Log(fmt.Sprintf("Output: %s", output))
 			return &output, nil
 		}
-		fmt.Printf("Attempt %d failed: %s\n", i+1, cmdErr)
-		fmt.Printf("Command: %s %s\n", command, strings.Join(args, " "))
+		Log("Attempt %d failed: %s\n", i+1, cmdErr)
+		Log("Command: %s %s\n", command, strings.Join(args, " "))
 
 		if i < retries-1 {
-			fmt.Println("Waiting before retry...")
+			Log("Waiting before retry...")
 			time.Sleep(delay)
 		}
 

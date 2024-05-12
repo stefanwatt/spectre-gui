@@ -20,10 +20,15 @@ type AppState struct {
 	MatchWholeWord bool
 	PreserveCase   bool
 }
+type SearchContext struct {
+	ctx         context.Context
+	cancel_func context.CancelFunc
+}
 
 type App struct {
-	ctx   context.Context
-	State AppState
+	ctx        context.Context
+	State      AppState
+	search_ctx SearchContext
 }
 
 func NewApp() *App {
@@ -32,4 +37,9 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	search_ctx, cancel := context.WithCancel(context.Background())
+	a.search_ctx = SearchContext{
+		ctx:         search_ctx,
+		cancel_func: cancel,
+	}
 }
