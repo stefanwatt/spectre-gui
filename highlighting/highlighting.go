@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strings"
 	"unicode"
 
@@ -11,20 +12,14 @@ import (
 
 	"spectre-gui/utils"
 
+	"github.com/alecthomas/chroma/v2"
 	html_formatter "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/styles"
 )
 
-func Highlight(code string, filename string, col int, matched_text string, replacement string) (string, string) {
+func Highlight(code string, lexer chroma.Lexer, filename string, col int, matched_text string, replacement string) (string, string) {
 	utils.Log(fmt.Sprintf("Highlighting code \n'%s' \nwith replacement: %s\non file%s", code, replacement, filename))
-	lexer := lexers.Match(filename)
-	if lexer == nil {
-		lexer = lexers.Get("plaintext")
-		if lexer == nil {
-			panic("Plaintext lexer not available")
-		}
-	}
 	var bytes bytes.Buffer
 	formatter := html_formatter.New(
 		html_formatter.WithClasses(true),
@@ -48,6 +43,22 @@ func Highlight(code string, filename string, col int, matched_text string, repla
 	html := inject_match(highlighted, matched_text, replacement)
 	formatter.WriteCSS(&bytes, style)
 	return html, bytes.String()
+}
+
+var lexerCache = make(map[string]chroma.Lexer)
+
+func MatchLexer(filename string) chroma.Lexer {
+	ext := strings.TrimLeft(filepath.Ext(filename), ".")
+	if cached_lexer, exists := lexerCache[ext]; exists {
+		return cached_lexer
+	} else {
+		lexer := lexers.Get(ext)
+		if lexer == nil {
+			lexer = lexers.Fallback
+		}
+		lexerCache[ext] = lexer
+		return lexer
+	}
 }
 
 func inject_match(html string, matched_text string, replacement string) string {
@@ -145,29 +156,35 @@ func get_middle_html(spans []ChromaSpan, matched_text string, match_html string)
 	}
 	end_match := start_match + len(matched_text)
 	current_html_index := 0
+
+	// Adjusted logic to ensure that modifications respect HTML boundaries
 	for _, span := range spans {
 		span_length := len(span.InnerHtml)
 		span_end_html_index := current_html_index + span_length
+
 		if start_match >= current_html_index && start_match < span_end_html_index {
 			relative_start := start_match - current_html_index
 			relative_end := end_match - current_html_index
-			if relative_start < 0 {
-				relative_start = 0
-			}
+
 			if relative_end > span_length {
 				relative_end = span_length
 			}
-			if relative_start > 0 && relative_start <= span_length {
+
+			if relative_start > 0 {
 				result.WriteString(span.OuterHtml[:strings.Index(span.OuterHtml, span.InnerHtml)+relative_start])
 			}
+
 			result.WriteString(match_html)
-			if relative_end < span_length && relative_end >= 0 {
-				after_match_start := strings.LastIndex(span.OuterHtml, span.InnerHtml) + relative_end
-				if after_match_start < len(span.OuterHtml) {
-					result.WriteString(span.OuterHtml[after_match_start:])
+
+			if relative_end < span_length {
+				// Correctly find where the InnerHtml ends within the OuterHtml
+				innerHtmlStart := strings.Index(span.OuterHtml, span.InnerHtml)
+				afterMatchStart := innerHtmlStart + relative_end
+				if afterMatchStart < len(span.OuterHtml) {
+					result.WriteString(span.OuterHtml[afterMatchStart:])
 				}
 			}
-			start_match = int(^uint(0) >> 1)
+			start_match = int(^uint(0) >> 1) // Ensuring we do not process the match again
 		} else {
 			if start_match > span_end_html_index {
 				result.WriteString(span.OuterHtml)

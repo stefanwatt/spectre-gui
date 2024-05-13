@@ -10,6 +10,7 @@ import (
 	"spectre-gui/highlighting"
 	"spectre-gui/utils"
 
+	"github.com/alecthomas/chroma/v2"
 	"github.com/google/uuid"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -58,6 +59,7 @@ func MapMatch(
 	replace_term string,
 	preserve_case bool,
 	use_regex bool,
+	lexer chroma.Lexer,
 ) Match {
 	matched_line, err := ext.GetLine(path, row)
 	if err != nil {
@@ -75,7 +77,7 @@ func MapMatch(
 	if err != nil {
 		replacement_text = case_corrected_replace_term
 	}
-	html, css := highlighting.Highlight(matched_line, path, col, matched_text, replacement_text)
+	html, css := highlighting.Highlight(matched_line, lexer, path, col, matched_text, replacement_text)
 	before, after := map_before_and_after(matched_line, matched_text)
 	match := Match{
 		Id:              uuid.String(),

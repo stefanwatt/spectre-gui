@@ -9,7 +9,10 @@ import (
 
 var do_log = false
 
-var StartTime time.Time
+var (
+	StartTime time.Time
+	LastTime  time.Time
+)
 
 func Log(text string, args ...interface{}) {
 	if do_log {
@@ -20,6 +23,14 @@ func Log(text string, args ...interface{}) {
 
 func LogTime(text string) {
 	duration := time.Since(StartTime)
+	LastTime = time.Now()
 	message := "\n" + lipgloss.NewStyle().Background(lipgloss.Color("#fff")).Foreground(lipgloss.Color("#000")).Render(text) + "\n"
-	fmt.Println(message+" : ", duration)
+	fmt.Println(message+" took ", duration)
+}
+
+func LogTimeSinceLast(text string) {
+	duration := time.Since(LastTime)
+	message := "\n" + lipgloss.NewStyle().Background(lipgloss.Color("#fff")).Foreground(lipgloss.Color("#000")).Render(text) + "\n"
+	fmt.Printf("\noperation '%s' took %v", message, duration)
+	LastTime = time.Now()
 }

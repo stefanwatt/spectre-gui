@@ -7,10 +7,13 @@ import (
 
 	ext "spectre-gui/external-tools"
 	filewatcher "spectre-gui/file-watcher"
+	"spectre-gui/highlighting"
 	"spectre-gui/match"
 	"spectre-gui/undo"
 	"spectre-gui/utils"
 
+	"github.com/alecthomas/chroma/v2"
+	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/bep/debounce"
 	"github.com/fsnotify/fsnotify"
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -34,6 +37,12 @@ func (a *App) GetAppState() AppState {
 	return a.State
 }
 
+type RglineRgInfoLexer struct {
+	rg_line string
+	rg_info ext.RipgrepInfo
+	lexer   chroma.Lexer
+}
+
 func (a *App) Search(
 	search_term string,
 	replace_term string,
@@ -46,6 +55,7 @@ func (a *App) Search(
 	preserve_case bool,
 ) []match.SearchResult {
 	utils.Log(fmt.Sprintf("searching...\nsearch_term: %s\ndir: %s\ninclude: %s\nexclude: %s\nreplace_term:%s\npreserve_case:%v", search_term, dir, include, exclude, replace_term, preserve_case))
+	utils.LogTime("Search")
 	if search_term == "" {
 		return []match.SearchResult{}
 	}
@@ -57,7 +67,7 @@ func (a *App) Search(
 	search_ctx, a.search_ctx.cancel_func = context.WithCancel(context.Background())
 	ctx, update_dir := filewatcher.InitContext(a.State.Dir, dir, a.ctx)
 	a.State.Dir = update_dir
-	utils.LogTime("until ripgrep")
+	utils.LogTimeSinceLast("before ripgrep")
 	rg_lines, err := ext.Ripgrep(
 		search_ctx,
 		search_term,
@@ -70,7 +80,7 @@ func (a *App) Search(
 		match_whole_word,
 		preserve_case,
 	)
-	utils.LogTime("after ripgrep")
+	utils.LogTimeSinceLast("after ripgrep")
 	if err != nil {
 		utils.Log(fmt.Sprintf("ripgrep error: %s", err))
 		if ctx.Err() == context.Canceled {
@@ -78,9 +88,20 @@ func (a *App) Search(
 		}
 		return match.MapSearchResult(a.State.CurrentMatches)
 	}
-	matches := utils.MapArrayConcurrent(rg_lines, func(line string) match.Match {
+	triples := utils.MapArray(rg_lines, func(line string) RglineRgInfoLexer {
 		rg_info := ext.MapRipgrepInfo(line)
-		utils.LogTime(fmt.Sprintf("after map ripgrep info for line %s", line))
+		lexer := highlighting.MatchLexer(rg_info.Path)
+		return RglineRgInfoLexer{
+			rg_line: line,
+			rg_info: rg_info,
+			lexer:   lexer,
+		}
+	})
+
+	matches := utils.MapArrayConcurrent(triples, func(triple RglineRgInfoLexer) match.Match {
+		line := triple.rg_line
+		rg_info := triple.rg_info
+		lexer := triple.lexer
 		m := match.MapMatch(
 			line,
 			rg_info.Path,
@@ -91,18 +112,17 @@ func (a *App) Search(
 			replace_term,
 			preserve_case,
 			regex,
+			lexer,
 		)
-		utils.LogTime("after map match")
 		return m
 	})
-	utils.LogTime("after map array")
+	utils.LogTimeSinceLast("map array")
 	a.State.CurrentMatches = matches
 	search_results := match.MapSearchResult(matches)
-	utils.LogTime("after map search results")
 	dirs := match.MapDirs(search_results)
 	// TODO: how to handle errors in a go routine?
 	go filewatcher.WatchFiles(ctx, dirs, dir, on_write, on_delete)
-	utils.LogTime("before returning")
+	utils.LogTime("search")
 	return search_results
 }
 
@@ -179,6 +199,7 @@ func (a *App) ReplaceAll(
 		utils.Log(fmt.Sprintf("ripgrep error: %s", err))
 		return
 	}
+	lexer := lexers.Get("plaintext")
 	matches := utils.MapArray(rg_lines, func(line string) match.Match {
 		rg_info := ext.MapRipgrepInfo(line)
 		return match.MapMatch(
@@ -191,6 +212,7 @@ func (a *App) ReplaceAll(
 			replace_term,
 			preserve_case,
 			regex,
+			lexer,
 		)
 	})
 	write_event = REPLACE_ALL
