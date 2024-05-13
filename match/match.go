@@ -3,6 +3,7 @@ package match
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -39,14 +40,38 @@ type Match struct {
 func MapSearchResult(matches []Match) []SearchResult {
 	grouped := make(map[string][]Match)
 	for _, match := range matches {
-		key := match.FileName
+		key := match.AbsolutePath
 		grouped[key] = append(grouped[key], match)
 	}
 	var search_results []SearchResult
 	for key, value := range grouped {
-		search_results = append(search_results, SearchResult{Path: key, Matches: value})
+		shortPath := key
+		search_results = append(search_results, SearchResult{Path: shortPath, Matches: value})
 	}
+	search_results = map_unique_paths(search_results)
+	sort.Slice(search_results, func(i, j int) bool {
+		return search_results[i].Path > search_results[j].Path
+	})
 	return search_results
+}
+
+func map_unique_paths(results []SearchResult) []SearchResult {
+	updated_results := make([]SearchResult, len(results))
+	copy(updated_results, results)
+	updated_results = utils.MapArray(updated_results, func(result SearchResult) SearchResult {
+		same_path_results := utils.Filter(updated_results, func(found_result SearchResult) bool {
+			return found_result.Path == result.Path
+		})
+		if len(same_path_results) == 0 {
+			return result
+		}
+		adapted_path := utils.GetLastSubdirAndFilename(result.Path)
+		return SearchResult{
+			Path:    adapted_path,
+			Matches: result.Matches,
+		}
+	})
+	return updated_results
 }
 
 func MapMatch(

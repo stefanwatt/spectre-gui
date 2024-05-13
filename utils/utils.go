@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -79,6 +80,11 @@ func Flatten[T any](slice [][]T) []T {
 		flatSlice = append(flatSlice, innerSlice...)
 	}
 	return flatSlice
+}
+
+func GetLastSubdirAndFilename(absolutePath string) string {
+	lastSubdir := filepath.Base(filepath.Dir(absolutePath))
+	return lastSubdir + "/" + filepath.Base(absolutePath)
 }
 
 func RetryCommand(command string, args []string, retries int, delay time.Duration) (*string, error) {

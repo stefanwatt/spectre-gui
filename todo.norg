@@ -7,11 +7,10 @@
     - this is actually very testable
     - come up with scenarios and mock input files
     - probably just test api.go ?
-*** (x) fix delay on replacing
-*** ( ) BUG: feedback loop
-    seems like backend is sending an update and then frontend searches again
-    somehow it gets stuck in a loop
+*** (-) fix delay on replacing
+    search is pretty fast again, but seems to take a lot of cpu resources
 *** ( ) BUG: some matches dont show proper match/replacement indicators
+*** ( ) BUG: matches with same filename but different subdirs get grouped
 *** ( ) BUG: flickering while typing
     maybe something with the debounce?
 *** (x) BUG: replace does nothing

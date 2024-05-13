@@ -1,5 +1,5 @@
 import { Search } from "$lib/wailsjs/go/main/App";
-import { selected_match, results } from "$lib/store";
+import { selected_match, results, replace_term as replace_term$ } from "$lib/store";
 import { get } from "svelte/store";
 
 /**
@@ -10,12 +10,10 @@ import { get } from "svelte/store";
 * @param {boolean} case_sensitive 
 * @param {boolean} regex 
 * @param {boolean} match_whole_word 
-* @param {string} replace_term 
 * @param {boolean} preserve_case 
  * */
 export function search(
   search_term,
-  replace_term,
   dir,
   exclude,
   include,
@@ -24,6 +22,7 @@ export function search(
   match_whole_word,
   preserve_case
 ) {
+  const replace_term = get(replace_term$)
   try {
     Search(
       search_term,

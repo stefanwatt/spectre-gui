@@ -26,7 +26,6 @@
 	$: {
 		search(
 			$search_term,
-			$replace_term,
 			$dir,
 			$exclude,
 			$include,
