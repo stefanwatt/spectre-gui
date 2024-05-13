@@ -44,5 +44,27 @@
 	class:bg-surface1={$selected_match === match}
 	class="m-1 flex w-full cursor-pointer snap-start justify-start rounded-sm p-1"
 >
-	{@html match.Html}
+	{#if match.TextBeforeMatch}
+		<div class="flex h-full items-center">
+			<code class="language-go">
+				<div>{match.TextBeforeMatch}</div>
+			</code>
+		</div>
+	{/if}
+
+	<div class="flex h-full items-center whitespace-pre">
+		<div
+			class="spectre-matched flex whitespace-pre-wrap rounded-sm bg-flamingo font-mono text-surface1 line-through"
+		>
+			{match.MatchedText}
+		</div>
+		<div class="spectre-replacement ml-1 whitespace-pre rounded-sm bg-surface1 text-flamingo">
+			{match.ReplacementText}
+		</div>
+	</div>
+	<div class="flex h-full items-center">
+		<code class="language-go bg-transparent">
+			<div>{match.TextAfterMatch}</div>
+		</code>
+	</div>
 </button>
