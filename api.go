@@ -88,6 +88,9 @@ func (a *App) Search(
 		}
 		return match.MapSearchResult(a.State.CurrentMatches)
 	}
+	// if len(rg_lines) > 0 {
+	// 	rg_lines = rg_lines[:1]
+	// }
 	triples := utils.MapArray(rg_lines, func(line string) RglineRgInfoLexer {
 		rg_info := ext.MapRipgrepInfo(line)
 		lexer := highlighting.MatchLexer(rg_info.Path)

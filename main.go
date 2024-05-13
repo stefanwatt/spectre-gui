@@ -38,9 +38,9 @@ func main() {
 	config := lua.LoadConfig()
 	state := AppState{
 		SearchTerm: opts.SearchTerm,
-		// SearchTerm: `func\s([A-Z]\w*)\(`,
+		// SearchTerm: "func",
 		ReplaceTerm: opts.ReplaceTerm,
-		// ReplaceTerm: `fn \1(`,
+		// ReplaceTerm: "fn",
 		Dir: opts.Dir,
 		// Dir:           "/home/stefan/Projects/spectre-gui",
 		Include:       opts.Include,

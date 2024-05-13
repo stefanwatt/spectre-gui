@@ -19,7 +19,7 @@ import (
 )
 
 func Highlight(code string, lexer chroma.Lexer, filename string, col int, matched_text string, replacement string) (string, string) {
-	utils.Log(fmt.Sprintf("Highlighting code \n'%s' \nwith replacement: %s\non file%s", code, replacement, filename))
+	utils.Log2(fmt.Sprintf("Highlighting code \n'%s' \nwith replacement: %s\non file%s", code, replacement, filename))
 	var bytes bytes.Buffer
 	formatter := html_formatter.New(
 		html_formatter.WithClasses(true),
@@ -39,7 +39,7 @@ func Highlight(code string, lexer chroma.Lexer, filename string, col int, matche
 		log.Fatal(err)
 	}
 	highlighted := bytes.String()
-	utils.Log(fmt.Sprintf("highlighted code: %s", highlighted))
+	utils.Log2(fmt.Sprintf("highlighted code: %s", highlighted))
 	html := inject_match(highlighted, matched_text, replacement)
 	formatter.WriteCSS(&bytes, style)
 	return html, bytes.String()
@@ -63,7 +63,7 @@ func MatchLexer(filename string) chroma.Lexer {
 
 func inject_match(html string, matched_text string, replacement string) string {
 	if matched_text == "" {
-		utils.Log("matched text empty -> cannot inject match html")
+		utils.Log2("matched text empty -> cannot inject match html")
 		return html
 	}
 	replacement_html := ""
@@ -74,19 +74,21 @@ func inject_match(html string, matched_text string, replacement string) string {
 	children, err := get_children(html)
 
 	if err != nil {
-		utils.Log(err.Error())
+		utils.Log2(err.Error())
 	} else {
-		utils.Log("children:", children)
+		utils.Log2("children:", children)
 	}
 	before, middle, after := split_spans(matched_text, children)
-	utils.Log("inject match ; matched text: " + matched_text)
-	utils.Log("inject match;before:", before)
-	utils.Log("inject match;middle:", middle)
-	utils.Log("inject match;after:", after)
+	utils.Log2("inject match ; matched text: " + matched_text)
+	utils.Log2("inject match;before:", before)
+	utils.Log2("inject match;middle:", middle)
+	utils.Log2("inject match;after:", after)
 	before_html := concat_outer_html(before)
+	utils.Log2(fmt.Sprintf("before html: %s", before_html))
 	middle_html := get_middle_html(middle, matched_text, match_html)
-	utils.Log(fmt.Sprintf("middle html: %s", middle_html))
+	utils.Log2(fmt.Sprintf("middle html: %s", middle_html))
 	after_html := concat_outer_html(after)
+	utils.Log2(fmt.Sprintf("after html: %s", after_html))
 
 	return fmt.Sprintf(
 		`<code class="spectre-chroma">%s%s%s</code`,
@@ -142,55 +144,74 @@ func get_children(html_content string) ([]ChromaSpan, error) {
 	return spans, nil
 }
 
-func get_middle_html(spans []ChromaSpan, matched_text string, match_html string) string {
-	if len(spans) == 0 {
+func get_middle_html(containing_spans []ChromaSpan, matched_text string, match_html string) string {
+	if len(containing_spans) == 0 {
 		return match_html
 	}
 
-	var result bytes.Buffer
-	concatenated_html := concat_inner_html(spans)
-	start_match := strings.Index(concatenated_html, matched_text)
+	var concatenated_inner_html bytes.Buffer
+	for _, span := range containing_spans {
+		concatenated_inner_html.WriteString(span.InnerHtml)
+	}
+	concatenatedHTML := concatenated_inner_html.String()
 
-	if start_match == -1 {
+	startMatch := strings.Index(concatenatedHTML, matched_text)
+	if startMatch == -1 {
 		return ""
 	}
-	end_match := start_match + len(matched_text)
+
+	return inject_match_html(containing_spans, startMatch, len(matched_text), match_html)
+}
+
+func inject_match_html(containing_spans []ChromaSpan, match_start_index int, match_length int, match_html string) string {
+	var result bytes.Buffer
 	current_html_index := 0
 
-	// Adjusted logic to ensure that modifications respect HTML boundaries
-	for _, span := range spans {
+	for _, span := range containing_spans {
 		span_length := len(span.InnerHtml)
 		span_end_html_index := current_html_index + span_length
 
-		if start_match >= current_html_index && start_match < span_end_html_index {
-			relative_start := start_match - current_html_index
-			relative_end := end_match - current_html_index
-
-			if relative_end > span_length {
-				relative_end = span_length
-			}
-
-			if relative_start > 0 {
-				result.WriteString(span.OuterHtml[:strings.Index(span.OuterHtml, span.InnerHtml)+relative_start])
-			}
-
-			result.WriteString(match_html)
-
-			if relative_end < span_length {
-				// Correctly find where the InnerHtml ends within the OuterHtml
-				innerHtmlStart := strings.Index(span.OuterHtml, span.InnerHtml)
-				afterMatchStart := innerHtmlStart + relative_end
-				if afterMatchStart < len(span.OuterHtml) {
-					result.WriteString(span.OuterHtml[afterMatchStart:])
-				}
-			}
-			start_match = int(^uint(0) >> 1) // Ensuring we do not process the match again
+		if match_start_index >= current_html_index && match_start_index+match_length <= span_end_html_index {
+			utils.Log2("get overlapping html")
+			overlapping_html := get_span_overlapping_html(span, match_start_index-current_html_index, match_length, match_html)
+			result.WriteString(overlapping_html)
+			match_start_index = int(^uint(0) >> 1) // Prevent further processing
 		} else {
-			if start_match > span_end_html_index {
-				result.WriteString(span.OuterHtml)
-			}
+			// havent reached the match yet -> just add the outerhtml
+			utils.Log2("get non-overlapping html")
+			result.WriteString(span.OuterHtml)
 		}
 		current_html_index = span_end_html_index
+	}
+	return result.String()
+}
+
+func get_span_overlapping_html(span ChromaSpan, relative_start, match_length int, match_html string) string {
+	var result bytes.Buffer
+	relative_end := relative_start + match_length
+
+	// HACK: trim previously whitespace for proper matching
+	inner_html := span.InnerHtml
+	inner_html = strings.TrimSpace(inner_html)
+	span_length := len(inner_html)
+	outer_html := strings.Replace(span.OuterHtml, span.InnerHtml, inner_html, 1)
+
+	if relative_end > span_length {
+		relative_end = span_length
+	}
+
+	if relative_start > 0 {
+		result.WriteString(outer_html[:strings.Index(outer_html, inner_html)+relative_start])
+	}
+
+	result.WriteString(match_html)
+
+	if relative_end < span_length {
+		inner_html_start := strings.Index(outer_html, inner_html)
+		after_match_start := inner_html_start + relative_end
+		if after_match_start < len(outer_html) {
+			result.WriteString(outer_html[after_match_start:])
+		}
 	}
 	return result.String()
 }
@@ -230,12 +251,12 @@ func split_spans(matched_text string, children []ChromaSpan) ([]ChromaSpan, []Ch
 			indexMap[len(current_text)-len(child.InnerHtml)+j] = i
 		}
 	}
-	utils.Log(fmt.Sprintf("index of %s in combined innerHTML %s is", matched_text, current_text))
+	utils.Log2(fmt.Sprintf("index of %s in combined innerHTML %s is", matched_text, current_text))
 	startPos := strings.Index(current_text, matched_text)
 	if startPos == -1 {
 		return children, nil, nil
 	}
-	utils.Log(fmt.Sprintf("index = %d", startPos))
+	utils.Log2(fmt.Sprintf("index = %d", startPos))
 	endPos := startPos + len(matched_text) - 1
 	startIndex = indexMap[startPos]
 	endIndex = indexMap[endPos]

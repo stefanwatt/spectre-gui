@@ -21,6 +21,11 @@ func Log(text string, args ...interface{}) {
 	}
 }
 
+func Log2(text string, args ...interface{}) {
+	message := "\n" + lipgloss.NewStyle().Background(lipgloss.Color("#fff")).Foreground(lipgloss.Color("#000")).Render(text) + "\n"
+	fmt.Println(message, args)
+}
+
 func LogTime(text string) {
 	duration := time.Since(StartTime)
 	LastTime = time.Now()

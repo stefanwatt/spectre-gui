@@ -71,7 +71,7 @@
 			<span>files</span>
 		</div>
 	{/if}
-	<div class="h-0 grow overflow-y-hidden pt-2">
+	<div class="flex h-0 min-h-full grow overflow-y-hidden pt-2">
 		<Results></Results>
 	</div>
 </div>
