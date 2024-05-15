@@ -1,43 +1,28 @@
 <script>
-	import { selected_match, replace_term } from './store';
+	import { GetReplacementText } from '$lib/wailsjs/go/main/App';
+	import { selected_match, regex, preserve_case, replace_term } from './store';
 	/** @type {App.RipgrepMatch}*/
 	export let match;
 	/** @param {App.RipgrepMatch} match*/
 	function replace_match(match) {
 		console.log('replace_match', match);
 	}
-	/** @type {HTMLButtonElement}*/
-	let button;
-	$: {
-		update_replace_term($replace_term);
-		console.log(button);
-	}
-	replace_term.subscribe((value) => {
-		update_replace_term(value);
-	});
-
-	/** @param {string} value*/
-	function update_replace_term(value) {
-		if (!value) return;
-		console.log('replace_term changed: ', value);
-		if (!button) return;
-		const replacement_elem = button.querySelector('.spectre-replacement');
-		if (!replacement_elem) {
-			const match_elem = button.querySelector('.spectre-matched');
-			if (!match_elem) return;
-			match_elem.insertAdjacentHTML(
-				'afterend',
-				`<span class="spectre-replacement">${value}</span>`
-			);
+	let replacement_text = '';
+	replace_term.subscribe(async (value) => {
+		if (!$preserve_case && !$regex) {
+			replacement_text = value;
 			return;
 		}
-		console.log('replacing inner html of elem: ', replacement_elem);
-		replacement_elem.innerHTML = value;
-	}
+		replacement_text = await GetReplacementText(
+			match.MatchedLine,
+			match.MatchedText,
+			value,
+			$regex
+		);
+	});
 </script>
 
 <button
-	bind:this={button}
 	on:click={() => {
 		replace_match(match);
 	}}
@@ -59,7 +44,7 @@
 			{match.MatchedText}
 		</div>
 		<div class="spectre-replacement ml-1 whitespace-pre rounded-sm bg-surface1 text-flamingo">
-			{match.ReplacementText}
+			{replacement_text}
 		</div>
 	</div>
 	<div class="flex h-full items-center">

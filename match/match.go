@@ -8,16 +8,14 @@ import (
 	"unicode"
 
 	ext "spectre-gui/external-tools"
-	"spectre-gui/highlighting"
 	"spectre-gui/utils"
 
-	"github.com/alecthomas/chroma/v2"
 	"github.com/google/uuid"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
 
-type SearchResult struct {
+type MatchesOfFile struct {
 	Path    string
 	Matches []Match
 }
@@ -27,26 +25,25 @@ type Match struct {
 	FileName        string
 	AbsolutePath    string
 	MatchedLine     string
-	Html            string
-	Css             string
 	TextBeforeMatch string
 	TextAfterMatch  string
 	MatchedText     string
 	ReplacementText string
 	Row             int
 	Col             int
+	Html            string
 }
 
-func MapSearchResult(matches []Match) []SearchResult {
+func MapSearchResult(matches []Match) []MatchesOfFile {
 	grouped := make(map[string][]Match)
 	for _, match := range matches {
 		key := match.AbsolutePath
 		grouped[key] = append(grouped[key], match)
 	}
-	var search_results []SearchResult
+	var search_results []MatchesOfFile
 	for key, value := range grouped {
 		shortPath := key
-		search_results = append(search_results, SearchResult{Path: shortPath, Matches: value})
+		search_results = append(search_results, MatchesOfFile{Path: shortPath, Matches: value})
 	}
 	search_results = map_unique_paths(search_results)
 	sort.Slice(search_results, func(i, j int) bool {
@@ -55,18 +52,26 @@ func MapSearchResult(matches []Match) []SearchResult {
 	return search_results
 }
 
-func map_unique_paths(results []SearchResult) []SearchResult {
-	updated_results := make([]SearchResult, len(results))
+func GetTotalMatches(grouped_matches []MatchesOfFile) int {
+	total := 0
+	for _, group := range grouped_matches {
+		total += len(group.Matches)
+	}
+	return total
+}
+
+func map_unique_paths(results []MatchesOfFile) []MatchesOfFile {
+	updated_results := make([]MatchesOfFile, len(results))
 	copy(updated_results, results)
-	updated_results = utils.MapArray(updated_results, func(result SearchResult) SearchResult {
-		same_path_results := utils.Filter(updated_results, func(found_result SearchResult) bool {
+	updated_results = utils.MapArray(updated_results, func(result MatchesOfFile) MatchesOfFile {
+		same_path_results := utils.Filter(updated_results, func(found_result MatchesOfFile) bool {
 			return found_result.Path == result.Path
 		})
 		if len(same_path_results) == 0 {
 			return result
 		}
 		adapted_path := utils.GetLastSubdirAndFilename(result.Path)
-		return SearchResult{
+		return MatchesOfFile{
 			Path:    adapted_path,
 			Matches: result.Matches,
 		}
@@ -84,7 +89,6 @@ func MapMatch(
 	replace_term string,
 	preserve_case bool,
 	use_regex bool,
-	lexer chroma.Lexer,
 ) Match {
 	matched_line, err := ext.GetLine(path, row)
 	if err != nil {
@@ -102,15 +106,12 @@ func MapMatch(
 	if err != nil {
 		replacement_text = case_corrected_replace_term
 	}
-	html, css := highlighting.Highlight(matched_line, lexer, path, col, matched_text, replacement_text)
 	before, after := map_before_and_after(matched_line, matched_text)
 	match := Match{
 		Id:              uuid.String(),
 		FileName:        filepath.Base(path),
 		AbsolutePath:    path,
 		MatchedLine:     matched_line,
-		Html:            html,
-		Css:             css,
 		TextBeforeMatch: before,
 		TextAfterMatch:  after,
 		MatchedText:     matched_text,
@@ -121,10 +122,10 @@ func MapMatch(
 	return match
 }
 
-func MapDirs(search_results []SearchResult) []string {
+func MapDirs(search_results []MatchesOfFile) []string {
 	var dirs []string
 	for _, result := range search_results {
-		group, err := utils.Find(search_results, func(found_result SearchResult) bool {
+		group, err := utils.Find(search_results, func(found_result MatchesOfFile) bool {
 			return found_result.Path == result.Path
 		})
 		if err != nil {

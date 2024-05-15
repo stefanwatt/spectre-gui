@@ -6,6 +6,18 @@ export function GetAppState() {
   return window['go']['main']['App']['GetAppState']();
 }
 
+export function GetNextPage() {
+  return window['go']['main']['App']['GetNextPage']();
+}
+
+export function GetPrevPage() {
+  return window['go']['main']['App']['GetPrevPage']();
+}
+
+export function GetReplacementText(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['GetReplacementText'](arg1, arg2, arg3, arg4);
+}
+
 export function Replace(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['Replace'](arg1, arg2, arg3, arg4);
 }

@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	match "spectre-gui/match"
+	"spectre-gui/match"
 )
 
 var ctx context.Context
@@ -14,11 +14,27 @@ type AppState struct {
 	Dir            string
 	Include        string
 	Exclude        string
-	CurrentMatches []match.Match
 	CaseSensitive  bool
 	Regex          bool
 	MatchWholeWord bool
 	PreserveCase   bool
+	Pagination     Pagination
+	TotalResults   int
+	TotalFiles     int
+}
+
+type PageMatch struct {
+	RgLine string
+	Match  *match.Match
+}
+
+type Page struct {
+	Index   int
+	Matches []PageMatch
+}
+type Pagination struct {
+	PageIndex int
+	Pages     []Page
 }
 type SearchContext struct {
 	ctx         context.Context

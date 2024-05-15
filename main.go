@@ -31,23 +31,22 @@ func main() {
 	parser := flags.NewParser(&opts, flags.Default)
 	_, err := parser.Parse()
 	if err != nil {
-		// Handle error
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	config := lua.LoadConfig()
 	state := AppState{
-		SearchTerm: opts.SearchTerm,
-		// SearchTerm: "func",
-		ReplaceTerm: opts.ReplaceTerm,
-		// ReplaceTerm: "fn",
-		Dir: opts.Dir,
-		// Dir:           "/home/stefan/Projects/spectre-gui",
+		// SearchTerm: opts.SearchTerm,
+		SearchTerm: `function\((\.*\w+.*)\)`,
+		// ReplaceTerm: opts.ReplaceTerm,
+		ReplaceTerm: `fn(\1)`,
+		// Dir: opts.Dir,
+		Dir:           "/home/stefan/.config/nvim",
 		Include:       opts.Include,
 		Exclude:       opts.Exclude,
 		CaseSensitive: config.CaseSensitive,
-		Regex:         config.Regex,
-		// Regex: true,
+		// Regex:         config.Regex,
+		Regex:          true,
 		MatchWholeWord: config.MatchWholeWord,
 		// MatchWholeWord: false,
 		PreserveCase: config.PreserveCase,

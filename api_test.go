@@ -43,11 +43,12 @@ func TestSearchSimple(t *testing.T) {
 		false,
 	)
 
-	if len(result) != 1 {
-		t.Errorf("Expected results to have 1 file, got %d", len(result))
+	grouped_matches := result.GroupedMatches
+	if len(grouped_matches) != 1 {
+		t.Errorf("Expected results to have 1 file, got %d", len(grouped_matches))
 	}
-	if len(result[0].Matches) != 5 {
-		t.Errorf("Expected file %s to have 5 matches, got %d", result[0].Path, len(result[0].Matches))
+	if len(grouped_matches[0].Matches) != 5 {
+		t.Errorf("Expected file %s to have 5 matches, got %d", grouped_matches[0].Path, len(grouped_matches[0].Matches))
 	}
 }
 
@@ -64,7 +65,7 @@ func TestSearchPreserveCase(t *testing.T) {
 		true,
 	)
 
-	matches := result[0].Matches
+	matches := result.GroupedMatches[0].Matches
 	expected := "bar"
 	actual := matches[0].ReplacementText
 	if actual != expected {

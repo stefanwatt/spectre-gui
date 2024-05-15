@@ -17,10 +17,14 @@
 		regex,
 		match_whole_word,
 		preserve_case,
-		results
+		results,
+		total_results,
+		total_files,
+		total_pages,
+		page_index
 	} from '$lib/store';
 	import { listen_for_events } from '$lib/runtime-events.service';
-	import { GetAppState } from '$lib/wailsjs/go/main/App';
+	import { GetAppState, GetReplacementText } from '$lib/wailsjs/go/main/App';
 
 	/**@type {App.RipgrepMatch} */
 	$: {
@@ -55,19 +59,22 @@
 		// @ts-ignore
 		$preserve_case = app_state.PreserveCase;
 	});
-	$: total_matches = $results?.flatMap((result) => result.Matches)?.length || 0;
 </script>
 
 <div
 	class="min-w-screen flex h-full min-h-screen w-full flex-col overflow-hidden bg-base px-2 py-4"
 >
 	<Form></Form>
-	{#if total_matches !== 0}
+	{#if $total_results !== 0}
 		<div class="mt-2 pl-1 text-overlay2">
-			<span class="font-bold text-blue">{total_matches}</span>
+			<span class="font-bold text-blue">{$total_results}</span>
 			<span>Results in </span>
-			<span class="font-bold text-blue">{$results.length}</span>
+			<span class="font-bold text-blue">{$total_files}</span>
 			<span>files</span>
+			<span class="ml-4">Page </span>
+			<span class="font-bold text-blue">{$page_index + 1}</span>
+			<span>of </span>
+			<span class="font-bold text-blue">{$total_pages}</span>
 		</div>
 	{/if}
 	<div class="flex h-0 min-h-full grow overflow-y-hidden pt-2">

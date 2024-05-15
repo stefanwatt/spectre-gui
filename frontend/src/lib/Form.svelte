@@ -3,7 +3,7 @@
 	import {
 		search_term,
 		replace_term,
-		dir,
+		dir as _dir,
 		include,
 		exclude,
 		preserve_case,
@@ -15,7 +15,14 @@
 	import CaseSensitive from './icons/CaseSensitive.svelte';
 	import Regex from './icons/Regex.svelte';
 	import MatchWholeWord from './icons/MatchWholeWord.svelte';
+	import { onMount } from 'svelte';
 
+	let dir = '';
+	onMount(() => {
+		setTimeout(() => {
+			dir = $_dir;
+		});
+	});
 	/**
 	 * @param {KeyboardEvent & { target: HTMLInputElement }} e
 	 */
@@ -27,7 +34,7 @@
 	 * @param {KeyboardEvent & { target: HTMLInputElement }} e
 	 */
 	async function debounced_dir(e) {
-		$dir = await debounce(e.target.value);
+		$_dir = await debounce(e.target.value);
 	}
 
 	/**
@@ -80,7 +87,7 @@
 	<input
 		class="input input-bordered w-full"
 		on:keyup={debounced_dir}
-		value={$dir}
+		value={dir}
 		type="text"
 		placeholder="eg. /home/user/Projects"
 	/>

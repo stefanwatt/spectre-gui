@@ -82,6 +82,22 @@ func Flatten[T any](slice [][]T) []T {
 	return flatSlice
 }
 
+func ChunkSlice[T any](slice []T, chunk_size int) [][]T {
+	if chunk_size <= 0 {
+		return nil
+	}
+
+	var chunks [][]T
+	for i := 0; i < len(slice); i += chunk_size {
+		end := i + chunk_size
+		if end > len(slice) {
+			end = len(slice)
+		}
+		chunks = append(chunks, slice[i:end])
+	}
+	return chunks
+}
+
 func GetLastSubdirAndFilename(absolutePath string) string {
 	lastSubdir := filepath.Base(filepath.Dir(absolutePath))
 	return lastSubdir + "/" + filepath.Base(absolutePath)
@@ -134,4 +150,12 @@ func SliceString(s string, index int) string {
 		return ""
 	}
 	return string(runes[index:])
+}
+
+func CountUniqueItems(items []string) int {
+	unique_items := make(map[string]struct{})
+	for _, item := range items {
+		unique_items[item] = struct{}{}
+	}
+	return len(unique_items)
 }

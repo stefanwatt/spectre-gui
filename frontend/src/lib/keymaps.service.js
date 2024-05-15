@@ -1,5 +1,5 @@
 import { get } from "svelte/store";
-import { Replace, ReplaceAll, Undo } from "$lib/wailsjs/go/main/App"
+import { Replace, ReplaceAll, Undo, GetNextPage, GetPrevPage } from "$lib/wailsjs/go/main/App"
 import { cursor_to_next_match, cursor_to_prev_match } from "$lib/results/results.service";
 import {
   selected_match,
@@ -12,6 +12,8 @@ import {
   regex,
   match_whole_word,
   preserve_case,
+  results,
+  page_index,
 } from "./store";
 
 /** @type {App.Modifier[]}*/
@@ -28,6 +30,25 @@ export function setup_keymaps() {
         break
       case "Alt":
         mods.push("a")
+        break
+      case "ArrowLeft":
+        if (is_mod("c")) {
+          event.preventDefault()
+          GetPrevPage().then(/**@param {App.SearchResult}new_results*/new_results => {
+            results.set(new_results.GroupedMatches)
+            page_index.set(new_results.PageIndex)
+          })
+        }
+        break
+
+      case "ArrowRight":
+        if (is_mod("c")) {
+          event.preventDefault()
+          GetNextPage().then(/**@param {App.SearchResult}new_results*/new_results => {
+            results.set(new_results.GroupedMatches)
+            page_index.set(new_results.PageIndex)
+          })
+        }
         break
       case "ArrowDown":
         event.preventDefault()

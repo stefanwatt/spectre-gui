@@ -12,8 +12,6 @@ import (
 	"spectre-gui/undo"
 	"spectre-gui/utils"
 
-	"github.com/alecthomas/chroma/v2"
-	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/bep/debounce"
 	"github.com/fsnotify/fsnotify"
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -31,16 +29,19 @@ var (
 	UNDO          = "undo"
 	TOAST         = "toast"
 	write_event   = REPLACE
+	page_size     = 20
 )
 
 func (a *App) GetAppState() AppState {
 	return a.State
 }
 
-type RglineRgInfoLexer struct {
-	rg_line string
-	rg_info ext.RipgrepInfo
-	lexer   chroma.Lexer
+type SearchResult struct {
+	GroupedMatches []match.MatchesOfFile
+	PageIndex      int
+	TotalPages     int
+	TotalResults   int
+	TotalFiles     int
 }
 
 func (a *App) Search(
@@ -53,11 +54,11 @@ func (a *App) Search(
 	regex bool,
 	match_whole_word bool,
 	preserve_case bool,
-) []match.SearchResult {
+) SearchResult {
 	utils.Log(fmt.Sprintf("searching...\nsearch_term: %s\ndir: %s\ninclude: %s\nexclude: %s\nreplace_term:%s\npreserve_case:%v", search_term, dir, include, exclude, replace_term, preserve_case))
 	utils.LogTime("Search")
 	if search_term == "" {
-		return []match.SearchResult{}
+		return SearchResult{}
 	}
 	utils.StartTime = time.Now()
 	if a.search_ctx.cancel_func != nil {
@@ -80,28 +81,19 @@ func (a *App) Search(
 		match_whole_word,
 		preserve_case,
 	)
+
 	utils.LogTimeSinceLast("after ripgrep")
 	if err != nil {
 		utils.Log(fmt.Sprintf("ripgrep error: %s", err))
 		if ctx.Err() == context.Canceled {
 			utils.Log("Search was canceled")
 		}
-		return match.MapSearchResult(a.State.CurrentMatches)
+		return SearchResult{}
 	}
-	triples := utils.MapArray(rg_lines, func(line string) RglineRgInfoLexer {
+	a.State.Pagination = map_pagination(rg_lines)
+	matches := utils.MapArrayConcurrent(a.State.Pagination.Pages[0].Matches, func(page_match PageMatch) match.Match {
+		line := page_match.RgLine
 		rg_info := ext.MapRipgrepInfo(line)
-		lexer := highlighting.MatchLexer(rg_info.Path)
-		return RglineRgInfoLexer{
-			rg_line: line,
-			rg_info: rg_info,
-			lexer:   lexer,
-		}
-	})
-
-	matches := utils.MapArrayConcurrent(triples, func(triple RglineRgInfoLexer) match.Match {
-		line := triple.rg_line
-		rg_info := triple.rg_info
-		lexer := triple.lexer
 		m := match.MapMatch(
 			line,
 			rg_info.Path,
@@ -112,18 +104,120 @@ func (a *App) Search(
 			replace_term,
 			preserve_case,
 			regex,
-			lexer,
 		)
+		html, _ := highlighting.Highlight(
+			m.MatchedLine,
+			rg_info.Path,
+			m.MatchedText,
+			m.ReplacementText,
+		)
+		m.Html = html
 		return m
 	})
 	utils.LogTimeSinceLast("map array")
-	a.State.CurrentMatches = matches
-	search_results := match.MapSearchResult(matches)
-	dirs := match.MapDirs(search_results)
+	grouped_matches := match.MapSearchResult(matches)
+	dirs := match.MapDirs(grouped_matches)
 	// TODO: how to handle errors in a go routine?
 	go filewatcher.WatchFiles(ctx, dirs, dir, on_write, on_delete)
 	utils.LogTime("search")
-	return search_results
+
+	paths := utils.MapArray(rg_lines, func(line string) string {
+		return ext.MapRipgrepInfo(line).Path
+	})
+	total_files := utils.CountUniqueItems(paths)
+	return SearchResult{
+		GroupedMatches: grouped_matches,
+		TotalPages:     len(a.State.Pagination.Pages),
+		PageIndex:      a.State.Pagination.PageIndex,
+		TotalResults:   len(rg_lines),
+		TotalFiles:     total_files,
+	}
+}
+
+func (a *App) GetPrevPage() SearchResult {
+	if len(a.State.Pagination.Pages) == 0 {
+		return SearchResult{}
+	}
+	a.State.Pagination.PageIndex--
+	if a.State.Pagination.PageIndex < 0 {
+		a.State.Pagination.PageIndex = len(a.State.Pagination.Pages) - 1
+	}
+	page := a.State.Pagination.Pages[a.State.Pagination.PageIndex]
+	matches := utils.MapArrayConcurrent(page.Matches, func(page_match PageMatch) match.Match {
+		line := page_match.RgLine
+		rg_info := ext.MapRipgrepInfo(line)
+		m := match.MapMatch(
+			line,
+			rg_info.Path,
+			rg_info.MatchedText,
+			rg_info.Row,
+			rg_info.Col,
+			a.State.SearchTerm,
+			a.State.ReplaceTerm,
+			a.State.PreserveCase,
+			a.State.Regex,
+		)
+		html, _ := highlighting.Highlight(
+			m.MatchedLine,
+			rg_info.Path,
+			m.MatchedText,
+			m.ReplacementText,
+		)
+		m.Html = html
+		return m
+	})
+	grouped_matches := match.MapSearchResult(matches)
+
+	return SearchResult{
+		GroupedMatches: grouped_matches,
+		TotalPages:     len(a.State.Pagination.Pages),
+		PageIndex:      a.State.Pagination.PageIndex,
+		TotalResults:   a.State.TotalResults,
+		TotalFiles:     a.State.TotalFiles,
+	}
+}
+
+func (a *App) GetNextPage() SearchResult {
+	if len(a.State.Pagination.Pages) == 0 {
+		return SearchResult{}
+	}
+	a.State.Pagination.PageIndex++
+	if a.State.Pagination.PageIndex >= len(a.State.Pagination.Pages) {
+		a.State.Pagination.PageIndex = 0
+	}
+	page := a.State.Pagination.Pages[a.State.Pagination.PageIndex]
+	matches := utils.MapArrayConcurrent(page.Matches, func(page_match PageMatch) match.Match {
+		line := page_match.RgLine
+		rg_info := ext.MapRipgrepInfo(line)
+		m := match.MapMatch(
+			line,
+			rg_info.Path,
+			rg_info.MatchedText,
+			rg_info.Row,
+			rg_info.Col,
+			a.State.SearchTerm,
+			a.State.ReplaceTerm,
+			a.State.PreserveCase,
+			a.State.Regex,
+		)
+		html, _ := highlighting.Highlight(
+			m.MatchedLine,
+			rg_info.Path,
+			m.MatchedText,
+			m.ReplacementText,
+		)
+		m.Html = html
+		return m
+	})
+	grouped_matches := match.MapSearchResult(matches)
+
+	return SearchResult{
+		GroupedMatches: grouped_matches,
+		TotalPages:     len(a.State.Pagination.Pages),
+		PageIndex:      a.State.Pagination.PageIndex,
+		TotalResults:   a.State.TotalResults,
+		TotalFiles:     a.State.TotalFiles,
+	}
 }
 
 func (a *App) Replace(
@@ -149,9 +243,6 @@ func (a *App) Replace(
 		replaced_match.MatchedText,
 		replaced_match.ReplacementText,
 	)
-	a.State.CurrentMatches = utils.Filter(a.State.CurrentMatches, func(m match.Match) bool {
-		return m.FileName != replaced_match.FileName || m.Row != replaced_match.Row || m.Col != replaced_match.Col
-	})
 	replace_op := undo.ReplaceOp{
 		Path:         replaced_match.AbsolutePath,
 		Row:          replaced_match.Row,
@@ -199,7 +290,6 @@ func (a *App) ReplaceAll(
 		utils.Log(fmt.Sprintf("ripgrep error: %s", err))
 		return
 	}
-	lexer := lexers.Get("plaintext")
 	matches := utils.MapArray(rg_lines, func(line string) match.Match {
 		rg_info := ext.MapRipgrepInfo(line)
 		return match.MapMatch(
@@ -212,7 +302,6 @@ func (a *App) ReplaceAll(
 			replace_term,
 			preserve_case,
 			regex,
-			lexer,
 		)
 	})
 	write_event = REPLACE_ALL
@@ -236,6 +325,19 @@ func (a *App) ReplaceAll(
 		Actions: replace_actions,
 	})
 	spawn_toast(a.ctx, SUCCESS_LEVEL, "Replaced all matches")
+}
+
+func (a *App) GetReplacementText(
+	matched_line string,
+	search_term string,
+	replace_term string,
+	use_regex bool,
+) string {
+	replacement_text, err := ext.GetReplacementText(matched_line, search_term, replace_term, use_regex)
+	if err != nil {
+		return replace_term
+	}
+	return replacement_text
 }
 
 func (a *App) Undo() {
@@ -288,4 +390,27 @@ func has_flag(flag string, flags []string) bool {
 
 func spawn_toast(ctx context.Context, level string, message string) {
 	Runtime.EventsEmit(ctx, TOAST, level, message)
+}
+
+func map_pagination(rg_lines []string) Pagination {
+	chunks := utils.ChunkSlice(rg_lines, page_size)
+	var pages []Page
+	for i := 0; i < len(chunks); i++ {
+		rg_lines := chunks[i]
+		matches := utils.MapArray(rg_lines, func(line string) PageMatch {
+			return PageMatch{
+				RgLine: line,
+				Match:  nil,
+			}
+		})
+		page := Page{
+			Index:   i,
+			Matches: matches,
+		}
+		pages = append(pages, page)
+	}
+	return Pagination{
+		PageIndex: 0,
+		Pages:     pages,
+	}
 }

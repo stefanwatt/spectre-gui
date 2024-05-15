@@ -1,5 +1,5 @@
 import { Search } from "$lib/wailsjs/go/main/App";
-import { selected_match, results, replace_term as replace_term$ } from "$lib/store";
+import { selected_match, total_pages, total_results, total_files, page_index, results, replace_term as replace_term$ } from "$lib/store";
 import { get } from "svelte/store";
 
 /**
@@ -35,11 +35,18 @@ export function search(
       match_whole_word,
       preserve_case,
     ).then(
-        /**@param {App.RipgrepResult[]} res*/(res) => {
+        /**@param {App.SearchResult} res*/(res) => {
         console.log("response:", res)
         selected_match.set(null)
-        results.set(res);
-        const matches = res[0]?.Matches;
+        results.set(res.GroupedMatches);
+        if (!res.GroupedMatches?.length) {
+          total_files.set(0)
+          total_results.set(0)
+          page_index.set(0)
+          total_pages.set(0)
+          return;
+        }
+        const matches = res.GroupedMatches[0]?.Matches;
         if (!matches?.length || !matches[0]) {
           selected_match.set(null)
           return;
@@ -47,6 +54,10 @@ export function search(
         const first_match = matches[0];
         console.assert(!!first_match, first_match);
         selected_match.set(first_match)
+        total_files.set(res.TotalFiles)
+        total_results.set(res.TotalResults)
+        page_index.set(res.PageIndex)
+        total_pages.set(res.TotalPages)
       },
     );
   } catch (error) {

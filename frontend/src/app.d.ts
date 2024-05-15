@@ -1,4 +1,5 @@
 import type { SvelteComponent } from "svelte";
+import type { Writable as _Writable } from "svelte/store";
 // See https://kit.svelte.dev/docs/types#app
 // for information about these interfaces
 declare global {
@@ -32,6 +33,16 @@ declare global {
       TextBeforeMatch: string;
       TextAfterMatch: string;
       ReplacementText: string;
+      Html: string;
+    }
+    type Writable<T> = _Writable<T>
+
+    interface SearchResult {
+      GroupedMatches: RipgrepResult[]
+      PageIndex: number
+      TotalPages: number
+      TotalResults: number
+      TotalFiles: number
     }
 
     interface ToastEvent {

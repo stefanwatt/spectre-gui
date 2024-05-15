@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	utils "spectre-gui/utils"
@@ -61,9 +62,13 @@ func GetReplacementText(
 	use_regex bool,
 ) (string, error) {
 	cmd_echo := exec.Command("echo", matched_line)
-	escaped := EscapeSpecialChars(search_term, use_regex)
-	utils.Log(fmt.Sprintf("search term: %s escaped:  %s", search_term, escaped))
-	regex := fmt.Sprintf("s/.*%s.*/%s/ip", escaped, replace_term)
+	escaped_search_term := search_term
+	if !use_regex {
+		escaped_search_term = regexp.QuoteMeta(search_term)
+	}
+
+	utils.Log(fmt.Sprintf("search term: %s escaped:  %s", search_term, escaped_search_term))
+	regex := fmt.Sprintf("s/.*%s.*/%s/ip", escaped_search_term, replace_term)
 	cmd_sed := exec.Command("sed", "-n", "-E", regex)
 	utils.Log(fmt.Sprintf("sed command: %s", cmd_sed.String()))
 	var output bytes.Buffer
@@ -83,17 +88,19 @@ func GetReplacementText(
 	}
 
 	if err := cmd_sed.Wait(); err != nil {
-		utils.Log("[GetReplacementText]E rror waiting for sed command:")
+		utils.Log("[GetReplacementText] Error waiting for sed command:")
 		utils.Log(err.Error())
 		return "", err
 	}
+
+	utils.Log("[GetReplacementText] replacement text: ", output.String())
 	return strings.Trim(output.String(), "\n"), nil
 }
 
 func EscapeSpecialChars(search_term string, use_regex bool) string {
-	specialChars := []string{`/`, `&`}
+	specialChars := []string{`/`, `&`, `(`, `)`}
 	if !use_regex {
-		specialChars = append(specialChars, `(`, `)`, `\`, `.`, `*`, `$`, `[`, `]`, `^`)
+		specialChars = append(specialChars, `\`, `.`, `*`, `$`, `[`, `]`, `^`)
 	}
 	escaped := search_term
 
