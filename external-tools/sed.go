@@ -11,7 +11,6 @@ import (
 )
 
 func Replace(row int, col int, path string, search_term string, replace_term string) error {
-	utils.Log(fmt.Sprintf("replacing: %s with %s", search_term, replace_term))
 	regex := fmt.Sprintf(
 		`%ds/^(.{%d})%s/\1%s/`,
 		row,
@@ -29,7 +28,6 @@ func Replace(row int, col int, path string, search_term string, replace_term str
 		regex,
 		path,
 	)
-	utils.Log(fmt.Sprintf("sed command: %s", cmd.String()))
 	return cmd.Run()
 }
 
@@ -38,6 +36,7 @@ func ReplaceLine(path string, row int, replacement string) error {
 	cmd := exec.Command("sed", "-i", regex, path)
 	err := cmd.Run()
 	if err != nil {
+		utils.Log("Error replacing line with sed")
 		utils.Log(err.Error())
 		return err
 	}
@@ -49,7 +48,7 @@ func GetLine(path string, row int) (string, error) {
 	cmd := exec.Command("sed", "-n", regex, path)
 	bytes, err := cmd.Output()
 	if err != nil {
-		fmt.Println(err)
+		utils.Log(err.Error())
 		return "", err
 	}
 	return string(bytes), nil
@@ -67,10 +66,8 @@ func GetReplacementText(
 		escaped_search_term = regexp.QuoteMeta(search_term)
 	}
 
-	utils.Log(fmt.Sprintf("search term: %s escaped:  %s", search_term, escaped_search_term))
 	regex := fmt.Sprintf("s/.*%s.*/%s/ip", escaped_search_term, replace_term)
 	cmd_sed := exec.Command("sed", "-n", "-E", regex)
-	utils.Log(fmt.Sprintf("sed command: %s", cmd_sed.String()))
 	var output bytes.Buffer
 	cmd_sed.Stdout = &output
 	cmd_sed.Stdin, _ = cmd_echo.StdoutPipe()
@@ -93,7 +90,6 @@ func GetReplacementText(
 		return "", err
 	}
 
-	utils.Log("[GetReplacementText] replacement text: ", output.String())
 	return strings.Trim(output.String(), "\n"), nil
 }
 

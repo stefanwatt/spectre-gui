@@ -74,6 +74,7 @@ func WatchFiles(ctx context.Context,
 			if !ok {
 				return err
 			}
+			utils.Log("file watcher error")
 			utils.Log(err.Error())
 		}
 	}
@@ -81,7 +82,6 @@ func WatchFiles(ctx context.Context,
 
 func watch_dirs(dirs []string) error {
 	for _, dir := range dirs {
-		utils.Log("Adding watcher for " + dir)
 		filepath.Dir(dir)
 		err := watcher.Add(dir)
 		if err != nil {

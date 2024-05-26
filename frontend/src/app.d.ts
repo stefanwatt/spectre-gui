@@ -25,17 +25,25 @@ declare global {
 
     interface RipgrepMatch {
       Id: string;
-      Path: string;
-      Row: number;
-      Col: number;
+      FileName: string;
+      AbsolutePath: string;
       MatchedLine: string;
-      MatchedText: string;
       TextBeforeMatch: string;
       TextAfterMatch: string;
+      MatchedText: string;
       ReplacementText: string;
+      Row: number;
+      Col: number;
       Html: string;
     }
+
     type Writable<T> = _Writable<T>
+
+    interface Keymap {
+      mods: Modifier[];
+      key: string;
+      action: (e: KeyboardEvent) => void;
+    }
 
     interface SearchResult {
       GroupedMatches: RipgrepResult[]

@@ -21,13 +21,6 @@ func Log(text string, args ...interface{}) {
 	}
 }
 
-func Log2(text string, args ...interface{}) {
-	if do_log {
-		message := "\n" + lipgloss.NewStyle().Background(lipgloss.Color("#fff")).Foreground(lipgloss.Color("#000")).Render(text) + "\n"
-		fmt.Println(message, args)
-	}
-}
-
 func LogTime(text string) {
 	if do_log {
 		duration := time.Since(StartTime)

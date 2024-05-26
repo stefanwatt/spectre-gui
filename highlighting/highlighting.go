@@ -19,9 +19,7 @@ import (
 )
 
 func Highlight(code, filename, matched_text, replacement string) (string, string) {
-	utils.Log2(fmt.Sprintf("Highlighting code \n'%s' \nwith replacement: %s\non file %s", code, replacement, filename))
 	highlighted := highlight_code(code, filename)
-	utils.Log2(fmt.Sprintf("highlighted code: %s", highlighted))
 	html := inject_match(highlighted, matched_text, replacement)
 	return html, highlighted
 }
@@ -65,15 +63,21 @@ func match_lexer(filename string) chroma.Lexer {
 
 func inject_match(highlighted_html, matched_text, replacement string) string {
 	if matched_text == "" {
-		log.Printf("matched text empty -> cannot inject match html")
+		utils.Log("matched text empty -> cannot inject match html")
 		return highlighted_html
 	}
 
-	fmt.Println(fmt.Sprintf("[inject match] mathched_text: %s\nreplacement: %s", matched_text, replacement))
+	replacement_html := ""
+	if replacement != "" {
+		replacement_html = fmt.Sprintf(
+			`<span class="spectre-replacement">%s</span>`,
+			replacement,
+		)
+	}
 	match_html := fmt.Sprintf(
-		`<span class="spectre-matched">%s</span><span class="spectre-replacement">%s</span>`,
+		`<span class="spectre-matched">%s</span>%s`,
 		matched_text,
-		replacement,
+		replacement_html,
 	)
 
 	characters := strings.Split(matched_text, "")
@@ -83,14 +87,10 @@ func inject_match(highlighted_html, matched_text, replacement string) string {
 	matched_text_re := regexp.MustCompile(matched_text_pattern)
 
 	if matched_text_re.MatchString(highlighted_html) && !strings.Contains(highlighted_html, match_html) {
-		fmt.Println(fmt.Sprintf("[inject match] match_html: %s", match_html))
-		fmt.Println(fmt.Sprintf("[inject match] highlighted_html: %s", highlighted_html))
 		injected_html := matched_text_re.ReplaceAllStringFunc(highlighted_html, func(match string) string {
 			// Ensure the match starts and ends at appropriate positions
-			fmt.Println(fmt.Sprintf("[inject match] match: %s, matched_text: %s", match, matched_text))
 			return match_html
 		})
-		fmt.Println(fmt.Sprintf("[inject match] injected_html: %s", injected_html))
 		return injected_html
 	}
 	return highlighted_html

@@ -1,9 +1,9 @@
 import { show_toast } from '$lib/notification/notification.service.js';
 import { search } from '$lib/results/results.service';
 import { EventsOn } from '$lib/wailsjs/runtime/runtime.js';
+import { goto } from '$app/navigation'
 import {
   search_term,
-  replace_term,
   case_sensitive,
   regex,
   match_whole_word,
@@ -21,12 +21,16 @@ const REPLACE = "file-replaced"
 const REPLACE_ALL = "replaced-all"
 const UNDO = "undo"
 const TOAST = "toast"
+const CHANGE_URL = "change-url"
 
 export function listen_for_events() {
+  EventsOn(CHANGE_URL, (page) => {
+    alert(`goto page ${page}`)
+    goto(page)
+  });
   EventsOn(REPLACE, () => {
     search(
       get(search_term),
-      get(replace_term),
       get(dir),
       get(exclude),
       get(include),
@@ -40,7 +44,6 @@ export function listen_for_events() {
   EventsOn(REPLACE_ALL, () => {
     search(
       get(search_term),
-      get(replace_term),
       get(dir),
       get(exclude),
       get(include),
@@ -54,7 +57,6 @@ export function listen_for_events() {
   EventsOn(UNDO, () => {
     search(
       get(search_term),
-      get(replace_term),
       get(dir),
       get(exclude),
       get(include),

@@ -8,7 +8,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/stretchr/testify v1.9.0
-	github.com/wailsapp/wails/v2 v2.8.1
+	github.com/wailsapp/wails/v2 v2.8.2
 )
 
 require (
@@ -41,6 +41,7 @@ require (
 	github.com/leaanthony/u v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/neovim/go-client v1.2.1
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
@@ -51,11 +52,11 @@ require (
 	github.com/wailsapp/go-webview2 v1.0.10 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	github.com/yuin/gopher-lua v1.1.1
-	golang.org/x/crypto v0.18.0 // indirect
+	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
-	golang.org/x/net v0.20.0
-	golang.org/x/sys v0.16.0 // indirect
-	golang.org/x/text v0.14.0
+	golang.org/x/net v0.25.0
+	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/text v0.15.0
 )
 
 // replace github.com/wailsapp/wails/v2 v2.8.1 => /

@@ -23,6 +23,8 @@ type Options struct {
 	Dir         string `short:"d" long:"dir" description:"Directory to search in" required:"false"`
 	Include     string `short:"i" long:"include" description:"glob pattern eg.: */**.go to include in search" required:"false"`
 	Exclude     string `short:"x" long:"exclude" description:"glob pattern eg.: */**.go to exclude from search" required:"false"`
+	Mode        string `short:"m" long:"mode" description:"mode" required:"false"`
+	Servername  string `short:"n" long:"servername" description:"neovim servername" required:"false"`
 }
 
 func main() {
@@ -34,19 +36,23 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+
+	app.Mode = opts.Mode
+	app.Mode = "search"
+	app.Servername = opts.Servername
 	config := lua.LoadConfig()
 	state := AppState{
-		// SearchTerm: opts.SearchTerm,
-		SearchTerm: `function\((\.*\w+.*)\)`,
-		// ReplaceTerm: opts.ReplaceTerm,
-		ReplaceTerm: `fn(\1)`,
+		SearchTerm: opts.SearchTerm,
+		// SearchTerm: `foo`,
+		ReplaceTerm: opts.ReplaceTerm,
+		// ReplaceTerm: `bar`,
 		// Dir: opts.Dir,
-		Dir:           "/home/stefan/.config/nvim",
+		Dir:           "/home/stefan/Projects/spectre-gui",
 		Include:       opts.Include,
 		Exclude:       opts.Exclude,
 		CaseSensitive: config.CaseSensitive,
-		// Regex:         config.Regex,
-		Regex:          true,
+		Regex:         config.Regex,
+		// Regex:          true,
 		MatchWholeWord: config.MatchWholeWord,
 		// MatchWholeWord: false,
 		PreserveCase: config.PreserveCase,
@@ -63,6 +69,7 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
 		OnStartup:        app.startup,
+		OnDomReady:       app.mounted,
 		Bind: []interface{}{
 			app,
 		},

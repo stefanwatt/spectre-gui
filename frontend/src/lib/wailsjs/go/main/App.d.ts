@@ -3,6 +3,8 @@
 import {main} from '../models';
 import {match} from '../models';
 
+export function AddMatchesToQuickfixList():Promise<void>;
+
 export function GetAppState():Promise<main.AppState>;
 
 export function GetNextPage():Promise<main.SearchResult>;
@@ -10,6 +12,10 @@ export function GetNextPage():Promise<main.SearchResult>;
 export function GetPrevPage():Promise<main.SearchResult>;
 
 export function GetReplacementText(arg1:string,arg2:string,arg3:string,arg4:boolean):Promise<string>;
+
+export function GetRoute():Promise<string>;
+
+export function OpenMatch(arg1:string,arg2:number,arg3:number):Promise<void>;
 
 export function Replace(arg1:match.Match,arg2:string,arg3:string,arg4:boolean):Promise<void>;
 

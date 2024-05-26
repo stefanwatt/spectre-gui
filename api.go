@@ -9,6 +9,7 @@ import (
 	filewatcher "spectre-gui/file-watcher"
 	"spectre-gui/highlighting"
 	"spectre-gui/match"
+	"spectre-gui/neovim"
 	"spectre-gui/undo"
 	"spectre-gui/utils"
 
@@ -44,6 +45,21 @@ type SearchResult struct {
 	TotalFiles     int
 }
 
+func (a *App) GetRoute() string {
+	return a.Mode
+}
+
+func (a *App) OpenMatch(path string, row int, col int) {
+	utils.Log("a.Servername")
+	err := neovim.OpenFileAt(path, row, col, a.Servername)
+	if err != nil {
+		utils.Log(err.Error())
+	}
+}
+
+func (a *App) AddMatchesToQuickfixList() {
+}
+
 func (a *App) Search(
 	search_term string,
 	replace_term string,
@@ -55,8 +71,6 @@ func (a *App) Search(
 	match_whole_word bool,
 	preserve_case bool,
 ) SearchResult {
-	utils.Log(fmt.Sprintf("searching...\nsearch_term: %s\ndir: %s\ninclude: %s\nexclude: %s\nreplace_term:%s\npreserve_case:%v", search_term, dir, include, exclude, replace_term, preserve_case))
-	utils.LogTime("Search")
 	if search_term == "" {
 		return SearchResult{}
 	}
@@ -68,7 +82,6 @@ func (a *App) Search(
 	search_ctx, a.search_ctx.cancel_func = context.WithCancel(context.Background())
 	ctx, update_dir := filewatcher.InitContext(a.State.Dir, dir, a.ctx)
 	a.State.Dir = update_dir
-	utils.LogTimeSinceLast("before ripgrep")
 	rg_lines, err := ext.Ripgrep(
 		search_ctx,
 		search_term,
@@ -81,8 +94,6 @@ func (a *App) Search(
 		match_whole_word,
 		preserve_case,
 	)
-
-	utils.LogTimeSinceLast("after ripgrep")
 	if err != nil {
 		utils.Log(fmt.Sprintf("ripgrep error: %s", err))
 		if ctx.Err() == context.Canceled {
@@ -114,12 +125,10 @@ func (a *App) Search(
 		m.Html = html
 		return m
 	})
-	utils.LogTimeSinceLast("map array")
 	grouped_matches := match.MapSearchResult(matches)
 	dirs := match.MapDirs(grouped_matches)
 	// TODO: how to handle errors in a go routine?
 	go filewatcher.WatchFiles(ctx, dirs, dir, on_write, on_delete)
-	utils.LogTime("search")
 
 	paths := utils.MapArray(rg_lines, func(line string) string {
 		return ext.MapRipgrepInfo(line).Path
@@ -226,15 +235,6 @@ func (a *App) Replace(
 	replace_term string,
 	preserve_case bool,
 ) {
-	utils.Log(fmt.Sprintf(
-		"replacing in file: %s\nmatched line: %s\nsearch_term: %s\nreplace_term: %s\npreserve_case: %v",
-		replaced_match.FileName,
-		replaced_match.MatchedLine,
-		search_term,
-		replace_term,
-		preserve_case,
-	))
-	utils.Log("calling sed")
 	write_event = REPLACE
 	ext.Replace(
 		replaced_match.Row,
@@ -266,9 +266,6 @@ func (a *App) ReplaceAll(
 	match_whole_word bool,
 	preserve_case bool,
 ) {
-	utils.Log(fmt.Sprintf("replacing all: \nsearch_term: %s\nreplace_term: %s", search_term, replace_term))
-	utils.Log("calling sed")
-
 	if a.search_ctx.cancel_func != nil {
 		a.search_ctx.cancel_func()
 	}
@@ -363,8 +360,9 @@ func on_write(event fsnotify.Event, ctx context.Context) {
 	if path[len(path)-1:] == "~" {
 		return
 	}
-	utils.Log("on_write")
 	debounced_files_changed(func() {
+		utils.Log("on_write")
+		utils.Log(write_event)
 		Runtime.EventsEmit(ctx, write_event)
 	})
 }

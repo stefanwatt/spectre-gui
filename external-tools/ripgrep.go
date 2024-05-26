@@ -99,7 +99,6 @@ func map_glob_pattern(patterns string, exclude bool) []string {
 }
 
 func map_replacement_text_preserve_case(matched_text string, replace_term string) string {
-	utils.Log(fmt.Sprintf("mapping replacement text: \nmatched_text:%s\nreplace_term:%s", matched_text, replace_term))
 	titleCaser := cases.Title(language.English)
 	// ALL UPPERCASE
 	if matched_text == "" {

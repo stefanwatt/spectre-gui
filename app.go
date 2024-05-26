@@ -4,6 +4,9 @@ import (
 	"context"
 
 	"spectre-gui/match"
+	"spectre-gui/utils"
+
+	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 var ctx context.Context
@@ -45,10 +48,17 @@ type App struct {
 	ctx        context.Context
 	State      AppState
 	search_ctx SearchContext
+	Mode       string
+	Servername string
 }
 
 func NewApp() *App {
 	return &App{}
+}
+
+func (a *App) mounted(ctx context.Context) {
+	utils.Log("mounted mode: ", a.Mode)
+	Runtime.EventsEmit(a.ctx, "change-url", a.Mode)
 }
 
 func (a *App) startup(ctx context.Context) {

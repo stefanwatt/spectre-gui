@@ -9,8 +9,17 @@
     - probably just test api.go ?
 *** (-) fix delay on replacing
     search is pretty fast again, but seems to take a lot of cpu resources
-*** ( ) BUG: some matches dont show proper match/replacement indicators
-*** ( ) BUG: matches with same filename but different subdirs get grouped
+*** (x) BUG: some matches dont show proper match/replacement indicators
+*** (x) BUG: matches with same filename but different subdirs get grouped
+*** ( ) BUG: incorrect search result
+    search for 
+    function\\((.\*\\w+.\*)\\)
+    in
+    \/home/stefan/.config/nvim
+    you get a result from lsp/luasnip.lua
+    with function() being an incorrect match
+    it doesnt have \\w+
+
 *** ( ) BUG: flickering while typing
     maybe something with the debounce?
 *** (x) BUG: replace does nothing
@@ -41,7 +50,7 @@
 
 *** (x) debounce all inputs
 ** (-) Features
-*** ( ) pagination
+*** (x) pagination
 *** ( ) sqlite
 *** (x) replace all
 *** ( ) make directory a comma separated list as well

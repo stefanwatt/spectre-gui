@@ -2,26 +2,6 @@
 @tailwind components;
 @tailwind base;
 
-.spectre-matched,
-.spectre-replacement {
-  padding: 0.2rem;
-  text-align: center;
-  line-height: 100%;
-  margin: 0px 0.2rem;
-  font-family: monospace;
-  border-radius: 0.15rem;
-}
-
-.spectre-matched {
-  background-color: #eebebe;
-  color: #51576d;
-  text-decoration: line-through;
-}
-
-.spectre-replacement {
-  color: #51576d;
-  background-color: #a6d189;
-}
 
 /* Background */
 .spectre-bg {
