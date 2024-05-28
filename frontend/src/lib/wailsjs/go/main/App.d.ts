@@ -23,4 +23,6 @@ export function ReplaceAll(arg1:string,arg2:string,arg3:string,arg4:string,arg5:
 
 export function Search(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean,arg7:boolean,arg8:boolean,arg9:boolean):Promise<main.SearchResult>;
 
+export function SendKey(arg1:string,arg2:boolean,arg3:boolean,arg4:boolean):Promise<void>;
+
 export function Undo():Promise<void>;

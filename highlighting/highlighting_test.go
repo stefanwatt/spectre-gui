@@ -69,7 +69,7 @@ func test_highlight_code(t *testing.T) {
 		code     = `    prepare_node = function(node)`
 		filename = `foo.go`
 	)
-	actual := highlight_code(code, filename)
+	actual := HighlightCode(code, filename)
 	expected := `<code class="spectre-chroma">    <span class="spectre-nx">prepare_node</span> <span class="spectre-p">=</span> <span class="spectre-nf">function</span><span class="spectre-p">(</span><span class="spectre-nx">node</span><span class="spectre-p">)</span></code>`
 	if expected != actual {
 

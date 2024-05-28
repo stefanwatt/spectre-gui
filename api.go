@@ -60,6 +60,10 @@ func (a *App) OpenMatch(path string, row int, col int) {
 func (a *App) AddMatchesToQuickfixList() {
 }
 
+func (a *App) SendKey(key string, ctrl bool, alt bool, shift bool) {
+	neovim.SendKey(key, ctrl, alt, shift, a.Servername)
+}
+
 func (a *App) Search(
 	search_term string,
 	replace_term string,

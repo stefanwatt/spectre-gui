@@ -38,8 +38,9 @@ func main() {
 	}
 
 	app.Mode = opts.Mode
-	app.Mode = "search"
+	// app.Mode = "buffer"
 	app.Servername = opts.Servername
+
 	config := lua.LoadConfig()
 	state := AppState{
 		SearchTerm: opts.SearchTerm,

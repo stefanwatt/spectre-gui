@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"spectre-gui/match"
+	"spectre-gui/neovim"
 	"spectre-gui/utils"
 
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -59,6 +60,9 @@ func NewApp() *App {
 func (a *App) mounted(ctx context.Context) {
 	utils.Log("mounted mode: ", a.Mode)
 	Runtime.EventsEmit(a.ctx, "change-url", a.Mode)
+	if a.Servername != "" {
+		go neovim.StartListening(a.Servername, a.ctx)
+	}
 }
 
 func (a *App) startup(ctx context.Context) {

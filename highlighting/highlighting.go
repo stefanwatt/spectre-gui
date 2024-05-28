@@ -19,12 +19,12 @@ import (
 )
 
 func Highlight(code, filename, matched_text, replacement string) (string, string) {
-	highlighted := highlight_code(code, filename)
+	highlighted := HighlightCode(code, filename)
 	html := inject_match(highlighted, matched_text, replacement)
 	return html, highlighted
 }
 
-func highlight_code(code string, filename string) string {
+func HighlightCode(code string, filename string) string {
 	var buf bytes.Buffer
 
 	lexer := match_lexer(filename)
