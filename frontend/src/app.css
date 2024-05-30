@@ -13,7 +13,9 @@
 .spectre-chroma {
   color: #c6d0f5;
   background-color: transparent;
-  white-space: nowrap;
+  /* white-space: nowrap; TODO check if this fucks find word etc.*/
+  white-space: pre;
+  tab-size: 1;
 }
 
 /* Error */

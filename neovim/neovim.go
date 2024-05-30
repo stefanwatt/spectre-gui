@@ -99,14 +99,14 @@ type BufChangeEvent struct {
 }
 
 func OnBufChanged(ctx context.Context, v *nvim.Nvim, args []interface{}) {
-	// lines_bytes, err := v.BufferLines(0, int(event.FirstLine), int(event.LastLine), true)
 	lines_bytes, err := v.BufferLines(0, 0, -1, true)
 	if err != nil {
 		panic(err)
 	}
 	lines := utils.MapArray(lines_bytes, func(bytes []byte) string {
 		s := string(bytes)
-		return highlighting.HighlightCode(s, "foo.go")
+		html := highlighting.HighlightCode(s, "foo.go")
+		return html
 	})
 
 	Runtime.EventsEmit(ctx, "buf-lines-changed", lines)
@@ -132,7 +132,7 @@ func parse_lua_number(value interface{}) int {
 }
 
 func OnCursorChanged(ctx context.Context, v *nvim.Nvim, args []interface{}) {
-	row := parse_lua_number(args[0])
+	row := parse_lua_number(args[0]) - 1
 	col := parse_lua_number(args[1])
 	key := " "
 	var ok bool

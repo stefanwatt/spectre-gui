@@ -10,7 +10,20 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 )
+
+func GetLeadingWhitespace(s string) string {
+	var leadingWhitespace []rune
+	for _, r := range s {
+		if unicode.IsSpace(r) {
+			leadingWhitespace = append(leadingWhitespace, r)
+		} else {
+			break
+		}
+	}
+	return string(leadingWhitespace)
+}
 
 func Find[T any](array []T, find_func func(T) bool) (T, error) {
 	var zero T

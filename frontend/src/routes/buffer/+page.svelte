@@ -18,14 +18,14 @@
 		});
 
 		runtime.EventsOn('cursor-changed', (row, col, key) => {
-			cursor = { row: +row, col: col + 1, key };
+			cursor = { row: row, col: col, key };
 			lines = lines;
 		});
 	});
 </script>
 
 <input autofocus class="hidden" on:keydown|preventDefault={send_key} type="text" />
-<div class="relative h-screen w-screen overflow-y-scroll whitespace-pre">
+<div class="relative h-screen w-screen overflow-y-scroll whitespace-pre font-mono">
 	{#each lines as line, index}
 		{#if !line}
 			<div class="whitespace-pre">{'\u00A0'}</div>
