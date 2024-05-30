@@ -74,13 +74,7 @@ func SendKey(key string, ctrl bool, alt bool, shift bool, servername string) err
 		sequence = key
 	}
 
-	actualKeys, err := v.ReplaceTermcodes(sequence, true, true, true)
-	if err != nil {
-		log.Println("Error replacing termcodes:", err)
-		return err
-	}
-
-	err = v.FeedKeys(actualKeys, "t", true)
+	_, err = v.Input(sequence)
 	if err != nil {
 		log.Println("Error feeding keys to Neovim:", err)
 		return err
