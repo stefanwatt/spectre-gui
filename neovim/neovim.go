@@ -110,19 +110,11 @@ func OnBufChanged(ctx context.Context, v *nvim.Nvim, args []interface{}) {
 }
 
 func parse_lua_number(value interface{}) int {
-	switch value.(type) {
+	switch value := value.(type) {
 	case int64:
-		row_int64, ok := value.(int64)
-		if !ok {
-			return 0
-		}
-		return int(row_int64)
+		return int(value)
 	case uint64:
-		row_uint64, ok := value.(uint64)
-		if !ok {
-			return 0
-		}
-		return int(row_uint64)
+		return int(value)
 	default:
 		return 0
 	}
