@@ -165,6 +165,9 @@ func StartListening(servername string, ctx context.Context) {
 
 	v.RegisterHandler("nvim-gui-cursor-moved", func(v *nvim.Nvim, cursor_move_event CursorMoveEvent) {
 		log.Println("cursor moved ", cursor_move_event)
+		if cursor_move_event.Key == "" {
+			cursor_move_event.Key = " "
+		}
 		Runtime.EventsEmit(ctx, "cursor-changed", cursor_move_event)
 	})
 

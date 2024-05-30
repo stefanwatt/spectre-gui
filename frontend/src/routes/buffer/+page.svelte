@@ -43,21 +43,19 @@
 
 <div class="relative h-screen w-screen snap-y overflow-y-scroll whitespace-pre font-mono text-xl">
 	{#each lines as line, index}
-		{#if !line}
-			<div class="snap-start buf-line-{index} whitespace-pre">{'\u00A0'}</div>
-		{:else}
-			<div class="snap-start buf-line-{index} whitespace-pre">
-				<span>
-					<span>
-						{@html line}
-					</span>
-					{#if cursor.row === index}
-						<span class="absolute bg-rosewater text-mantle" style="width:1ch;left: {cursor.col}ch;"
-							>{cursor.key}</span
-						>
-					{/if}
+		<div class="snap-start buf-line-{index} whitespace-pre">
+			<span>
+				{#if !line}
+					{'\u00A0'}
+				{:else}
+					{@html line}
+				{/if}
+			</span>
+			{#if cursor.row === index}
+				<span class="absolute bg-rosewater text-mantle" style="width:1ch;left: {cursor.col}ch;">
+					{cursor.key}
 				</span>
-			</div>
-		{/if}
+			{/if}
+		</div>
 	{/each}
 </div>
