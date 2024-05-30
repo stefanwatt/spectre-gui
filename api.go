@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	ext "spectre-gui/external-tools"
@@ -61,7 +62,10 @@ func (a *App) AddMatchesToQuickfixList() {
 }
 
 func (a *App) SendKey(key string, ctrl bool, alt bool, shift bool) {
-	neovim.SendKey(key, ctrl, alt, shift, a.Servername)
+	err := neovim.SendKey(key, ctrl, alt, shift, a.Servername)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func (a *App) Search(

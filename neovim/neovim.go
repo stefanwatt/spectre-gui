@@ -43,6 +43,9 @@ var specialKeys = map[string]string{
 }
 
 func SendKey(key string, ctrl bool, alt bool, shift bool, servername string) error {
+	if key == "Super" {
+		return fmt.Errorf("Invalid key: %s", key)
+	}
 	v, err := nvim.Dial(servername)
 	if err != nil {
 		log.Println("Failed to connect to Neovim:", err)
@@ -77,7 +80,7 @@ func SendKey(key string, ctrl bool, alt bool, shift bool, servername string) err
 		return err
 	}
 
-	err = v.FeedKeys(actualKeys, "n", true)
+	err = v.FeedKeys(actualKeys, "t", true)
 	if err != nil {
 		log.Println("Error feeding keys to Neovim:", err)
 		return err
