@@ -1,6 +1,6 @@
 <script>
 	import { SendKey } from '$lib/wailsjs/go/main/App';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 
 	/**@type{string[]}*/
 	let lines = [];
@@ -11,26 +11,42 @@
 		SendKey(e.key, e.ctrlKey, e.shiftKey, e.altKey);
 	}
 
+	/**@param {App.CursorMoveEvent} e*/
+	function on_cursor_moved(e) {
+		cursor = { ...cursor, row: e.row, col: e.col, key: e.key };
+		lines = lines;
+		scroll_into_view(e.top_line);
+	}
+
 	onMount(async () => {
+		window.addEventListener('keydown', send_key);
 		const runtime = await import('$lib/wailsjs/runtime/runtime');
 		runtime.EventsOn('buf-lines-changed', (updated_lines) => {
 			lines = updated_lines;
 		});
 
-		runtime.EventsOn('cursor-changed', (row, col, key) => {
-			cursor = { row: row, col: col, key };
-			lines = lines;
-		});
+		runtime.EventsOn('cursor-changed', on_cursor_moved);
 	});
+
+	onDestroy(() => {
+		window.removeEventListener('keydown', send_key);
+	});
+
+	/**@param {number} line*/
+	function scroll_into_view(line) {
+		const lineElement = document.querySelector(`.buf-line-${line - 1}`);
+		if (lineElement) {
+			lineElement.scrollIntoView({ behavior: 'smooth' });
+		}
+	}
 </script>
 
-<input autofocus class="hidden" on:keydown|preventDefault={send_key} type="text" />
-<div class="relative h-screen w-screen overflow-y-scroll whitespace-pre font-mono">
+<div class="relative h-screen w-screen snap-y overflow-y-scroll whitespace-pre font-mono text-xl">
 	{#each lines as line, index}
 		{#if !line}
-			<div class="whitespace-pre">{'\u00A0'}</div>
+			<div class="snap-start buf-line-{index} whitespace-pre">{'\u00A0'}</div>
 		{:else}
-			<div class="whitespace-pre">
+			<div class="snap-start buf-line-{index} whitespace-pre">
 				<span>
 					<span>
 						{@html line}

@@ -23,6 +23,14 @@ declare global {
       Matches: RipgrepMatch[]
     }
 
+    interface CursorMoveEvent {
+      row: number;
+      col: number;
+      key: string;
+      top_line: number;
+      bottom_line: number;
+    }
+
     interface RipgrepMatch {
       Id: string;
       FileName: string;

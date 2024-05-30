@@ -131,28 +131,19 @@ func parse_lua_number(value interface{}) int {
 	}
 }
 
-func OnCursorChanged(ctx context.Context, v *nvim.Nvim, args []interface{}) {
-	row := parse_lua_number(args[0]) - 1
-	col := parse_lua_number(args[1])
-	key := " "
-	var ok bool
-	if len(args) >= 3 {
-		key, ok = args[2].(string)
-		if !ok {
-			log.Println("Failed to get key")
-			log.Printf("Type of args[2]: %T\n", args[2])
-			key = " "
-		}
-	}
-	log.Println("row: ", row, " col: ", col, " key: ", key)
-	Runtime.EventsEmit(ctx, "cursor-changed", row, col, key)
+type CursorMoveEvent struct {
+	Row        uint64 `msgpack:"row" json:"row"`
+	Col        uint64 `msgpack:"col" json:"col"`
+	Key        string `msgpack:"key" json:"key"`
+	TopLine    uint64 `msgpack:"top_line" json:"top_line"`
+	BottomLine uint64 `msgpack:"bottom_line" json:"bottom_line"`
 }
 
 func StartListening(servername string, ctx context.Context) {
 	v, err := nvim.Dial(servername)
 	if err != nil {
 		log.Println(err)
-		panic(err)
+		return
 	}
 	defer v.Close()
 	var result string
@@ -172,8 +163,9 @@ func StartListening(servername string, ctx context.Context) {
 		OnBufChanged(ctx, v, args)
 	})
 
-	v.RegisterHandler("nvim-gui-cursor-moved", func(v *nvim.Nvim, args []interface{}) {
-		OnCursorChanged(ctx, v, args)
+	v.RegisterHandler("nvim-gui-cursor-moved", func(v *nvim.Nvim, cursor_move_event CursorMoveEvent) {
+		log.Println("cursor moved ", cursor_move_event)
+		Runtime.EventsEmit(ctx, "cursor-changed", cursor_move_event)
 	})
 
 	if err := v.Serve(); err != nil {
