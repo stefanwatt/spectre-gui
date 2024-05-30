@@ -72,4 +72,5 @@ func (a *App) startup(ctx context.Context) {
 		ctx:         search_ctx,
 		cancel_func: cancel,
 	}
+	utils.SetupLog()
 }

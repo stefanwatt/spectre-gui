@@ -99,27 +99,6 @@ type BufChangeEvent struct {
 }
 
 func OnBufChanged(ctx context.Context, v *nvim.Nvim, args []interface{}) {
-	event := BufChangeEvent{
-		Event:           args[0].(string),
-		Buffer:          args[1].(int64),
-		ChangedTick:     args[2].(int64),
-		FirstLine:       args[3].(int64),
-		LastLine:        args[4].(int64),
-		LastLineChanged: args[5].(int64),
-	}
-
-	if len(args) > 6 {
-		if val, ok := args[6].(int64); ok {
-			log.Println(args[6])
-			event.DeletedCodepoints = &val
-		}
-	}
-	if len(args) > 7 {
-		if val, ok := args[7].(int64); ok {
-			log.Println(args[7])
-			event.DeletedCodeunits = &val
-		}
-	}
 	// lines_bytes, err := v.BufferLines(0, int(event.FirstLine), int(event.LastLine), true)
 	lines_bytes, err := v.BufferLines(0, 0, -1, true)
 	if err != nil {
@@ -131,27 +110,72 @@ func OnBufChanged(ctx context.Context, v *nvim.Nvim, args []interface{}) {
 	})
 
 	Runtime.EventsEmit(ctx, "buf-lines-changed", lines)
-	log.Println("buf changed lines", lines)
-	log.Printf("BufChanged: %+v\n", event)
+}
+
+func parse_lua_number(value interface{}) int {
+	switch value.(type) {
+	case int64:
+		row_int64, ok := value.(int64)
+		if !ok {
+			return 0
+		}
+		return int(row_int64)
+	case uint64:
+		row_uint64, ok := value.(uint64)
+		if !ok {
+			return 0
+		}
+		return int(row_uint64)
+	default:
+		return 0
+	}
+}
+
+func OnCursorChanged(ctx context.Context, v *nvim.Nvim, args []interface{}) {
+	row := parse_lua_number(args[0])
+	col := parse_lua_number(args[1])
+	key := " "
+	var ok bool
+	if len(args) >= 3 {
+		key, ok = args[2].(string)
+		if !ok {
+			log.Println("Failed to get key")
+			log.Printf("Type of args[2]: %T\n", args[2])
+			key = " "
+		}
+	}
+	log.Println("row: ", row, " col: ", col, " key: ", key)
+	Runtime.EventsEmit(ctx, "cursor-changed", row, col, key)
 }
 
 func StartListening(servername string, ctx context.Context) {
 	v, err := nvim.Dial(servername)
-	var result string
-	nvim_cmd := fmt.Sprintf("return require('config.utils').attach_buffer(%d)", v.ChannelID())
-	log.Println("nvim attach cmd:", nvim_cmd)
-
-	v.ExecLua(nvim_cmd, &result)
 	if err != nil {
 		log.Println(err)
+		panic(err)
+	}
+	defer v.Close()
+	var result string
+	nvim_cmd := fmt.Sprintf("return require('config.utils').attach_buffer(%d)", v.ChannelID())
+	err = v.ExecLua(nvim_cmd, &result)
+	if err != nil {
+		utils.Log(err.Error())
 	}
 	log.Println("channel: ", v.ChannelID())
-	defer v.Close()
-	log.Println("start listening")
+	nvim_cmd = fmt.Sprintf("return require('config.utils').listen_for_cursor_move(%d)", v.ChannelID())
+	err = v.ExecLua(nvim_cmd, &result)
+	if err != nil {
+		utils.Log(err.Error())
+	}
 
-	v.RegisterHandler("spectre-current-buf-changed", func(v *nvim.Nvim, args []interface{}) {
+	v.RegisterHandler("nvim-gui-current-buf-changed", func(v *nvim.Nvim, args []interface{}) {
 		OnBufChanged(ctx, v, args)
 	})
+
+	v.RegisterHandler("nvim-gui-cursor-moved", func(v *nvim.Nvim, args []interface{}) {
+		OnCursorChanged(ctx, v, args)
+	})
+
 	if err := v.Serve(); err != nil {
 		log.Fatal(err)
 	}

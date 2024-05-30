@@ -38,8 +38,9 @@ func main() {
 	}
 
 	app.Mode = opts.Mode
-	// app.Mode = "buffer"
-	app.Servername = opts.Servername
+	app.Mode = "buffer"
+	// app.Servername = opts.Servername
+	app.Servername = "/tmp/nvimsocket"
 
 	config := lua.LoadConfig()
 	state := AppState{
