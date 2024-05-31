@@ -92,21 +92,31 @@ type BufChangeEvent struct {
 	LastLineChanged   int64
 	PreviousByteCount int64
 	DeletedCodepoints *int64
-	DeletedCodeunits  *int64
+
+	DeletedCodeunits *int64
+}
+
+type BufLine struct {
+	Sign string `msgpack:"sign" json:"sign"`
+	Row  uint64 `msgpack:"row" json:"row"`
+	Line string `msgpack:"line" json:"line"`
 }
 
 func OnBufChanged(ctx context.Context, v *nvim.Nvim, args []interface{}) {
-	lines_bytes, err := v.BufferLines(0, 0, -1, true)
+	var buf_lines []BufLine
+	nvim_cmd := "return require('config.utils').get_buf_lines()"
+	log.Println("getting buf lines")
+	err := v.ExecLua(nvim_cmd, &buf_lines)
 	if err != nil {
-		panic(err)
+		utils.Log(err.Error())
+		return
 	}
-	lines := utils.MapArray(lines_bytes, func(bytes []byte) string {
-		s := string(bytes)
-		html := highlighting.HighlightCode(s, "foo.go")
-		return html
+	buf_lines = utils.MapArray(buf_lines, func(buf_line BufLine) BufLine {
+		html := highlighting.HighlightCode(buf_line.Line, "foo.go")
+		return BufLine{Sign: buf_line.Sign, Row: buf_line.Row, Line: html}
 	})
 
-	Runtime.EventsEmit(ctx, "buf-lines-changed", lines)
+	Runtime.EventsEmit(ctx, "buf-lines-changed", buf_lines)
 }
 
 func parse_lua_number(value interface{}) int {
@@ -135,14 +145,19 @@ func StartListening(servername string, ctx context.Context) {
 		return
 	}
 	defer v.Close()
+	OnBufChanged(ctx, v, nil)
 	var result string
 	nvim_cmd := fmt.Sprintf("return require('config.utils').attach_buffer(%d)", v.ChannelID())
 	err = v.ExecLua(nvim_cmd, &result)
 	if err != nil {
 		utils.Log(err.Error())
 	}
-	log.Println("channel: ", v.ChannelID())
 	nvim_cmd = fmt.Sprintf("return require('config.utils').listen_for_cursor_move(%d)", v.ChannelID())
+	err = v.ExecLua(nvim_cmd, &result)
+	if err != nil {
+		utils.Log(err.Error())
+	}
+	nvim_cmd = fmt.Sprintf("return require('config.utils').listen_for_mode_change(%d)", v.ChannelID())
 	err = v.ExecLua(nvim_cmd, &result)
 	if err != nil {
 		utils.Log(err.Error())
@@ -150,6 +165,10 @@ func StartListening(servername string, ctx context.Context) {
 
 	v.RegisterHandler("nvim-gui-current-buf-changed", func(v *nvim.Nvim, args []interface{}) {
 		OnBufChanged(ctx, v, args)
+	})
+
+	v.RegisterHandler("nvim-gui-mode-changed", func(v *nvim.Nvim, args []string) {
+		Runtime.EventsEmit(ctx, "mode-changed", args[0])
 	})
 
 	v.RegisterHandler("nvim-gui-cursor-moved", func(v *nvim.Nvim, cursor_move_event CursorMoveEvent) {

@@ -23,6 +23,13 @@ declare global {
       Matches: RipgrepMatch[]
     }
 
+    type VimMode = "n" | "i" | "v" | "V" | "c"
+    interface BufLine {
+      sign: string;
+      row: number;
+      line: string;
+    }
+
     interface CursorMoveEvent {
       row: number;
       col: number;
