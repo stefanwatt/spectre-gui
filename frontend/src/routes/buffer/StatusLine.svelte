@@ -12,13 +12,13 @@
 </script>
 
 <div class="w-full bg-mantle text-text">
-	<div
+	<span
 		class:bg-blue={mode === 'n'}
 		class:bg-green={mode === 'i'}
 		class:bg-mauve={mode === 'v' || mode === 'V'}
 		class:bg-peach={mode === 'c'}
-		class="px-2 text-xl uppercase"
+		class="bold rounded-md px-2 text-xl uppercase text-mantle"
 	>
 		{mode_name}
-	</div>
+	</span>
 </div>

@@ -53,11 +53,11 @@
 		class="grid h-full w-screen grow snap-y auto-rows-min grid-cols-[4rem,auto] overflow-y-scroll whitespace-pre font-mono text-xl"
 	>
 		{#each lines as buf_line, index}
-			<div class="text-overlay0">
+			<div class="buf-line-{index} text-overlay0">
 				<span class="text-right">{buf_line.sign}</span>
 				<span class="ml-1 text-right">{buf_line.row}</span>
 			</div>
-			<div class="relative ml-8 snap-start buf-line-{index} whitespace-pre">
+			<div class="relative ml-8 snap-start whitespace-pre">
 				<span>
 					{#if !buf_line.line}
 						{'\u00A0'}
@@ -83,7 +83,7 @@
 			</div>
 		{/each}
 	</div>
-	<div class="h-8">
+	<div class="h-8 p-1">
 		<StatusLine {mode}></StatusLine>
 	</div>
 </div>
