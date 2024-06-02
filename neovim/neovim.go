@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	"spectre-gui/highlighting"
 	"spectre-gui/utils"
 
 	"github.com/neovim/go-client/nvim"
@@ -96,26 +95,38 @@ type BufChangeEvent struct {
 	DeletedCodeunits *int64
 }
 
+type HighlightToken struct {
+	Text          string `msgpack:"text" json:"text"`
+	StartRow      uint64 `msgpack:"start_row" json:"end_row"`
+	EndRow        uint64 `msgpack:"end_row" json:"end_row"`
+	StartCol      uint64 `msgpack:"start_col" json:"start_col"`
+	EndCol        uint64 `msgpack:"end_col" json:"end_col"`
+	Foreground    string `msgpack:"foreground" json:"foreground"`
+	Background    string `msgpack:"background" json:"background"`
+	Reverse       bool   `msgpack:"reverse" json:"reverse"`
+	Underline     bool   `msgpack:"underline" json:"underline"`
+	Undercurl     bool   `msgpack:"undercurl" json:"undercurl"`
+	Strikethrough bool   `msgpack:"strikethrough" json:"strikethrough"`
+	Bold          bool   `msgpack:"bold" json:"bold"`
+	Italic        bool   `msgpack:"italic" json:"italic"`
+}
+
 type BufLine struct {
-	Sign string `msgpack:"sign" json:"sign"`
-	Row  uint64 `msgpack:"row" json:"row"`
-	Line string `msgpack:"line" json:"line"`
+	Sign   string           `msgpack:"sign" json:"sign"`
+	Row    uint64           `msgpack:"row" json:"row"`
+	Tokens []HighlightToken `msgpack:"tokens" json:"tokens"`
 }
 
 func OnBufChanged(ctx context.Context, v *nvim.Nvim, args []interface{}) {
 	var buf_lines []BufLine
-	nvim_cmd := "return require('config.utils').get_buf_lines()"
+	nvim_cmd := "return require('config.nvim-gui').get_tokens(0,0,100,1)"
 	log.Println("getting buf lines")
 	err := v.ExecLua(nvim_cmd, &buf_lines)
 	if err != nil {
 		utils.Log(err.Error())
+		utils.Log("for buf_lines", buf_lines[0])
 		return
 	}
-	buf_lines = utils.MapArray(buf_lines, func(buf_line BufLine) BufLine {
-		html := highlighting.HighlightCode(buf_line.Line, "foo.go")
-		return BufLine{Sign: buf_line.Sign, Row: buf_line.Row, Line: html}
-	})
-
 	Runtime.EventsEmit(ctx, "buf-lines-changed", buf_lines)
 }
 
@@ -147,17 +158,17 @@ func StartListening(servername string, ctx context.Context) {
 	defer v.Close()
 	OnBufChanged(ctx, v, nil)
 	var result string
-	nvim_cmd := fmt.Sprintf("return require('config.utils').attach_buffer(%d)", v.ChannelID())
+	nvim_cmd := fmt.Sprintf("return require('config.nvim-gui').attach_buffer(%d)", v.ChannelID())
 	err = v.ExecLua(nvim_cmd, &result)
 	if err != nil {
 		utils.Log(err.Error())
 	}
-	nvim_cmd = fmt.Sprintf("return require('config.utils').listen_for_cursor_move(%d)", v.ChannelID())
+	nvim_cmd = fmt.Sprintf("return require('config.nvim-gui').listen_for_cursor_move(%d)", v.ChannelID())
 	err = v.ExecLua(nvim_cmd, &result)
 	if err != nil {
 		utils.Log(err.Error())
 	}
-	nvim_cmd = fmt.Sprintf("return require('config.utils').listen_for_mode_change(%d)", v.ChannelID())
+	nvim_cmd = fmt.Sprintf("return require('config.nvim-gui').listen_for_mode_change(%d)", v.ChannelID())
 	err = v.ExecLua(nvim_cmd, &result)
 	if err != nil {
 		utils.Log(err.Error())

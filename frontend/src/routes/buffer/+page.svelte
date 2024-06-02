@@ -58,28 +58,16 @@
 				<span class="ml-1 text-right">{buf_line.row}</span>
 			</div>
 			<div class="relative ml-8 snap-start whitespace-pre">
-				<span>
-					{#if !buf_line.line}
-						{'\u00A0'}
-					{:else}
-						{@html buf_line.line}
-					{/if}
-				</span>
-				{#if cursor.row === index}
+				{#each buf_line.tokens as token}
 					<span
-						class:bg-rosewater={mode !== 'i'}
-						class:border-l={mode === 'i'}
-						class:bg-transparent={mode === 'i'}
-						class="absolute border-rosewater bg-rosewater text-mantle"
-						style="width:1ch;left: {cursor.col}ch;"
+						class:strikethrough={token.strikethrough}
+						class:underline={token.underline}
+						class:italic={token.italic}
+						style="color:{token.foreground}; background:{token.background}"
 					>
-						{#if mode !== 'i'}
-							{cursor.key}
-						{:else}
-							⠀
-						{/if}
+						{token.text}
 					</span>
-				{/if}
+				{/each}
 			</div>
 		{/each}
 	</div>
