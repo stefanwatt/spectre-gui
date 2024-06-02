@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"slices"
+	"strings"
 
 	"spectre-gui/utils"
 
@@ -138,6 +139,7 @@ func map_buf_lines(tokens []HighlightToken) []BufLine {
 	var buf_lines []BufLine
 	row := 0
 	var tokens_of_line []HighlightToken
+	last_end_col := -1
 	for _, token := range tokens {
 		if row != int(token.StartRow) {
 			buf_lines = append(buf_lines, BufLine{
@@ -146,6 +148,7 @@ func map_buf_lines(tokens []HighlightToken) []BufLine {
 				Tokens: tokens_of_line,
 			})
 			tokens_of_line = []HighlightToken{}
+			last_end_col = -1
 			row++
 		}
 		for row < int(token.StartRow) {
@@ -155,8 +158,31 @@ func map_buf_lines(tokens []HighlightToken) []BufLine {
 				Tokens: []HighlightToken{},
 			})
 			tokens_of_line = []HighlightToken{}
+			last_end_col = -1
 			row++
 		}
+		if last_end_col != -1 {
+			char_diff := int(token.StartCol) - last_end_col
+			if char_diff > 0 {
+				tokens_of_line = append(tokens_of_line, HighlightToken{
+					Text:     strings.Repeat(" ", char_diff),
+					StartRow: token.StartRow,
+					EndRow:   token.EndRow,
+					StartCol: token.StartCol - uint64(char_diff),
+					EndCol:   token.EndCol - uint64(char_diff),
+				})
+			}
+		} else if int(token.StartCol) > 0 {
+			start_col := token.StartCol
+			tokens_of_line = append(tokens_of_line, HighlightToken{
+				Text:     strings.Repeat(" ", int(start_col)),
+				StartRow: token.StartRow,
+				EndRow:   token.EndRow,
+				StartCol: token.StartCol - start_col,
+				EndCol:   token.EndCol - start_col,
+			})
+		}
+		last_end_col = int(token.EndCol)
 		tokens_of_line = append(tokens_of_line, token)
 	}
 	return buf_lines
