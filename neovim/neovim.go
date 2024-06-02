@@ -128,11 +128,46 @@ func OnBufChanged(ctx context.Context, v *nvim.Nvim, args []interface{}) {
 		utils.Log(err.Error())
 		return
 	}
+	hl_tokens = merge_tokens(hl_tokens)
 	slices.SortFunc(hl_tokens, func(a HighlightToken, b HighlightToken) int {
-		return int(a.StartRow - b.StartRow)
+		if a.StartRow == b.StartRow {
+			return int(a.StartCol - b.StartCol)
+		} else {
+			return int(a.StartRow - b.StartRow)
+		}
 	})
 	buf_lines := map_buf_lines(hl_tokens)
 	Runtime.EventsEmit(ctx, "buf-lines-changed", buf_lines)
+}
+
+func merge_tokens(tokens []HighlightToken) []HighlightToken {
+	token_ranges := make(map[string][]HighlightToken)
+	for _, token := range tokens {
+		token_key := fmt.Sprintf("%d-%d-%d-%d", token.StartRow, token.StartCol, token.EndRow, token.EndCol)
+		token_ranges[token_key] = append(token_ranges[token_key], token)
+	}
+
+	merged_tokens := []HighlightToken{}
+
+	for _, tokens_of_range := range token_ranges {
+		if len(tokens_of_range) == 0 {
+			continue
+		}
+		if tokens_of_range[0].Text == "vim" {
+			log.Println("vim tokens: ", tokens_of_range)
+		}
+		if len(tokens_of_range) == 1 {
+			merged_tokens = append(merged_tokens, tokens_of_range[0])
+		} else {
+			merged_token := tokens_of_range[0]
+			for i := 1; i < len(tokens_of_range); i++ {
+				merged_token.Foreground = tokens_of_range[i].Foreground
+				merged_token.Background = tokens_of_range[i].Background
+			}
+			merged_tokens = append(merged_tokens, merged_token)
+		}
+	}
+	return merged_tokens
 }
 
 func map_buf_lines(tokens []HighlightToken) []BufLine {
@@ -153,9 +188,17 @@ func map_buf_lines(tokens []HighlightToken) []BufLine {
 		}
 		for row < int(token.StartRow) {
 			buf_lines = append(buf_lines, BufLine{
-				Sign:   "",
-				Row:    uint64(row),
-				Tokens: []HighlightToken{},
+				Sign: "",
+				Row:  uint64(row),
+				Tokens: []HighlightToken{
+					{
+						Text:     " ",
+						StartRow: uint64(row),
+						EndRow:   uint64(row),
+						StartCol: 0,
+						EndCol:   1,
+					},
+				},
 			})
 			tokens_of_line = []HighlightToken{}
 			last_end_col = -1
@@ -207,6 +250,13 @@ type CursorMoveEvent struct {
 	BottomLine uint64 `msgpack:"bottom_line" json:"bottom_line"`
 }
 
+type NvimRange struct {
+	StartRow uint64 `msgpack:"start_row" json:"start_row"`
+	StartCol uint64 `msgpack:"start_col" json:"start_col"`
+	EndRow   uint64 `msgpack:"end_row" json:"end_row"`
+	EndCol   uint64 `msgpack:"end_col" json:"end_col"`
+}
+
 func StartListening(servername string, ctx context.Context) {
 	v, err := nvim.Dial(servername)
 	if err != nil {
@@ -217,6 +267,11 @@ func StartListening(servername string, ctx context.Context) {
 	OnBufChanged(ctx, v, nil)
 	var result string
 	nvim_cmd := fmt.Sprintf("return require('config.nvim-gui').attach_buffer(%d)", v.ChannelID())
+	err = v.ExecLua(nvim_cmd, &result)
+	if err != nil {
+		utils.Log(err.Error())
+	}
+	nvim_cmd = fmt.Sprintf("return require('config.nvim-gui').listen_for_visual_selection_change(%d)", v.ChannelID())
 	err = v.ExecLua(nvim_cmd, &result)
 	if err != nil {
 		utils.Log(err.Error())
@@ -237,7 +292,20 @@ func StartListening(servername string, ctx context.Context) {
 	})
 
 	v.RegisterHandler("nvim-gui-mode-changed", func(v *nvim.Nvim, args []string) {
-		Runtime.EventsEmit(ctx, "mode-changed", args[0])
+		mode := args[0]
+		Runtime.EventsEmit(ctx, "mode-changed", mode)
+		if mode != "v" && mode != "V" {
+			Runtime.EventsEmit(ctx, "visual-selection-changed", NvimRange{
+				StartRow: 9999999,
+				EndRow:   9999999,
+				StartCol: 0,
+				EndCol:   0,
+			})
+		}
+	})
+
+	v.RegisterHandler("nvim-gui-visual-selection-changed", func(v *nvim.Nvim, selection_range NvimRange) {
+		Runtime.EventsEmit(ctx, "visual-selection-changed", selection_range)
 	})
 
 	v.RegisterHandler("nvim-gui-cursor-moved", func(v *nvim.Nvim, cursor_move_event CursorMoveEvent) {

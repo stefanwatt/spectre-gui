@@ -25,6 +25,13 @@ declare global {
 
     type VimMode = "n" | "i" | "v" | "V" | "c"
 
+    interface NvimRange {
+      start_row: number;
+      end_row: number;
+      start_col: number;
+      end_col: number;
+    }
+
     interface HighlightToken {
       text: string;
       start_row: number;

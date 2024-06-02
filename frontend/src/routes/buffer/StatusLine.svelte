@@ -11,7 +11,7 @@
 	$: mode_name = mode_names.get(mode);
 </script>
 
-<div class="w-full bg-mantle text-text">
+<div class="h-10 w-full bg-mantle p-1 text-text">
 	<span
 		class:bg-blue={mode === 'n'}
 		class:bg-green={mode === 'i'}
