@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"slices"
 
 	"spectre-gui/utils"
 
@@ -118,16 +119,47 @@ type BufLine struct {
 }
 
 func OnBufChanged(ctx context.Context, v *nvim.Nvim, args []interface{}) {
-	var buf_lines []BufLine
+	var hl_tokens []HighlightToken
 	nvim_cmd := "return require('config.nvim-gui').get_tokens(0,0,100,1)"
 	log.Println("getting buf lines")
-	err := v.ExecLua(nvim_cmd, &buf_lines)
+	err := v.ExecLua(nvim_cmd, &hl_tokens)
 	if err != nil {
 		utils.Log(err.Error())
-		utils.Log("for buf_lines", buf_lines[0])
 		return
 	}
+	slices.SortFunc(hl_tokens, func(a HighlightToken, b HighlightToken) int {
+		return int(a.StartRow - b.StartRow)
+	})
+	buf_lines := map_buf_lines(hl_tokens)
 	Runtime.EventsEmit(ctx, "buf-lines-changed", buf_lines)
+}
+
+func map_buf_lines(tokens []HighlightToken) []BufLine {
+	var buf_lines []BufLine
+	row := 0
+	var tokens_of_line []HighlightToken
+	for _, token := range tokens {
+		if row != int(token.StartRow) {
+			buf_lines = append(buf_lines, BufLine{
+				Sign:   "",
+				Row:    uint64(row),
+				Tokens: tokens_of_line,
+			})
+			tokens_of_line = []HighlightToken{}
+			row++
+		}
+		for row < int(token.StartRow) {
+			buf_lines = append(buf_lines, BufLine{
+				Sign:   "",
+				Row:    uint64(row),
+				Tokens: []HighlightToken{},
+			})
+			tokens_of_line = []HighlightToken{}
+			row++
+		}
+		tokens_of_line = append(tokens_of_line, token)
+	}
+	return buf_lines
 }
 
 func parse_lua_number(value interface{}) int {

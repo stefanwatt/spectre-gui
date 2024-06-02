@@ -24,10 +24,27 @@ declare global {
     }
 
     type VimMode = "n" | "i" | "v" | "V" | "c"
+
+    interface HighlightToken {
+      text: string;
+      start_row: number;
+      end_row: number;
+      start_col: number;
+      end_col: number;
+      foreground: string;
+      background: string
+      reverse: boolean;
+      underline: boolean;
+      undercurl: boolean;
+      strikethrough: boolean;
+      bold: boolean
+      italic: boolean;
+    }
+
     interface BufLine {
       sign: string;
       row: number;
-      line: string;
+      tokens: HighlightToken[]
     }
 
     interface CursorMoveEvent {

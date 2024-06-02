@@ -55,18 +55,34 @@
 		{#each lines as buf_line, index}
 			<div class="buf-line-{index} text-overlay0">
 				<span class="text-right">{buf_line.sign}</span>
-				<span class="ml-1 text-right">{buf_line.row}</span>
+				<span class="ml-1 text-right">{buf_line.row+1}</span>
 			</div>
 			<div class="relative ml-8 snap-start whitespace-pre">
-				{#each buf_line.tokens as token}
-					<span
-						class:strikethrough={token.strikethrough}
-						class:underline={token.underline}
-						class:italic={token.italic}
-						style="color:{token.foreground}; background:{token.background}"
-					>
-						{token.text}
-					</span>
+				{#each buf_line?.tokens || [] as token}
+						<span
+							class:strikethrough={token.strikethrough}
+							class:underline={token.underline}
+							class:italic={token.italic}
+							style="color:{token.foreground}; background:{token.background}"
+						>
+							{#each token.text as cell, i}
+								<span
+									class:text-mantle={cursor.row === buf_line.row &&
+										cursor.col === token.start_col + i}
+									class:bg-rosewater={cursor.row === buf_line.row &&
+										cursor.col === token.start_col + i}
+								>
+									{cell}
+								</span>
+							{/each}
+						</span>
+
+					{:else }
+					{#if cursor.row == buf_line.row}
+						<span class="bg-rosewater text-mantle">
+							{' '}
+						</span>
+					{/if}
 				{/each}
 			</div>
 		{/each}
