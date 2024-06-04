@@ -35,6 +35,7 @@
 		const runtime = await import('$lib/wailsjs/runtime/runtime');
 		runtime.EventsOn('buf-lines-changed', (updated_lines) => {
 			lines = updated_lines;
+			console.log('updated line:',updated_lines)
 		});
 
 		runtime.EventsOn('cursor-changed', on_cursor_moved);
@@ -101,12 +102,15 @@
 	<div
 		class="grid h-full w-screen grow snap-y auto-rows-min grid-cols-[4rem,auto] gap-0 overflow-y-scroll whitespace-pre font-mono text-xl"
 	>
-		{#each lines as buf_line, index}
+		{#each lines || [] as buf_line, index}
 			<div class="buf-line-{index} text-overlay0">
 				<span class="text-right">{buf_line.sign}</span>
 				<span class="ml-1 text-right">{buf_line.row + 1}</span>
 			</div>
-			<div class="relative ml-8 flex snap-start whitespace-pre">
+			<div
+				class:bg-surface0={mode !== 'v' && mode !== 'V' && cursor.row === buf_line.row}
+				class="victor-mono relative ml-4 flex snap-start whitespace-pre"
+			>
 				{#each buf_line?.tokens || [] as token}
 					<div
 						class:strikethrough={token.strikethrough}
@@ -115,28 +119,43 @@
 						style="color:{token.foreground}; background:{token.background}"
 						class="flex"
 					>
-						{#each token.text as cell, i}
-							<span
-								class:bg-surface2={is_in_selection_range(buf_line.row, i + token.start_col)}
-								class:!text-mantle={cursor.row === buf_line.row &&
-									cursor.col === token.start_col + i}
-								class:!bg-rosewater={cursor.row === buf_line.row &&
-									cursor.col === token.start_col + i}
-								class="h-full"
-							>
-								{cell}
-							</span>
+						{#each token.text || "" as cell, i}
+							{#if cursor.row === buf_line.row && cursor.col === token.start_col + i}
+								{#if cell === '\t'}
+									<span
+										class:bg-surface2={is_in_selection_range(buf_line.row, i + token.start_col)}
+										class="h-full !bg-rosewater !text-mantle"
+									>
+										{' '}
+									</span>
+									<span
+										class:bg-surface2={is_in_selection_range(buf_line.row, i + token.start_col)}
+										class="whitespace-pre">{'   '}</span
+									>
+								{:else}
+									<span
+										class:bg-surface2={is_in_selection_range(buf_line.row, i + token.start_col)}
+										class="h-full !bg-rosewater !text-mantle"
+									>
+										{cell}
+									</span>
+								{/if}
+							{:else}
+								<span class:bg-surface2={is_in_selection_range(buf_line.row, i + token.start_col)}
+									>{cell}</span
+								>
+							{/if}
 						{/each}
 					</div>
-				{:else}
-					{#if cursor.row == buf_line.row}
-						<span class="bg-rosewater text-mantle">
-							{' '}
-						</span>
-					{/if}
 				{/each}
 			</div>
 		{/each}
 	</div>
 	<StatusLine {mode}></StatusLine>
 </div>
+
+<style>
+	.victor-mono {
+		font-family: VictorMono Nerd Font Mono;
+	}
+</style>

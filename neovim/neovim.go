@@ -13,35 +13,38 @@ import (
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-var specialKeys = map[string]string{
-	"Backspace":  "<BS>",
-	"Enter":      "<CR>",
-	"Escape":     "<Esc>",
-	"Tab":        "<Tab>",
-	"Insert":     "<Insert>",
-	"Delete":     "<Del>",
-	"ArrowUp":    "<Up>",
-	"ArrowDown":  "<Down>",
-	"ArrowLeft":  "<Left>",
-	"ArrowRight": "<Right>",
-	"Home":       "<Home>",
-	"End":        "<End>",
-	"PageUp":     "<PageUp>",
-	"PageDown":   "<PageDown>",
-	"F1":         "<F1>",
-	"F2":         "<F2>",
-	"F3":         "<F3>",
-	"F4":         "<F4>",
-	"F5":         "<F5>",
-	"F6":         "<F6>",
-	"F7":         "<F7>",
-	"F8":         "<F8>",
-	"F9":         "<F9>",
-	"F10":        "<F10>",
-	"F11":        "<F11>",
-	"F12":        "<F12>",
-	"Space":      "<Space>",
-}
+var (
+	buf_lines   []BufLine
+	specialKeys = map[string]string{
+		"Backspace":  "<BS>",
+		"Enter":      "<CR>",
+		"Escape":     "<Esc>",
+		"Tab":        "<Tab>",
+		"Insert":     "<Insert>",
+		"Delete":     "<Del>",
+		"ArrowUp":    "<Up>",
+		"ArrowDown":  "<Down>",
+		"ArrowLeft":  "<Left>",
+		"ArrowRight": "<Right>",
+		"Home":       "<Home>",
+		"End":        "<End>",
+		"PageUp":     "<PageUp>",
+		"PageDown":   "<PageDown>",
+		"F1":         "<F1>",
+		"F2":         "<F2>",
+		"F3":         "<F3>",
+		"F4":         "<F4>",
+		"F5":         "<F5>",
+		"F6":         "<F6>",
+		"F7":         "<F7>",
+		"F8":         "<F8>",
+		"F9":         "<F9>",
+		"F10":        "<F10>",
+		"F11":        "<F11>",
+		"F12":        "<F12>",
+		"Space":      "<Space>",
+	}
+)
 
 func SendKey(key string, ctrl bool, alt bool, shift bool, servername string) error {
 	if key == "Super" {
@@ -84,19 +87,6 @@ func SendKey(key string, ctrl bool, alt bool, shift bool, servername string) err
 	return nil
 }
 
-type BufChangeEvent struct {
-	Event             string
-	Buffer            int64
-	ChangedTick       int64
-	FirstLine         int64
-	LastLine          int64
-	LastLineChanged   int64
-	PreviousByteCount int64
-	DeletedCodepoints *int64
-
-	DeletedCodeunits *int64
-}
-
 type HighlightToken struct {
 	Text          string `msgpack:"text" json:"text"`
 	StartRow      uint64 `msgpack:"start_row" json:"end_row"`
@@ -119,16 +109,26 @@ type BufLine struct {
 	Tokens []HighlightToken `msgpack:"tokens" json:"tokens"`
 }
 
-func OnBufChanged(ctx context.Context, v *nvim.Nvim, args []interface{}) {
-	var hl_tokens []HighlightToken
-	nvim_cmd := "return require('config.nvim-gui').get_tokens(0,0,100,1)"
-	log.Println("getting buf lines")
-	err := v.ExecLua(nvim_cmd, &hl_tokens)
-	if err != nil {
-		utils.Log(err.Error())
-		return
+func GetBufLines(hl_tokens []HighlightToken) []BufLine {
+	if len(hl_tokens) == 0 {
+		return []BufLine{
+			{
+				Sign: "",
+				Row:  uint64(0),
+				Tokens: []HighlightToken{
+					{
+						Text:     " ",
+						StartRow: uint64(0),
+						StartCol: 0,
+						EndCol:   1,
+						EndRow:   uint64(1),
+					},
+				},
+			},
+		}
 	}
 	hl_tokens = merge_tokens(hl_tokens)
+	log.Println("num hl tokens: ", len(hl_tokens))
 	slices.SortFunc(hl_tokens, func(a HighlightToken, b HighlightToken) int {
 		if a.StartRow == b.StartRow {
 			return int(a.StartCol - b.StartCol)
@@ -136,8 +136,28 @@ func OnBufChanged(ctx context.Context, v *nvim.Nvim, args []interface{}) {
 			return int(a.StartRow - b.StartRow)
 		}
 	})
-	buf_lines := map_buf_lines(hl_tokens)
-	Runtime.EventsEmit(ctx, "buf-lines-changed", buf_lines)
+	return map_buf_lines(hl_tokens)
+}
+
+type BufChangeEvent struct {
+	Event             string
+	Buffer            int64
+	ChangedTick       int64
+	FirstLine         int64
+	LastLine          int64
+	LastLineChanged   int64
+	PreviousByteCount int64
+	DeletedCodepoints *int64
+
+	DeletedCodeunits *int64
+}
+
+func OnBufChanged(ctx context.Context, hl_tokens []HighlightToken) {
+	if len(hl_tokens) < 50 {
+		return
+	}
+	updated_buf_lines := GetBufLines(hl_tokens)
+	Runtime.EventsEmit(ctx, "buf-lines-changed", updated_buf_lines)
 }
 
 func merge_tokens(tokens []HighlightToken) []HighlightToken {
@@ -218,7 +238,7 @@ func map_buf_lines(tokens []HighlightToken) []BufLine {
 		} else if int(token.StartCol) > 0 {
 			start_col := token.StartCol
 			tokens_of_line = append(tokens_of_line, HighlightToken{
-				Text:     strings.Repeat(" ", int(start_col)),
+				Text:     strings.Repeat("\t", int(start_col)),
 				StartRow: token.StartRow,
 				EndRow:   token.EndRow,
 				StartCol: token.StartCol - start_col,
@@ -264,7 +284,7 @@ func StartListening(servername string, ctx context.Context) {
 		return
 	}
 	defer v.Close()
-	OnBufChanged(ctx, v, nil)
+	Runtime.EventsEmit(ctx, "buf-lines-changed", buf_lines)
 	var result string
 	nvim_cmd := fmt.Sprintf("return require('config.nvim-gui').attach_buffer(%d)", v.ChannelID())
 	err = v.ExecLua(nvim_cmd, &result)
@@ -287,8 +307,8 @@ func StartListening(servername string, ctx context.Context) {
 		utils.Log(err.Error())
 	}
 
-	v.RegisterHandler("nvim-gui-current-buf-changed", func(v *nvim.Nvim, args []interface{}) {
-		OnBufChanged(ctx, v, args)
+	v.RegisterHandler("nvim-gui-buf-changed", func(v *nvim.Nvim, hl_tokens []HighlightToken) {
+		OnBufChanged(ctx, hl_tokens)
 	})
 
 	v.RegisterHandler("nvim-gui-mode-changed", func(v *nvim.Nvim, args []string) {

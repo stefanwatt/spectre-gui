@@ -11,13 +11,13 @@
 	$: mode_name = mode_names.get(mode);
 </script>
 
-<div class="h-10 w-full bg-mantle p-1 text-text">
+<div class="flex h-10 w-full items-center bg-mantle p-1 text-text">
 	<span
 		class:bg-blue={mode === 'n'}
 		class:bg-green={mode === 'i'}
 		class:bg-mauve={mode === 'v' || mode === 'V'}
 		class:bg-peach={mode === 'c'}
-		class="bold rounded-md px-2 text-xl uppercase text-mantle"
+		class="rounded-md px-2 text-xl font-bold uppercase text-mantle"
 	>
 		{mode_name}
 	</span>
