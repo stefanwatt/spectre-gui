@@ -38,6 +38,7 @@ declare global {
       end_row: number;
       start_col: number;
       end_col: number;
+      id: string;
       foreground: string;
       background: string
       reverse: boolean;

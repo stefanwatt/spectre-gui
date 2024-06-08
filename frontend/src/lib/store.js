@@ -32,4 +32,3 @@ export const page_index = writable(0);
 export const total_results = writable(0);
 /**@type {App.Writable<number>}*/
 export const total_files = writable(0);
-

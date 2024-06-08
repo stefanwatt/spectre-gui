@@ -2,6 +2,7 @@
 	import { SendKey } from '$lib/wailsjs/go/main/App';
 	import { onDestroy, onMount } from 'svelte';
 	import StatusLine from './StatusLine.svelte';
+	import { Grid } from 'svelte-virtual';
 
 	/**@type{App.VimMode}*/
 	let mode = 'n';
@@ -35,7 +36,7 @@
 		const runtime = await import('$lib/wailsjs/runtime/runtime');
 		runtime.EventsOn('buf-lines-changed', (updated_lines) => {
 			lines = updated_lines;
-			console.log('updated line:',updated_lines)
+			console.log('updated line:', updated_lines);
 		});
 
 		runtime.EventsOn('cursor-changed', on_cursor_moved);
@@ -99,57 +100,80 @@
 </script>
 
 <div class="flex h-screen flex-col">
-	<div
-		class="grid h-full w-screen grow snap-y auto-rows-min grid-cols-[4rem,auto] gap-0 overflow-y-scroll whitespace-pre font-mono text-xl"
-	>
-		{#each lines || [] as buf_line, index}
-			<div class="buf-line-{index} text-overlay0">
-				<span class="text-right">{buf_line.sign}</span>
-				<span class="ml-1 text-right">{buf_line.row + 1}</span>
-			</div>
-			<div
-				class:bg-surface0={mode !== 'v' && mode !== 'V' && cursor.row === buf_line.row}
-				class="victor-mono relative ml-4 flex snap-start whitespace-pre"
-			>
-				{#each buf_line?.tokens || [] as token}
-					<div
-						class:strikethrough={token.strikethrough}
-						class:underline={token.underline}
-						class:italic={token.italic}
-						style="color:{token.foreground}; background:{token.background}"
-						class="flex"
-					>
-						{#each token.text || "" as cell, i}
-							{#if cursor.row === buf_line.row && cursor.col === token.start_col + i}
-								{#if cell === '\t'}
-									<span
-										class:bg-surface2={is_in_selection_range(buf_line.row, i + token.start_col)}
-										class="h-full !bg-rosewater !text-mantle"
-									>
-										{' '}
-									</span>
-									<span
-										class:bg-surface2={is_in_selection_range(buf_line.row, i + token.start_col)}
-										class="whitespace-pre">{'   '}</span
-									>
-								{:else}
-									<span
-										class:bg-surface2={is_in_selection_range(buf_line.row, i + token.start_col)}
-										class="h-full !bg-rosewater !text-mantle"
-									>
-										{cell}
-									</span>
-								{/if}
-							{:else}
-								<span class:bg-surface2={is_in_selection_range(buf_line.row, i + token.start_col)}
-									>{cell}</span
+	<div class="h-full w-screen grow snap-y overflow-y-scroll whitespace-pre font-mono text-xl">
+		<Grid
+			itemCount={lines.length * 2}
+			itemWidth={50}
+			itemHeight={28}
+			columnCount={2}
+			height={1400}
+		>
+			<div slot="item" let:columnIndex let:rowIndex let:style {style}>
+				{#if lines?.length >= rowIndex}
+					{#if columnIndex === 0}
+						<div class="buf-line-{rowIndex} text-overlay0">
+							<span class="text-right">{lines[rowIndex].sign}</span>
+							<span class="ml-1 text-right">{lines[rowIndex].row + 1}</span>
+						</div>
+					{:else}
+						<div
+							class:bg-surface0={mode !== 'v' && mode !== 'V' && cursor.row === lines[rowIndex].row}
+							class="victor-mono relative ml-4 flex snap-start whitespace-pre"
+						>
+							{#each lines[rowIndex]?.tokens || [] as token}
+								<div
+									class:strikethrough={token.strikethrough}
+									class:underline={token.underline}
+									class:italic={token.italic}
+									style="color:{token.foreground}; background:{token.background}"
+									class="flex"
 								>
-							{/if}
-						{/each}
-					</div>
-				{/each}
+									{#each token.text || '' as cell, i}
+										{#if cursor.row === lines[rowIndex].row && cursor.col === token.start_col + i}
+											{#if cell === '\t'}
+												<span
+													class:bg-surface2={is_in_selection_range(
+														lines[rowIndex].row,
+														i + token.start_col
+													)}
+													class="h-full !bg-rosewater !text-mantle"
+												>
+													{' '}
+												</span>
+												<span
+													class:bg-surface2={is_in_selection_range(
+														lines[rowIndex].row,
+														i + token.start_col
+													)}
+													class="whitespace-pre">{'   '}</span
+												>
+											{:else}
+												<span
+													class:bg-surface2={is_in_selection_range(
+														lines[rowIndex].row,
+														i + token.start_col
+													)}
+													class="h-full !bg-rosewater !text-mantle"
+												>
+													{cell}
+												</span>
+											{/if}
+										{:else}
+											<span
+												class:bg-surface2={is_in_selection_range(
+													lines[rowIndex].row,
+													i + token.start_col
+												)}>{cell}</span
+											>
+										{/if}
+									{/each}
+								</div>
+							{/each}
+						</div>
+					{/if}
+				{/if}
 			</div>
-		{/each}
+		</Grid>
 	</div>
 	<StatusLine {mode}></StatusLine>
 </div>
