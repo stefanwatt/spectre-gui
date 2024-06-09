@@ -1,45 +1,86 @@
 <script>
 	import { SendKey } from '$lib/wailsjs/go/main/App';
 	import { onDestroy, onMount } from 'svelte';
+	import { update_cursor } from './cursor.service';
 	import StatusLine from './StatusLine.svelte';
-	import { Grid } from 'svelte-virtual';
+	import VirtualList from './VirtualList.svelte';
+	import { scroll_into_view } from './utils.service';
+	import { clear_highlights, highlight_lines, highlight_range } from './visual-selection.service';
 
 	/**@type{App.VimMode}*/
-	let mode = 'n';
+	let mode = $state('n');
+
+	/**@type{boolean}*/
+	//@ts-ignore
+	let visual_selection_active = $derived(mode === 'v' || mode === 'V');
 
 	/**@type{App.BufLine[]}*/
-	let lines = [];
+	let buf_lines = $state([]);
 
 	/**@type{App.NvimRange}*/
-	let selection_range = {
+	let selection_range = $state({
 		start_row: -1,
 		end_row: -1,
 		start_col: 0,
 		end_col: 0
-	};
+	});
 
-	let cursor = { row: 5, col: 5, key: ' ' };
+	$effect(() => {
+		if (!visual_selection_active) {
+			clear_highlights();
+			return;
+		}
+		if (mode === 'V') {
+			highlight_lines(selection_range.start_row, selection_range.end_row);
+			return;
+		}
+		if (mode === 'v') {
+			highlight_range(selection_range, buf_lines);
+		}
+	});
 
+	/**@type{App.NvimPosition}*/
+	let cursor = $state({ row: 0, col: 1 });
+	let top_row = $state(0);
+
+	$effect(() => {
+		console.log('cursor effect');
+		if (!buf_lines?.length || !cursor) return;
+		const row = buf_lines.find((buf_line) => buf_line.row === cursor.row);
+		if (!row?.tokens?.length) return;
+		const line_end_col = row.tokens.slice(-1)[0].end_col;
+		update_cursor({ row: cursor.row, col: cursor.col }, line_end_col, mode);
+	});
+	/**@type{number}*/
+	let container_height = $state(0);
+
+	/**@type{number|undefined}*/
+	let scroll_top = $state(0);
+	$effect(() => {
+		if (!top_row) return;
+		scroll_top = top_row * 28;
+		scroll_into_view(top_row);
+	});
+	/**@param {KeyboardEvent} e*/
 	function send_key(e) {
-		SendKey(e.key, e.ctrlKey, e.shiftKey, e.altKey);
-	}
-
-	/**@param {App.CursorMoveEvent} e*/
-	function on_cursor_moved(e) {
-		cursor = { ...cursor, row: e.row, col: e.col, key: e.key };
-		lines = lines;
-		scroll_into_view(e.top_line);
+		e.preventDefault();
+		SendKey(e.key, e.altKey, e.shiftKey, e.ctrlKey);
 	}
 
 	onMount(async () => {
 		window.addEventListener('keydown', send_key);
 		const runtime = await import('$lib/wailsjs/runtime/runtime');
 		runtime.EventsOn('buf-lines-changed', (updated_lines) => {
-			lines = updated_lines;
+			buf_lines = updated_lines;
 			console.log('updated line:', updated_lines);
 		});
 
-		runtime.EventsOn('cursor-changed', on_cursor_moved);
+		runtime.EventsOn('cursor-changed', (e) => {
+			console.log('cursor-changed event');
+			cursor = { row: e.row, col: e.col };
+			top_row = e.top_line - 1;
+		});
+
 		runtime.EventsOn('mode-changed', (new_mode) => {
 			mode = new_mode;
 		});
@@ -52,128 +93,51 @@
 	onDestroy(() => {
 		window.removeEventListener('keydown', send_key);
 	});
-
-	/**@param {number} line*/
-	function scroll_into_view(line) {
-		const lineElement = document.querySelector(`.buf-line-${line - 1}`);
-		if (lineElement) {
-			lineElement.scrollIntoView();
-		}
-	}
-
-	/**
-	 * @param {number} row
-	 * @param {number} col
-	 * @returns {boolean}
-	 */
-	function is_in_selection_range(row, col) {
-		let start_row = selection_range.start_row;
-		let end_row = selection_range.end_row;
-		let start_col = selection_range.start_col;
-		let end_col = selection_range.end_col;
-
-		if (end_row < start_row) {
-			start_row = selection_range.end_row;
-			end_row = selection_range.start_row;
-			start_col = selection_range.end_col;
-			end_col = selection_range.start_col;
-		}
-
-		if (mode === 'V') {
-			return row >= start_row && row <= end_row;
-		}
-
-		if (start_row === end_row) {
-			if (row === start_row) {
-				return col >= start_col && col <= end_col;
-			}
-		} else {
-			if (row === start_row) {
-				return col >= start_col;
-			}
-			if (row === end_row) {
-				return col <= end_col;
-			}
-		}
-		return row >= start_row && row <= end_row;
-	}
 </script>
 
 <div class="flex h-screen flex-col">
-	<div class="h-full w-screen grow snap-y overflow-y-scroll whitespace-pre font-mono text-xl">
-		<Grid
-			itemCount={lines.length * 2}
-			itemWidth={50}
+	<div
+		bind:clientHeight={container_height}
+		class="scr-top-{scroll_top} h-full w-screen grow snap-y auto-rows-min grid-cols-[4rem,auto] gap-0 overflow-y-scroll whitespace-pre font-mono text-xl"
+	>
+		<!-- {#each lines || [] as buf_line} -->
+		<VirtualList
+			items={buf_lines}
+			containerHeight={container_height}
 			itemHeight={28}
-			columnCount={2}
-			height={1400}
+			scrollTop={scroll_top || 0}
 		>
-			<div slot="item" let:columnIndex let:rowIndex let:style {style}>
-				{#if lines?.length >= rowIndex}
-					{#if columnIndex === 0}
-						<div class="buf-line-{rowIndex} text-overlay0">
-							<span class="text-right">{lines[rowIndex].sign}</span>
-							<span class="ml-1 text-right">{lines[rowIndex].row + 1}</span>
-						</div>
-					{:else}
+			{#snippet children(prop)}
+				<!-- <div class=" text-overlay0"> -->
+				<!-- 	<span class="text-right">{buf_line.sign}</span> -->
+				<!-- 	<span class="ml-1 text-right">{buf_line.row + 1}</span> -->
+				<!-- </div> -->
+				<div
+					class:bg-surface0={!visual_selection_active && cursor.row === prop?.buf_line?.row}
+					id="buf-line-{prop?.buf_line.row}"
+					style="top:{prop?.y}px;"
+					class="victor-mono relative ml-4 flex w-screen snap-start whitespace-pre text-xl"
+				>
+					{#each prop.buf_line?.tokens || [] as token}
 						<div
-							class:bg-surface0={mode !== 'v' && mode !== 'V' && cursor.row === lines[rowIndex].row}
-							class="victor-mono relative ml-4 flex snap-start whitespace-pre"
+							class:strikethrough={token.strikethrough}
+							class:underline={token.underline}
+							class:italic={token.italic}
+							style="color:{token.foreground}; background:{token.background}"
+							class="nvim-gui-token flex {token.hl_group}"
 						>
-							{#each lines[rowIndex]?.tokens || [] as token}
-								<div
-									class:strikethrough={token.strikethrough}
-									class:underline={token.underline}
-									class:italic={token.italic}
-									style="color:{token.foreground}; background:{token.background}"
-									class="flex"
+							{#each token.text || '' as cell, i}
+								<span
+									id="cell-{prop?.buf_line?.row}-{i + token.start_col}"
+									class="border-y-0 border-l border-r-0 border-transparent">{cell}</span
 								>
-									{#each token.text || '' as cell, i}
-										{#if cursor.row === lines[rowIndex].row && cursor.col === token.start_col + i}
-											{#if cell === '\t'}
-												<span
-													class:bg-surface2={is_in_selection_range(
-														lines[rowIndex].row,
-														i + token.start_col
-													)}
-													class="h-full !bg-rosewater !text-mantle"
-												>
-													{' '}
-												</span>
-												<span
-													class:bg-surface2={is_in_selection_range(
-														lines[rowIndex].row,
-														i + token.start_col
-													)}
-													class="whitespace-pre">{'   '}</span
-												>
-											{:else}
-												<span
-													class:bg-surface2={is_in_selection_range(
-														lines[rowIndex].row,
-														i + token.start_col
-													)}
-													class="h-full !bg-rosewater !text-mantle"
-												>
-													{cell}
-												</span>
-											{/if}
-										{:else}
-											<span
-												class:bg-surface2={is_in_selection_range(
-													lines[rowIndex].row,
-													i + token.start_col
-												)}>{cell}</span
-											>
-										{/if}
-									{/each}
-								</div>
 							{/each}
 						</div>
-					{/if}
-				{/if}
-			</div>
-		</Grid>
+					{/each}
+				</div>
+			{/snippet}
+		</VirtualList>
+		<!-- {/each} -->
 	</div>
 	<StatusLine {mode}></StatusLine>
 </div>

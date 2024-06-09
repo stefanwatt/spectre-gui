@@ -3,6 +3,7 @@ import type { Writable as _Writable } from "svelte/store";
 // See https://kit.svelte.dev/docs/types#app
 // for information about these interfaces
 declare global {
+
   namespace App {
     type NotificationLevel = "info" | "success" | "warning" | "error"
 
@@ -31,6 +32,10 @@ declare global {
       start_col: number;
       end_col: number;
     }
+    interface NvimPosition {
+      row: number;
+      col: number;
+    }
 
     interface HighlightToken {
       text: string;
@@ -47,6 +52,7 @@ declare global {
       strikethrough: boolean;
       bold: boolean
       italic: boolean;
+      hl_group: string;
     }
 
     interface BufLine {

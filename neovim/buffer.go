@@ -17,7 +17,7 @@ import (
 type HighlightToken struct {
 	Id            string `msgpack:"id" json:"id"`
 	Text          string `msgpack:"text" json:"text"`
-	StartRow      uint64 `msgpack:"start_row" json:"end_row"`
+	StartRow      uint64 `msgpack:"start_row" json:"start_row"`
 	EndRow        uint64 `msgpack:"end_row" json:"end_row"`
 	StartCol      uint64 `msgpack:"start_col" json:"start_col"`
 	EndCol        uint64 `msgpack:"end_col" json:"end_col"`
@@ -29,6 +29,7 @@ type HighlightToken struct {
 	Strikethrough bool   `msgpack:"strikethrough" json:"strikethrough"`
 	Bold          bool   `msgpack:"bold" json:"bold"`
 	Italic        bool   `msgpack:"italic" json:"italic"`
+	HlGroup       string `msgpack:"hl_group" json:"hl_group"`
 }
 
 type BufLine struct {
@@ -94,6 +95,7 @@ func merge_tokens(tokens []HighlightToken) []HighlightToken {
 	token_ranges := make(map[string][]HighlightToken)
 	for _, token := range tokens {
 		token_key := fmt.Sprintf("%d-%d-%d-%d", token.StartRow, token.StartCol, token.EndRow, token.EndCol)
+		token.HlGroup = strings.ReplaceAll(token.HlGroup, ".", "-")
 		token_ranges[token_key] = append(token_ranges[token_key], token)
 	}
 
@@ -113,6 +115,9 @@ func merge_tokens(tokens []HighlightToken) []HighlightToken {
 				}
 				if tokens_of_range[i].Background != "" {
 					merged_token.Background = tokens_of_range[i].Background
+				}
+				if tokens_of_range[i].HlGroup != "" {
+					merged_token.HlGroup = tokens_of_range[i].HlGroup
 				}
 			}
 			merged_tokens = append(merged_tokens, merged_token)

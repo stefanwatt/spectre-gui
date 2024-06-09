@@ -39,9 +39,19 @@ var specialKeys = map[string]string{
 	"Space":      "<Space>",
 }
 
-func SendKey(key string, ctrl bool, alt bool, shift bool, servername string) error {
-	if key == "Super" {
-		return fmt.Errorf("Invalid key: %s", key)
+var ignored_keys = []string{
+	"Super",
+	"Alt",
+	"Shift",
+	"Control",
+}
+
+func SendKey(key string, alt bool, shift bool, ctrl bool, servername string) error {
+	_, err := utils.Find(ignored_keys, func(ignored_key string) bool {
+		return key == ignored_key
+	})
+	if err == nil {
+		return fmt.Errorf("Ignored key: %s", key)
 	}
 	v, err := nvim.Dial(servername)
 	if err != nil {
