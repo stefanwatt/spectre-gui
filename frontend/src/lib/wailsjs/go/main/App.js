@@ -30,6 +30,10 @@ export function OpenMatch(arg1, arg2, arg3) {
   return window['go']['main']['App']['OpenMatch'](arg1, arg2, arg3);
 }
 
+export function Ping(arg1) {
+  return window['go']['main']['App']['Ping'](arg1);
+}
+
 export function Replace(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['Replace'](arg1, arg2, arg3, arg4);
 }

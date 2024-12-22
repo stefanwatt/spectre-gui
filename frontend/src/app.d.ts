@@ -5,6 +5,18 @@ import type { Writable as _Writable } from "svelte/store";
 declare global {
 
   namespace App {
+    interface NvimGuiNode {
+      id: string
+      text: string
+      hl_group: string
+      start_top: uint64
+      end_top: uint64
+      start_left: uint64
+      end_left: uint64
+      children: NvimGuiNode[]
+    }
+
+
     type NotificationLevel = "info" | "success" | "warning" | "error"
 
     interface SearchFlag {

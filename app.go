@@ -60,7 +60,7 @@ func NewApp() *App {
 func (a *App) mounted(ctx context.Context) {
 	utils.Log("mounted mode: ", a.Mode)
 	Runtime.EventsEmit(a.ctx, "change-url", a.Mode)
-	if a.Servername != "" {
+	if a.Mode == "buffer" && a.Servername != "" {
 		go neovim.StartListening(a.Servername, a.ctx)
 	}
 }

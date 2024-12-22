@@ -50,6 +50,10 @@ func (a *App) GetRoute() string {
 	return a.Mode
 }
 
+func (a *App) Ping(key string) string {
+	return fmt.Sprintf("received key %s. PONG",key)
+}
+
 func (a *App) OpenMatch(path string, row int, col int) {
 	utils.Log("a.Servername")
 	err := neovim.OpenFileAt(path, row, col, a.Servername)

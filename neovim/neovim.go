@@ -41,8 +41,8 @@ func StartListening(servername string, ctx context.Context) {
 		utils.Log(err.Error())
 	}
 
-	v.RegisterHandler("nvim-gui-buf-changed", func(v *nvim.Nvim, hl_tokens []HighlightToken) {
-		OnBufChanged(ctx, hl_tokens)
+	v.RegisterHandler("nvim-gui-buf-changed", func(v *nvim.Nvim, root NvimGuiNode) {
+		OnBufChanged(ctx, root)
 	})
 
 	v.RegisterHandler("nvim-gui-mode-changed", func(v *nvim.Nvim, args []string) {

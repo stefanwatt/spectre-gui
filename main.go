@@ -37,7 +37,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	app.Mode = opts.Mode
+	// app.Mode = opts.Mode
 	app.Mode = "buffer"
 	// app.Servername = opts.Servername
 	app.Servername = "/tmp/nvimsocket"
@@ -48,8 +48,8 @@ func main() {
 		// SearchTerm: `foo`,
 		ReplaceTerm: opts.ReplaceTerm,
 		// ReplaceTerm: `bar`,
-		// Dir: opts.Dir,
-		Dir:           "/home/stefan/Projects/spectre-gui",
+		Dir: opts.Dir,
+		// Dir:           "/home/stefan/Projects/spectre-gui",
 		Include:       opts.Include,
 		Exclude:       opts.Exclude,
 		CaseSensitive: config.CaseSensitive,

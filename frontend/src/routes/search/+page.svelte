@@ -60,21 +60,23 @@
 	});
 </script>
 
-<SearchForm />
-{#if $total_results !== 0}
-	<div class="mt-2 pl-1 text-overlay2">
-		<span class="font-bold text-blue">{$total_results}</span>
-		<span>Results in </span>
-		<span class="font-bold text-blue">{$total_files}</span>
-		<span>files</span>
-		<span class="ml-4">Page </span>
-		<span class="font-bold text-blue">{$page_index + 1}</span>
-		<span>of </span>
-		<span class="font-bold text-blue">{$total_pages}</span>
+<div class="flex h-screen flex-col">
+	<SearchForm />
+	{#if $total_results !== 0}
+		<div class="mt-2 pl-1 text-overlay2">
+			<span class="font-bold text-blue">{$total_results}</span>
+			<span>Results in </span>
+			<span class="font-bold text-blue">{$total_files}</span>
+			<span>files</span>
+			<span class="ml-4">Page </span>
+			<span class="font-bold text-blue">{$page_index + 1}</span>
+			<span>of </span>
+			<span class="font-bold text-blue">{$total_pages}</span>
+		</div>
+	{/if}
+	<div class="flex h-0 min-h-full grow overflow-y-hidden pt-2">
+		<Results></Results>
 	</div>
-{/if}
-<div class="flex h-0 min-h-full grow overflow-y-hidden pt-2">
-	<Results></Results>
 </div>
 
 <style>

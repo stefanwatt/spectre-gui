@@ -32,6 +32,20 @@ type HighlightToken struct {
 	HlGroup       string `msgpack:"hl_group" json:"hl_group"`
 }
 
+type NvimGuiNode struct {
+	Id        string        `msgpack:"id" json:"id"`
+	Text      string        `msgpack:"text" json:"text"`
+	HlGroup   string        `msgpack:"hl_group" json:"hl_group"`
+	StartTop  uint64        `msgpack:"start_top" json:"start_top"`
+	EndTop    uint64        `msgpack:"end_top" json:"end_top"`
+	StartLeft uint64        `msgpack:"start_left" json:"start_left"`
+	EndLeft   uint64        `msgpack:"end_left" json:"end_left"`
+	Root      bool          `msgpack:"root" json:"root"`
+	LineBreak bool          `msgpack:"line_break" json:"line_break"`
+	Space     bool          `msgpack:"space" json:"space"`
+	Children  []NvimGuiNode `msgpack:"children" json:"children"`
+}
+
 type BufLine struct {
 	Sign   string           `msgpack:"sign" json:"sign"`
 	Row    uint64           `msgpack:"row" json:"row"`
@@ -82,13 +96,9 @@ func GetBufLines(hl_tokens []HighlightToken) []BufLine {
 	return buf_lines
 }
 
-func OnBufChanged(ctx context.Context, hl_tokens []HighlightToken) {
-	if len(hl_tokens) < 50 {
-		return
-	}
-	updated_buf_lines := GetBufLines(hl_tokens)
+func OnBufChanged(ctx context.Context, root NvimGuiNode) {
 	utils.LogTimeSinceLast("update buf lines")
-	Runtime.EventsEmit(ctx, "buf-lines-changed", updated_buf_lines)
+	Runtime.EventsEmit(ctx, "buf-lines-changed", root)
 }
 
 func merge_tokens(tokens []HighlightToken) []HighlightToken {
