@@ -53,6 +53,7 @@ func StartListening(servername string, ctx context.Context) {
 		col := cursor_move_event.Col
 		updated_tree := SplitNodeAtCursor(current_tree, row, col)
 		OnBufChanged(ctx, updated_tree)
+		UpdateCursor(ctx, cursor_move_event)
 	})
 
 	v.RegisterHandler("nvim-gui-mode-changed", func(v *nvim.Nvim, args []string) {
