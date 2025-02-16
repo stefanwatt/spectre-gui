@@ -11,6 +11,8 @@ import (
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
+var current_tree NvimGuiNode
+
 func StartListening(servername string, ctx context.Context) {
 	v, err := nvim.Dial(servername)
 	if err != nil {
@@ -42,7 +44,15 @@ func StartListening(servername string, ctx context.Context) {
 	}
 
 	v.RegisterHandler("nvim-gui-buf-changed", func(v *nvim.Nvim, root NvimGuiNode) {
+		current_tree = root
 		OnBufChanged(ctx, root)
+	})
+
+	v.RegisterHandler("nvim-gui-cursor-moved", func(v *nvim.Nvim, cursor_move_event CursorMoveEvent) {
+		row := cursor_move_event.Row
+		col := cursor_move_event.Col
+		updated_tree := SplitNodeAtCursor(current_tree, row, col)
+		OnBufChanged(ctx, updated_tree)
 	})
 
 	v.RegisterHandler("nvim-gui-mode-changed", func(v *nvim.Nvim, args []string) {
@@ -52,10 +62,6 @@ func StartListening(servername string, ctx context.Context) {
 
 	v.RegisterHandler("nvim-gui-visual-selection-changed", func(v *nvim.Nvim, selection_range NvimRange) {
 		Runtime.EventsEmit(ctx, "visual-selection-changed", selection_range)
-	})
-
-	v.RegisterHandler("nvim-gui-cursor-moved", func(v *nvim.Nvim, cursor_move_event CursorMoveEvent) {
-		UpdateCursor(ctx, cursor_move_event)
 	})
 
 	if err := v.Serve(); err != nil {

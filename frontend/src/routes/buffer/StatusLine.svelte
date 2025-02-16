@@ -1,7 +1,7 @@
 <script>
 	/**@type{App.VimMode}*/
 	export let mode = 'n';
-
+	export let cursor ={ row: 0, col: 0 }
 	const mode_names = new Map();
 	mode_names.set('n', 'normal');
 	mode_names.set('i', 'insert');
@@ -20,5 +20,12 @@
 		class="rounded-md px-2 text-xl font-bold uppercase text-mantle"
 	>
 		{mode_name}
+	</span>
+	<span class="flex-grow">
+	</span>
+	<span 
+		class="w-24 flex items-center justify-center rounded-md bg-blue px-2 text-xl font-bold uppercase text-mantle"
+	>
+		{cursor.row+1}:{cursor.col+1}
 	</span>
 </div>

@@ -99,13 +99,22 @@
 <div class="flex h-screen flex-col">
 	<div
 		bind:clientHeight={container_height}
-		class="scr-top-{scroll_top} h-full w-screen grow snap-y auto-rows-min grid-cols-[4rem,auto] gap-0 overflow-y-scroll whitespace-pre font-mono text-xl"
+		class="flex scr-top-{scroll_top} h-full w-screen grow snap-y overflow-y-scroll whitespace-pre font-mono text-xl"
 	>
-		{#if root?.children?.length}
-			<Node children={root.children}></Node>
-		{/if}
+		<div class="flex flex-col">
+			{#each new Array(200) as _, line}
+				<div class="w-12 flex justify-end mr-6 text-surface2 buf-line-{line+1}">
+					{line + 1}
+				</div>
+			{/each}
+		</div>
+		<div class="grow">
+			{#if root?.children?.length}
+				<Node children={root.children}></Node>
+			{/if}
+		</div>
 	</div>
-	<StatusLine {mode}></StatusLine>
+	<StatusLine {cursor} {mode}></StatusLine>
 </div>
 
 <style>
