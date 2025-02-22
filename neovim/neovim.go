@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
-	"spectre-gui/utils"
+	"nvim-gui/utils"
 
 	"github.com/neovim/go-client/nvim"
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -21,23 +22,23 @@ func StartListening(servername string, ctx context.Context) {
 	}
 	defer v.Close()
 	var result string
-	nvim_cmd := fmt.Sprintf("return require('config.nvim-gui').attach_buffer(%d)", v.ChannelID())
+	nvim_cmd := fmt.Sprintf("return require('nvim-gui.foo').attach_buffer(%d)", v.ChannelID())
 	err = v.ExecLua(nvim_cmd, &result)
 	if err != nil {
 		utils.Log(err.Error())
 	}
 
-	nvim_cmd = fmt.Sprintf("return require('config.nvim-gui').listen_for_visual_selection_change(%d)", v.ChannelID())
+	nvim_cmd = fmt.Sprintf("return require('nvim-gui.foo').listen_for_visual_selection_change(%d)", v.ChannelID())
 	err = v.ExecLua(nvim_cmd, &result)
 	if err != nil {
 		utils.Log(err.Error())
 	}
-	nvim_cmd = fmt.Sprintf("return require('config.nvim-gui').listen_for_cursor_move(%d)", v.ChannelID())
+	nvim_cmd = fmt.Sprintf("return require('nvim-gui.foo').listen_for_cursor_move(%d)", v.ChannelID())
 	err = v.ExecLua(nvim_cmd, &result)
 	if err != nil {
 		utils.Log(err.Error())
 	}
-	nvim_cmd = fmt.Sprintf("return require('config.nvim-gui').listen_for_mode_change(%d)", v.ChannelID())
+	nvim_cmd = fmt.Sprintf("return require('nvim-gui.foo').listen_for_mode_change(%d)", v.ChannelID())
 	err = v.ExecLua(nvim_cmd, &result)
 	if err != nil {
 		utils.Log(err.Error())
@@ -45,6 +46,12 @@ func StartListening(servername string, ctx context.Context) {
 
 	v.RegisterHandler("nvim-gui-buf-changed", func(v *nvim.Nvim, root NvimGuiNode) {
 		current_tree = root
+		
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Print(PrintNode(current_tree, ""))
+		fmt.Println("")
+		fmt.Println("")
 		OnBufChanged(ctx, root)
 	})
 
@@ -69,4 +76,41 @@ func StartListening(servername string, ctx context.Context) {
 		log.Fatal(err)
 	}
 	log.Println("listening terminating")
+}
+func PrintNode(node NvimGuiNode, indent string) string {
+	var result strings.Builder
+
+	// Write basic node information
+	result.WriteString(fmt.Sprintf("%sNode ID: %s\n", indent, node.Id))
+	result.WriteString(fmt.Sprintf("%sPosition: (%d:%d) -> (%d:%d)\n",
+		indent, node.StartRow, node.StartCol, node.EndRow, node.EndCol))
+
+	// Write text content with special formatting for linebreaks and spaces
+	if node.LineBreak {
+		result.WriteString(fmt.Sprintf("%sType: LineBreak\n", indent))
+	} else if node.Space {
+		result.WriteString(fmt.Sprintf("%sType: Space\n", indent))
+	}
+
+	if node.Text != "" {
+		// Replace invisible characters with visible representations
+		text := strings.ReplaceAll(node.Text, "\n", "⏎")
+		text = strings.ReplaceAll(text, " ", "␣")
+		result.WriteString(fmt.Sprintf("%sText: '%s'\n", indent, text))
+	}
+
+	if node.HlGroup != "" {
+		result.WriteString(fmt.Sprintf("%sHighlight: %s\n", indent, node.HlGroup))
+	}
+
+	// Print children recursively
+	if len(node.Children) > 0 {
+		result.WriteString(fmt.Sprintf("%sChildren (%d):\n", indent, len(node.Children)))
+		for i, child := range node.Children {
+			result.WriteString(fmt.Sprintf("%s└─── Child %d:\n", indent, i+1))
+			result.WriteString(PrintNode(child, indent+"    "))
+		}
+	}
+
+	return result.String()
 }

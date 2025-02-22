@@ -7,6 +7,7 @@ export function scroll_into_view(row) {
       console.log('couldnt find ' + `.buf-line-${row}`);
       return;
     } else {
+      console.log("scrolling into view", line_elem)
       //@ts-ignore
       line_elem.scrollIntoView({ block: 'start' });
     }

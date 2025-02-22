@@ -2,7 +2,7 @@ package neovim
 
 import (
 	"context"
-	"spectre-gui/utils"
+	"nvim-gui/utils"
 
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )

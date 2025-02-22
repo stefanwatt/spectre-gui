@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"spectre-gui/lua"
+	"nvim-gui/lua"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/wailsapp/wails/v2"
@@ -49,7 +49,7 @@ func main() {
 		ReplaceTerm: opts.ReplaceTerm,
 		// ReplaceTerm: `bar`,
 		Dir: opts.Dir,
-		// Dir:           "/home/stefan/Projects/spectre-gui",
+		// Dir:           "/home/stefan/Projects/nvim-gui",
 		Include:       opts.Include,
 		Exclude:       opts.Exclude,
 		CaseSensitive: config.CaseSensitive,
@@ -61,7 +61,7 @@ func main() {
 	}
 	app.State = state
 	err = wails.Run(&options.App{
-		Title:              "spectre-gui",
+		Title:              "nvim-gui",
 		LogLevel:           logger.ERROR,
 		LogLevelProduction: logger.ERROR,
 		Width:              1024,

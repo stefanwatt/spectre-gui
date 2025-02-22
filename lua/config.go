@@ -15,7 +15,7 @@ type Config struct {
 }
 
 // TODO: build path
-var CONFIG_PATH = "/home/stefan/.config/spectre-gui/init.lua"
+var CONFIG_PATH = "/home/stefan/.config/nvim-gui/init.lua"
 
 func LoadConfig() Config {
 	L := golua.NewState()

@@ -3,7 +3,7 @@ package neovim
 import (
 	"fmt"
 	"log"
-	"spectre-gui/utils"
+	"nvim-gui/utils"
 
 	"github.com/neovim/go-client/nvim"
 )

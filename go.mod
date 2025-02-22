@@ -1,4 +1,4 @@
-module spectre-gui
+module nvim-gui
 
 go 1.21
 
@@ -6,28 +6,20 @@ toolchain go1.22.2
 
 require (
 	github.com/charmbracelet/lipgloss v0.10.0
-	github.com/fsnotify/fsnotify v1.4.9
-	github.com/stretchr/testify v1.9.0
 	github.com/wailsapp/wails/v2 v2.8.2
 )
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dlclark/regexp2 v1.11.0 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 )
 
 require (
-	github.com/alecthomas/chroma/v2 v2.13.0
-	github.com/bep/debounce v1.2.1
+	github.com/bep/debounce v1.2.1 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/uuid v1.3.0
@@ -54,9 +46,9 @@ require (
 	github.com/yuin/gopher-lua v1.1.1
 	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
-	golang.org/x/net v0.25.0
+	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/text v0.15.0
+	golang.org/x/text v0.15.0 // indirect
 )
 
 // replace github.com/wailsapp/wails/v2 v2.8.1 => /

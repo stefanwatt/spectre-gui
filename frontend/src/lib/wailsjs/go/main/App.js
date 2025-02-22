@@ -10,46 +10,10 @@ export function GetAppState() {
   return window['go']['main']['App']['GetAppState']();
 }
 
-export function GetNextPage() {
-  return window['go']['main']['App']['GetNextPage']();
-}
-
-export function GetPrevPage() {
-  return window['go']['main']['App']['GetPrevPage']();
-}
-
-export function GetReplacementText(arg1, arg2, arg3, arg4) {
-  return window['go']['main']['App']['GetReplacementText'](arg1, arg2, arg3, arg4);
-}
-
-export function GetRoute() {
-  return window['go']['main']['App']['GetRoute']();
-}
-
 export function OpenMatch(arg1, arg2, arg3) {
   return window['go']['main']['App']['OpenMatch'](arg1, arg2, arg3);
 }
 
-export function Ping(arg1) {
-  return window['go']['main']['App']['Ping'](arg1);
-}
-
-export function Replace(arg1, arg2, arg3, arg4) {
-  return window['go']['main']['App']['Replace'](arg1, arg2, arg3, arg4);
-}
-
-export function ReplaceAll(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
-  return window['go']['main']['App']['ReplaceAll'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-}
-
-export function Search(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
-  return window['go']['main']['App']['Search'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-}
-
 export function SendKey(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['SendKey'](arg1, arg2, arg3, arg4);
-}
-
-export function Undo() {
-  return window['go']['main']['App']['Undo']();
 }

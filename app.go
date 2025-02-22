@@ -3,9 +3,8 @@ package main
 import (
 	"context"
 
-	"spectre-gui/match"
-	"spectre-gui/neovim"
-	"spectre-gui/utils"
+	"nvim-gui/neovim"
+	"nvim-gui/utils"
 
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -29,7 +28,6 @@ type AppState struct {
 
 type PageMatch struct {
 	RgLine string
-	Match  *match.Match
 }
 
 type Page struct {
