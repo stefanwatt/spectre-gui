@@ -5,50 +5,14 @@ import (
 
 	"nvim-gui/neovim"
 	"nvim-gui/utils"
-
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 var ctx context.Context
 
-type AppState struct {
-	SearchTerm     string
-	ReplaceTerm    string
-	Dir            string
-	Include        string
-	Exclude        string
-	CaseSensitive  bool
-	Regex          bool
-	MatchWholeWord bool
-	PreserveCase   bool
-	Pagination     Pagination
-	TotalResults   int
-	TotalFiles     int
-}
-
-type PageMatch struct {
-	RgLine string
-}
-
-type Page struct {
-	Index   int
-	Matches []PageMatch
-}
-type Pagination struct {
-	PageIndex int
-	Pages     []Page
-}
-type SearchContext struct {
-	ctx         context.Context
-	cancel_func context.CancelFunc
-}
-
 type App struct {
 	ctx        context.Context
-	State      AppState
-	search_ctx SearchContext
-	Mode       string
 	Servername string
+	File       string
 }
 
 func NewApp() *App {
@@ -56,19 +20,12 @@ func NewApp() *App {
 }
 
 func (a *App) mounted(ctx context.Context) {
-	utils.Log("mounted mode: ", a.Mode)
-	Runtime.EventsEmit(a.ctx, "change-url", a.Mode)
-	if a.Mode == "buffer" && a.Servername != "" {
+	if a.Servername != "" {
 		go neovim.StartListening(a.Servername, a.ctx)
 	}
 }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	search_ctx, cancel := context.WithCancel(context.Background())
-	a.search_ctx = SearchContext{
-		ctx:         search_ctx,
-		cancel_func: cancel,
-	}
 	utils.SetupLog()
 }

@@ -4,8 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
-
-	"nvim-gui/lua"
+	"os/exec"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/wailsapp/wails/v2"
@@ -18,13 +17,26 @@ import (
 var assets embed.FS
 
 type Options struct {
-	SearchTerm  string `short:"s" long:"search-term" description:"search term" required:"false"`
-	ReplaceTerm string `short:"r" long:"replace-term" description:"replace term" required:"false"`
-	Dir         string `short:"d" long:"dir" description:"Directory to search in" required:"false"`
-	Include     string `short:"i" long:"include" description:"glob pattern eg.: */**.go to include in search" required:"false"`
-	Exclude     string `short:"x" long:"exclude" description:"glob pattern eg.: */**.go to exclude from search" required:"false"`
-	Mode        string `short:"m" long:"mode" description:"mode" required:"false"`
-	Servername  string `short:"n" long:"servername" description:"neovim servername" required:"false"`
+	Servername string `short:"n" long:"servername" description:"neovim servername" required:"false"`
+	File       string `short:"f" long:"filename" description:"file to open" required:"false"`
+}
+
+func deleteIfExists(path string) error {
+	var err error
+	if _, err = os.Stat(path); err == nil {
+		return os.Remove(path)
+	} else if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}
+
+func spawnNeovim(servername string, filename string) (*exec.Cmd, error) {
+	cmd := exec.Command("nvim", "--embed", "--listen", servername, filename)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd, cmd.Start()
 }
 
 func main() {
@@ -36,30 +48,20 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-
-	// app.Mode = opts.Mode
-	app.Mode = "buffer"
 	// app.Servername = opts.Servername
 	app.Servername = "/tmp/nvimsocket"
-
-	config := lua.LoadConfig()
-	state := AppState{
-		SearchTerm: opts.SearchTerm,
-		// SearchTerm: `foo`,
-		ReplaceTerm: opts.ReplaceTerm,
-		// ReplaceTerm: `bar`,
-		Dir: opts.Dir,
-		// Dir:           "/home/stefan/Projects/nvim-gui",
-		Include:       opts.Include,
-		Exclude:       opts.Exclude,
-		CaseSensitive: config.CaseSensitive,
-		Regex:         config.Regex,
-		// Regex:          true,
-		MatchWholeWord: config.MatchWholeWord,
-		// MatchWholeWord: false,
-		PreserveCase: config.PreserveCase,
+	// app.File = opts.File
+	app.File = "/tmp/foo.lua"
+	err = deleteIfExists(app.Servername)
+	if err != nil {
+		fmt.Println("error deleting nvim socket")
 	}
-	app.State = state
+	cmd, err := spawnNeovim(app.Servername, app.File)
+	if err != nil {
+		panic(err)
+	}
+	cmd.Wait()
+
 	err = wails.Run(&options.App{
 		Title:              "nvim-gui",
 		LogLevel:           logger.ERROR,

@@ -40,6 +40,7 @@
 
 	/**@type{App.NvimPosition}*/
 	let cursor = $state({ row: 0, col: 1 });
+	let show_cmdline = $state(false)
 	let top_row = $state(0);
 
 	// $effect(() => {
@@ -84,6 +85,16 @@
 		runtime.EventsOn('mode-changed', (new_mode) => {
 			$mode = new_mode;
 		});
+
+		runtime.EventsOn('cmdline_show', () => {
+			//@ts-ignore
+			document.getElementById("my_modal_1").showModal()
+		});
+
+		runtime.EventsOn('cmdline_hide', () => {
+			//@ts-ignore
+			document.getElementById("my_modal_1").close()
+		});
 	});
 
 	onDestroy(() => {
@@ -91,6 +102,10 @@
 	});
 </script>
 
+
+<dialog id="my_modal_1" class="modal">
+	<input class="input input-ghost" type="text" autofocus>
+</dialog>
 <div class="flex h-screen flex-col">
 	<div
 		bind:clientHeight={container_height}

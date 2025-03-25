@@ -5,8 +5,6 @@ import (
 	"log"
 
 	"nvim-gui/utils"
-
-	"github.com/neovim/go-client/nvim"
 )
 
 var specialKeys = map[string]string{
@@ -53,12 +51,6 @@ func SendKey(key string, alt bool, shift bool, ctrl bool, servername string) err
 	if err == nil {
 		return fmt.Errorf("Ignored key: %s", key)
 	}
-	v, err := nvim.Dial(servername)
-	if err != nil {
-		log.Println("Failed to connect to Neovim:", err)
-		return err
-	}
-	defer v.Close()
 
 	if termcode, ok := specialKeys[key]; ok {
 		key = termcode
@@ -81,7 +73,7 @@ func SendKey(key string, alt bool, shift bool, ctrl bool, servername string) err
 		sequence = key
 	}
 
-	_, err = v.Input(sequence)
+	_, err = NvimInstance.Input(sequence)
 	if err != nil {
 		log.Println("Error feeding keys to Neovim:", err)
 		return err

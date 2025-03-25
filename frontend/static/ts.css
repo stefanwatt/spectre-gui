@@ -1,4 +1,6 @@
+.visual-selection{background-color: #949cbb;}
 .cursor.mode-n { color: #272a38; background-color: #eebebe; }
+.cursor.mode-v { color: #272a38; background-color: #eebebe; }
 .variable { color: #c6d0f5; }
 .variable.builtin { color: #e78284; }
 .variable.parameter { color: #ea999c; }
