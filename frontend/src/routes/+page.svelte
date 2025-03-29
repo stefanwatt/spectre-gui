@@ -1,61 +1,27 @@
 <script>
 	import { SendKey } from '$lib/wailsjs/go/main/App';
 	import { onDestroy, onMount } from 'svelte';
-	import { update_cursor } from './cursor.service';
 	import StatusLine from './StatusLine.svelte';
-	import VirtualList from './VirtualList.svelte';
 	import { scroll_into_view } from './utils.service';
-	import { clear_highlights, highlight_lines, highlight_range } from './visual-selection.service';
-	import Node from './Node.svelte';
 	import { mode } from './state.svelte';
-
-	/**@type{boolean}*/
-	//@ts-ignore
-	let visual_selection_active = $derived($mode === 'v' || $mode === 'V');
 
 	/**@type{App.NvimGuiNode | undefined}*/
 	let root = $state();
 
-	/**@type{App.NvimRange}*/
-	let selection_range = $state({
-		start_row: -1,
-		end_row: -1,
-		start_col: 0,
-		end_col: 0
-	});
-
-	// $effect(() => {
-	// 	if (!visual_selection_active) {
-	// 		clear_highlights();
-	// 		return;
-	// 	}
-	// 	if (mode === 'V') {
-	// 		highlight_lines(selection_range.start_row, selection_range.end_row);
-	// 		return;
-	// 	}
-	// 	if (mode === 'v') {
-	// 		highlight_range(selection_range, buf_lines);
-	// 	}
-	// });
-
 	/**@type{App.NvimPosition}*/
 	let cursor = $state({ row: 0, col: 1 });
-	let show_cmdline = $state(false)
+
 	let top_row = $state(0);
 
-	// $effect(() => {
-	// 	console.log('cursor effect');
-	// 	if (!buf_lines?.length || !cursor) return;
-	// 	const row = buf_lines.find((buf_line) => buf_line.row === cursor.row);
-	// 	if (!row?.tokens?.length) return;
-	// 	const line_end_col = row.tokens.slice(-1)[0].end_col;
-	// 	update_cursor({ row: cursor.row, col: cursor.col }, line_end_col, mode);
-	// });
 	/**@type{number}*/
 	let container_height = $state(0);
 
 	/**@type{number|undefined}*/
 	let scroll_top = $state(0);
+
+	/**@type{{char:string}[][]}*/
+	let content = $state([]);
+
 	$effect(() => {
 		console.log('top row changed', top_row);
 		if (!top_row) return;
@@ -71,9 +37,9 @@
 	onMount(async () => {
 		window.addEventListener('keydown', send_key);
 		const runtime = await import('$lib/wailsjs/runtime/runtime');
-		runtime.EventsOn('buf-lines-changed', (updated_root) => {
-			root = updated_root;
-			console.log('updated tree:', updated_root);
+		runtime.EventsOn('flush', (updated_content) => {
+			console.log('flush', updated_content);
+			content = updated_content;
 		});
 
 		runtime.EventsOn('cursor-changed', (e) => {
@@ -88,12 +54,12 @@
 
 		runtime.EventsOn('cmdline_show', () => {
 			//@ts-ignore
-			document.getElementById("my_modal_1").showModal()
+			document.getElementById('my_modal_1').showModal();
 		});
 
 		runtime.EventsOn('cmdline_hide', () => {
 			//@ts-ignore
-			document.getElementById("my_modal_1").close()
+			document.getElementById('my_modal_1').close();
 		});
 	});
 
@@ -102,27 +68,18 @@
 	});
 </script>
 
-
 <dialog id="my_modal_1" class="modal">
-	<input class="input input-ghost" type="text" autofocus>
+	<input class="input input-ghost" type="text" autofocus />
 </dialog>
-<div class="flex h-screen flex-col">
-	<div
-		bind:clientHeight={container_height}
-		class="flex scr-top-{scroll_top} h-full w-screen grow snap-y overflow-y-scroll whitespace-pre font-mono text-xl"
-	>
-		<div class="flex flex-col">
-			{#each new Array(200) as _, line}
-				<div id="buf-line-{line + 1}" class="mr-6 flex w-12 justify-end text-surface2">
-					{line + 1}
-				</div>
-			{/each}
-		</div>
-		<div class="grow">
-			{#if root?.children?.length}
-				<Node children={root.children}></Node>
-			{/if}
-		</div>
+<div class="flex h-screen flex-col font-mono">
+	<div class="flex-grow whitespace-pre">
+		{#each content as row}
+			<div>
+				{#each row as cell}
+					{cell?.char || ' '}
+				{/each}
+			</div>
+		{/each}
 	</div>
 	<StatusLine {cursor} mode={$mode}></StatusLine>
 </div>
