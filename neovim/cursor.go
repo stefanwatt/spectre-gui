@@ -2,7 +2,6 @@ package neovim
 
 import (
 	"context"
-	"log"
 
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -22,6 +21,5 @@ type NvimRange struct {
 }
 
 func UpdateCursor(ctx context.Context, cursor_move_event CursorMoveEvent) {
-	log.Println("cursor moved ", cursor_move_event)
 	Runtime.EventsEmit(ctx, "cursor-changed", cursor_move_event)
 }

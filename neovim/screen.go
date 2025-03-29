@@ -37,6 +37,15 @@ type Cell struct {
 	Highlight  int
 	Foreground string `json:"fg"`
 	Background string `json:"bg"`
+	Dirty      bool
+	Classes    string `json:"classes"`
+}
+
+func (c *Cell) Equals(other *Cell) bool {
+	if c == nil || other == nil {
+		return c == other
+	}
+	return c.Char == other.Char && c.Foreground == other.Foreground && c.Background == other.Background
 }
 
 type Screen struct {
@@ -445,7 +454,6 @@ func (s *Screen) gridResize(gridId int, width int, height int) {
 }
 
 func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
-	//TODO: not sure why, but for some reason col is +6
 	grid, exists := s.Grids[gridId]
 	if !exists {
 		return
@@ -453,16 +461,15 @@ func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
 
 	grid.Cursor.Row = row
 	grid.Cursor.Col = col
+
 	s.ActiveGrid = gridId
 
-	s.scheduleRender()
 	UpdateCursor(s.ctx, CursorMoveEvent{
 		Row:        uint64(row),
-		Col:        uint64(col - 6),
+		Col:        uint64(col),
 		TopLine:    uint64(s.botLine),
 		BottomLine: uint64(s.topLine),
 	})
-
 }
 
 func (s *Screen) defaultColorsSet(fg int, bg int, sp int) {
@@ -607,20 +614,109 @@ func (s *Screen) render() {
 	if len(s.Grids) == 1 {
 		utils.Log("grid 1 ", s.Grids[0])
 	}
-	for gridId, grid := range s.Grids {
+	var grid *Grid
+	for gridId, g := range s.Grids {
 		if gridId != 2 {
 			continue
 		}
+		grid = g
+	}
+	if grid == nil {
+		return
+	}
 
-		for row := 0; row < grid.Height && row < len(s.Content); row++ {
-			for col := 0; col < grid.Width && col < len(s.Content[row]); col++ {
-				if row < len(grid.Cells) && col < len(grid.Cells[row]) {
-					if grid.Cells[row][col] != nil {
-						s.Content[row][col] = grid.Cells[row][col]
+	for row := 0; row < grid.Height && row < len(s.Content); row++ {
+		for col := 0; col < grid.Width && col < len(s.Content[row]); col++ {
+			if row < len(grid.Cells) && col < len(grid.Cells[row]) {
+				if grid.Cells[row][col] != nil {
+					updatedCell := grid.Cells[row][col]
+					if !updatedCell.Equals(s.Content[row][col]) {
+						updatedCell.Dirty = true
 					}
+					s.Content[row][col] = updatedCell
 				}
 			}
 		}
 	}
-	Runtime.EventsEmit(s.ctx, "flush", s.Content)
+
+	optimizedGrid := make([][]*Cell, len(s.Content))
+	for i, row := range s.Content {
+		optimizedGrid[i] = make([]*Cell, 0) // Initialize with empty slice, we'll append
+		if len(row) == 0 {
+			continue // Skip empty rows
+		}
+
+		firstCell := row[0]
+		lastHl := firstCell.Highlight
+		currentToken := Cell{
+			Char:       "",
+			Highlight:  lastHl,
+			Background: firstCell.Background,
+			Foreground: firstCell.Foreground,
+			Dirty:      firstCell.Dirty,
+		}
+
+		for _, cell := range row {
+			if lastHl == cell.Highlight || cell.Char == " " {
+				// Same highlight or space, append to current token
+				currentToken.Char += cell.Char
+				// Update dirty flag if any cell is dirty
+				currentToken.Dirty = currentToken.Dirty || cell.Dirty
+			} else {
+				// Different highlight, store current token and start a new one
+				tokenCopy := currentToken // Copy to avoid reference issues
+				optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
+
+				// Start new token
+				lastHl = cell.Highlight
+				currentToken = Cell{
+					Char:       cell.Char,
+					Highlight:  cell.Highlight,
+					Background: cell.Background,
+					Foreground: cell.Foreground,
+					Dirty:      cell.Dirty,
+				}
+			}
+		}
+
+		// Don't forget to add the last token from the row
+		tokenCopy := currentToken
+		optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
+	}
+
+	// updates := s.createSparseUpdates()
+	// Runtime.EventsEmit(s.ctx, "flush", updates)
+	Runtime.EventsEmit(s.ctx, "flush", optimizedGrid)
+}
+
+func (s *Screen) createSparseUpdates() [][]*Cell {
+	updates := make([][]*Cell, len(s.Content))
+	hasChanges := false
+
+	// Compare each cell and only include changed ones
+	for i, row := range s.Content {
+		rowHasChanges := false
+		updates[i] = make([]*Cell, len(row))
+
+		for j, cell := range row {
+			if cell.Dirty {
+				updates[i][j] = cell
+				cell.Dirty = false
+				rowHasChanges = true
+				hasChanges = true
+			} else {
+				updates[i][j] = nil // Unchanged cell
+			}
+		}
+
+		if !rowHasChanges {
+			updates[i] = nil // Entire row unchanged
+		}
+	}
+
+	// Only return updates if there are changes
+	if hasChanges {
+		return updates
+	}
+	return nil
 }

@@ -25,13 +25,13 @@ var (
 var screen *Screen
 
 func StartListening(servername string, ctx context.Context) {
-	cols := 100
-	rows := 40
+	cols := 140
+	rows := 57
 	screen = NewScreen(ctx, cols, rows)
 	var err error
 	NvimInstance, err = nvim.NewChildProcess(
 		nvim.ChildProcessCommand("nvim"),
-		nvim.ChildProcessArgs("--embed", "/tmp/foo.lua"),
+		nvim.ChildProcessArgs("--embed", "/home/stefan/Projects/nvim-gui/neovim/screen.go"),
 		nvim.ChildProcessContext(context.Background()),
 	)
 	if err != nil {

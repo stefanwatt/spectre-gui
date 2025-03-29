@@ -19,7 +19,7 @@
 	/**@type{number|undefined}*/
 	let scroll_top = $state(0);
 
-	/**@type{{char:string, fg:string, bg:string}[][]}*/
+	/**@type{{char:string, fg:string, bg:string,classes:string}[][]}*/
 	let content = $state([]);
 
 	$effect(() => {
@@ -37,13 +37,23 @@
 	onMount(async () => {
 		window.addEventListener('keydown', send_key);
 		const runtime = await import('$lib/wailsjs/runtime/runtime');
-		runtime.EventsOn('flush', (updated_content) => {
-			console.log('flush', updated_content);
-			content = updated_content;
+		runtime.EventsOn('flush', (/**@type{any[]}*/ updated_content) => {
+			console.log(updated_content)
+			content=updated_content
+			// if (updated_content === null) return;
+			// for (let i = 0; i < updated_content.length; i++) {
+			// 	const row = updated_content[i];
+			// 	if (row === null) continue;
+			// 	for (let j = 0; j < row.length; j++) {
+			// 		const cell = row[j];
+			// 		if (cell === null) continue;
+			// 		if (!content[i]) content[i] = [];
+			// 		content[i][j] = cell;
+			// 	}
+			// }
 		});
 
 		runtime.EventsOn('cursor-changed', (e) => {
-			// console.log('cursor-changed event',e);
 			cursor = { row: e.row, col: e.col };
 			top_row = e.top_line;
 		});
@@ -72,11 +82,11 @@
 	<input class="input input-ghost" type="text" autofocus />
 </dialog>
 <div class="flex h-screen flex-col font-mono">
-	<div class="flex-grow whitespace-pre">
-		{#each content as row}
+	<div class:mode-n={$mode === 'n'} class:mode-v={$mode === 'v'} class="flex-grow whitespace-pre">
+		{#each content as row, i}
 			<div>
-				{#each row as cell}
-					<span style="color:{cell.fg};background-color:{cell.bg}">
+				{#each row as cell, j}
+					<span class:cursor={i == cursor.row && j == cursor.col} style="color:{cell?.fg};background-color:{cell?.bg}">
 						{cell?.char || ' '}
 					</span>
 				{/each}
