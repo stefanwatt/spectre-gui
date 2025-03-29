@@ -4,6 +4,7 @@
 	import StatusLine from './StatusLine.svelte';
 	import { scroll_into_view } from './utils.service';
 	import { mode } from './state.svelte';
+	import { highlights, generateHighlightCSS, updateHighlightStyles } from '$lib/highlights';
 
 	/**@type{App.NvimGuiNode | undefined}*/
 	let root = $state();
@@ -19,7 +20,7 @@
 	/**@type{number|undefined}*/
 	let scroll_top = $state(0);
 
-	/**@type{{char:string, fg:string, bg:string,classes:string}[][]}*/
+	/**@type{{char:string, fg:string, bg:string,classes:string,highlight:string}[][]}*/
 	let content = $state([]);
 
 	$effect(() => {
@@ -27,6 +28,10 @@
 		if (!top_row) return;
 		scroll_top = top_row * 28;
 		scroll_into_view(top_row);
+	});
+	$effect(() => {
+		const css = generateHighlightCSS($highlights);
+		updateHighlightStyles(css);
 	});
 	/**@param {KeyboardEvent} e*/
 	function send_key(e) {
@@ -37,9 +42,10 @@
 	onMount(async () => {
 		window.addEventListener('keydown', send_key);
 		const runtime = await import('$lib/wailsjs/runtime/runtime');
+		runtime.EventsEmit('get-highlights');
 		runtime.EventsOn('flush', (/**@type{any[]}*/ updated_content) => {
-			console.log(updated_content)
-			content=updated_content
+			console.log(updated_content);
+			content = updated_content;
 			// if (updated_content === null) return;
 			// for (let i = 0; i < updated_content.length; i++) {
 			// 	const row = updated_content[i];
@@ -52,6 +58,15 @@
 			// 	}
 			// }
 		});
+		runtime.EventsOn('highlight_defined', (highlightUpdates) => {
+			const updatedHighlights = { ...$highlights };
+
+			highlightUpdates.forEach((highlight) => {
+				updatedHighlights[highlight.id] = highlight;
+			});
+
+			highlights.set(updatedHighlights);
+		});
 
 		runtime.EventsOn('cursor-changed', (e) => {
 			cursor = { row: e.row, col: e.col };
@@ -59,9 +74,11 @@
 		});
 
 		runtime.EventsOn('mode-changed', (new_mode) => {
-			console.log("mode changed", new_mode)
+			console.log('mode changed', new_mode);
 			$mode = new_mode;
 		});
+
+		runtime.EventsOn('mode-changed', (new_mode) => {});
 
 		runtime.EventsOn('cmdline_show', () => {
 			//@ts-ignore
@@ -82,15 +99,23 @@
 <dialog id="my_modal_1" class="modal">
 	<input class="input input-ghost" type="text" autofocus />
 </dialog>
-<div class="flex h-screen flex-col font-mono">
-	<div class:mode-n={$mode === 'normal'} class:mode-v={$mode === 'visual'} class="flex-grow whitespace-pre">
+<div class="victor-mono flex h-screen flex-col">
+	<div
+		class:mode-n={$mode === 'normal'}
+		class:mode-v={$mode === 'visual'}
+		class="flex-grow whitespace-pre"
+	>
 		{#each content as row}
-			<div>
+			<div class="flex overflow-hidden leading-none">
 				{#each row as cell}
-					<span
-						class=" {cell?.classes}" style="color:{cell?.fg};background-color:{cell?.bg}">
-						{cell?.char || ' '}
-					</span>
+					{#if cell?.char}
+						<span
+							class="cell inline-block h-full hl-{cell?.highlight} {cell?.classes}"
+							style="color:{cell?.fg};background-color:{cell?.bg}"
+						>
+							{cell.char}
+						</span>
+					{/if}
 				{/each}
 			</div>
 		{/each}
@@ -99,7 +124,12 @@
 </div>
 
 <style>
+	.cell {
+		padding-top: 3px;
+		padding-bottom: 3px;
+	}
 	.victor-mono {
 		font-family: VictorMono Nerd Font Mono;
+		font-size: 22px;
 	}
 </style>

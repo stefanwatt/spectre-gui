@@ -2,5 +2,9 @@
   - ( ) calculate line height based on available space such that there's  never empty space between the content and the status line
   - ( ) implement cmdline
   - ( ) implement Markdown
-  - (-) make sure there's no gaps between rows such that visual selection etc. doesnt have weird gaps with different colors inbetween
+  - ( ) visual selection has some bugs with the beginning of the row not having the correct background color
   - ( ) apply highlighting with css classes instead of style attribute
+  - ( ) handle multiple grids for splits etc.
+  - ( ) refactor screen.go -> probably has too much logic
+* Done
+  - (x) make sure there's no gaps between rows such that visual selection etc. doesnt have weird gaps with different colors inbetween

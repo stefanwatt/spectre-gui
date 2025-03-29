@@ -7,6 +7,7 @@ import (
 	"nvim-gui/utils"
 
 	"github.com/neovim/go-client/nvim"
+	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type CursorState struct {
@@ -22,9 +23,9 @@ var (
 
 var screen *Screen
 
-func StartListening(ctx context.Context) {
+func StartListening(ctx context.Context) {	
 	cols := 140
-	rows := 57
+	rows := 49
 	screen = NewScreen(ctx, cols, rows)
 	var err error
 	NvimInstance, err = nvim.NewChildProcess(
@@ -36,6 +37,7 @@ func StartListening(ctx context.Context) {
 		log.Println(err)
 		return
 	}
+	Runtime.EventsOn(ctx,"get-highlights",screen.sendInitialHighlights)
 	defer NvimInstance.Close()
 
 	opts := map[string]interface{}{
