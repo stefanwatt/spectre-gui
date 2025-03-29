@@ -135,10 +135,10 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 		}
 		event, ok := handleEvent(update[0])
 		if !ok {
-			utils.Log("event not ok")
+
 			continue
 		}
-		utils.Log(fmt.Sprintf("event: %s", event))
+
 		args := update[1:]
 
 		switch event {
@@ -220,6 +220,7 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 }
 
 func (s *Screen) gridScroll(gridId int, top int, bot int, left int, right int, rows int, cols int) {
+
 	grid, exists := s.Grids[gridId]
 	if !exists {
 		return
@@ -236,7 +237,7 @@ func (s *Screen) gridScroll(gridId int, top int, bot int, left int, right int, r
 		}
 		absRows := int(math.Abs(float64(rows)))
 
-		if direction > 0 {
+		if direction < 0 {
 			// Scroll down (content moves up)
 			for row := bot - 1; row >= top+absRows; row-- {
 				for col := left; col < right; col++ {
@@ -273,9 +274,8 @@ func (s *Screen) gridScroll(gridId int, top int, bot int, left int, right int, r
 				}
 			}
 		}
+		s.scheduleRender()
 	}
-
-	s.scheduleRender()
 }
 
 func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
@@ -307,9 +307,6 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 		if len(cellData) > 1 {
 			hl = utils.ReflectToInt(cellData[1])
 			lastHl = hl
-		}
-		if char != " " { // Only log non-space characters to reduce noise
-			utils.Log(fmt.Sprintf("Char: '%s', Highlight ID: %d", char, hl))
 		}
 		for i := 0; i < repeat && currentCol < grid.Width; i++ {
 			if row < len(grid.Cells) && currentCol < len(grid.Cells[row]) {
@@ -412,8 +409,6 @@ func (s *Screen) handleWinViewportMargins(args []interface{}) {
 }
 
 func (s *Screen) gridResize(gridId int, width int, height int) {
-	utils.Log(fmt.Sprintf("grid_resize: grid=%d, width=%d, height=%d", gridId, width, height))
-
 	// Get or create the grid
 	grid, exists := s.Grids[gridId]
 	if !exists {
@@ -545,7 +540,6 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 			highlight.Strikethrough = strikethrough.(bool)
 		}
 
-		utils.Log("new Highlight: " + highlight.toString())
 		s.Highlights[id] = highlight
 	}
 
@@ -610,10 +604,6 @@ func (s *Screen) scheduleRender() {
 }
 
 func (s *Screen) render() {
-	utils.Log(fmt.Sprintf("rendering %d grids", len(s.Grids)))
-	if len(s.Grids) == 1 {
-		utils.Log("grid 1 ", s.Grids[0])
-	}
 	var grid *Grid
 	for gridId, g := range s.Grids {
 		if gridId != 2 {
@@ -638,6 +628,12 @@ func (s *Screen) render() {
 			}
 		}
 	}
+	// updates := s.createSparseUpdates()
+	// Runtime.EventsEmit(s.ctx, "flush", updates)
+	Runtime.EventsEmit(s.ctx, "flush", s.optimizeGrid())
+}
+
+func (s *Screen) optimizeGrid() [][]*Cell {
 
 	optimizedGrid := make([][]*Cell, len(s.Content))
 	for i, row := range s.Content {
@@ -658,9 +654,7 @@ func (s *Screen) render() {
 
 		for _, cell := range row {
 			if lastHl == cell.Highlight || cell.Char == " " {
-				// Same highlight or space, append to current token
 				currentToken.Char += cell.Char
-				// Update dirty flag if any cell is dirty
 				currentToken.Dirty = currentToken.Dirty || cell.Dirty
 			} else {
 				// Different highlight, store current token and start a new one
@@ -683,10 +677,7 @@ func (s *Screen) render() {
 		tokenCopy := currentToken
 		optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
 	}
-
-	// updates := s.createSparseUpdates()
-	// Runtime.EventsEmit(s.ctx, "flush", updates)
-	Runtime.EventsEmit(s.ctx, "flush", optimizedGrid)
+	return optimizedGrid
 }
 
 func (s *Screen) createSparseUpdates() [][]*Cell {

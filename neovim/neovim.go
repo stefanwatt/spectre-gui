@@ -2,7 +2,6 @@ package neovim
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"nvim-gui/utils"
@@ -24,7 +23,7 @@ var (
 
 var screen *Screen
 
-func StartListening(servername string, ctx context.Context) {
+func StartListening(ctx context.Context) {
 	cols := 140
 	rows := 57
 	screen = NewScreen(ctx, cols, rows)
@@ -70,7 +69,7 @@ func StartListening(servername string, ctx context.Context) {
 		mode := args[0]
 		currentMode = mode
 		Runtime.EventsEmit(ctx, "mode-changed", mode)
-		utils.Log(fmt.Sprintf("Mode changed to: %s", mode))
+		
 	})
 
 	if err := NvimInstance.Serve(); err != nil {

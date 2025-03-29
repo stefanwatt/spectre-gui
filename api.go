@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"nvim-gui/neovim"
 )
 
@@ -10,9 +9,9 @@ var (
 )
 
 func (a *App) SendKey(key string, ctrl bool, alt bool, shift bool) {
-	err := neovim.SendKey(key, ctrl, alt, shift, a.Servername)
+	err := neovim.SendKey(key, ctrl, alt, shift)
 	if err != nil {
-		log.Println(err)
+		// log.Println(err)
 	}
 }
 

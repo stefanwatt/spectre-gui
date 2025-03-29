@@ -44,7 +44,7 @@ var ignored_keys = []string{
 	"Control",
 }
 
-func SendKey(key string, alt bool, shift bool, ctrl bool, servername string) error {
+func SendKey(key string, alt bool, shift bool, ctrl bool) error {
 	_, err := utils.Find(ignored_keys, func(ignored_key string) bool {
 		return key == ignored_key
 	})
@@ -79,6 +79,5 @@ func SendKey(key string, alt bool, shift bool, ctrl bool, servername string) err
 		return err
 	}
 
-	utils.LogTime("Sent key to Neovim: " + sequence)
 	return nil
 }

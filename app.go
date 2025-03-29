@@ -11,7 +11,6 @@ var ctx context.Context
 
 type App struct {
 	ctx        context.Context
-	Servername string
 	File       string
 }
 
@@ -20,9 +19,7 @@ func NewApp() *App {
 }
 
 func (a *App) mounted(ctx context.Context) {
-	if a.Servername != "" {
-		go neovim.StartListening(a.Servername, a.ctx)
-	}
+		go neovim.StartListening( a.ctx)
 }
 
 func (a *App) startup(ctx context.Context) {
