@@ -14,13 +14,17 @@ type Highlight struct {
 	Strikethrough bool
 }
 
-func (h *Highlight)toString()string{
-		return fmt.Sprintf("fg: %d, bg: %d",h.Foreground, h.Background)
+func (h *Highlight) toString() string {
+	return fmt.Sprintf("fg: %d, bg: %d", h.Foreground, h.Background)
 }
 
-func (h *Highlight) fgHex()string{
+func (h *Highlight) fgHex() string {
 	return fmt.Sprintf("#%06x", h.Foreground)
 }
-func (h *Highlight) bgHex()string{
-	return fmt.Sprintf("#%06x", h.Background)
+func (h *Highlight) bgHex() string {
+	hex := fmt.Sprintf("#%06x", h.Background)
+	if hex == "#000000" {
+		return ""
+	}
+	return hex
 }

@@ -76,7 +76,7 @@
 		{#each content as row}
 			<div>
 				{#each row as cell}
-					<span style="color:{cell.fg}">
+					<span style="color:{cell.fg};background-color:{cell.bg}">
 						{cell?.char || ' '}
 					</span>
 				{/each}

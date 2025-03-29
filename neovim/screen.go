@@ -307,9 +307,12 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 				if hl == 0 {
 					hl = lastHl
 				}
+				highlight := s.Highlights[hl]
 				grid.Cells[row][currentCol] = &Cell{
-					Char:      char,
-					Highlight: hl,
+					Char:       char,
+					Highlight:  hl,
+					Foreground: highlight.fgHex(),
+					Background: highlight.bgHex(),
 				}
 				currentCol++
 			}
@@ -614,10 +617,6 @@ func (s *Screen) render() {
 				if row < len(grid.Cells) && col < len(grid.Cells[row]) {
 					if grid.Cells[row][col] != nil {
 						s.Content[row][col] = grid.Cells[row][col]
-						hl_id := s.Content[row][col].Highlight
-						highlight := s.Highlights[hl_id]
-						s.Content[row][col].Foreground = highlight.fgHex()
-						s.Content[row][col].Background = highlight.bgHex()
 					}
 				}
 			}
