@@ -86,7 +86,7 @@
 		{#each content as row, i}
 			<div>
 				{#each row as cell, j}
-					<span class:cursor={i == cursor.row && j == cursor.col} style="color:{cell?.fg};background-color:{cell?.bg}">
+					<span class="{cell?.classes}" style="color:{cell?.fg};background-color:{cell?.bg}">
 						{cell?.char || ' '}
 					</span>
 				{/each}

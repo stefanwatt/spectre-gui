@@ -465,6 +465,7 @@ func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
 		TopLine:    uint64(s.botLine),
 		BottomLine: uint64(s.topLine),
 	})
+	s.scheduleRender()
 }
 
 func (s *Screen) defaultColorsSet(fg int, bg int, sp int) {
@@ -634,50 +635,90 @@ func (s *Screen) render() {
 }
 
 func (s *Screen) optimizeGrid() [][]*Cell {
-
-	optimizedGrid := make([][]*Cell, len(s.Content))
-	for i, row := range s.Content {
-		optimizedGrid[i] = make([]*Cell, 0) // Initialize with empty slice, we'll append
-		if len(row) == 0 {
-			continue // Skip empty rows
-		}
-
-		firstCell := row[0]
-		lastHl := firstCell.Highlight
-		currentToken := Cell{
-			Char:       "",
-			Highlight:  lastHl,
-			Background: firstCell.Background,
-			Foreground: firstCell.Foreground,
-			Dirty:      firstCell.Dirty,
-		}
-
-		for _, cell := range row {
-			if lastHl == cell.Highlight || cell.Char == " " {
-				currentToken.Char += cell.Char
-				currentToken.Dirty = currentToken.Dirty || cell.Dirty
-			} else {
-				// Different highlight, store current token and start a new one
-				tokenCopy := currentToken // Copy to avoid reference issues
-				optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
-
-				// Start new token
-				lastHl = cell.Highlight
-				currentToken = Cell{
-					Char:       cell.Char,
-					Highlight:  cell.Highlight,
-					Background: cell.Background,
-					Foreground: cell.Foreground,
-					Dirty:      cell.Dirty,
-				}
-			}
-		}
-
-		// Don't forget to add the last token from the row
-		tokenCopy := currentToken
-		optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
-	}
-	return optimizedGrid
+    cursor := s.Grids[2].Cursor
+    optimizedGrid := make([][]*Cell, len(s.Content))
+    
+    for i, row := range s.Content {
+        optimizedGrid[i] = make([]*Cell, 0)
+        if len(row) == 0 {
+            continue
+        }
+        
+        if len(row) > 0 {
+            firstCell := row[0]
+            lastHl := firstCell.Highlight
+            currentToken := Cell{
+                Char:       "",
+                Highlight:  lastHl,
+                Background: firstCell.Background,
+                Foreground: firstCell.Foreground,
+                Dirty:      firstCell.Dirty,
+            }
+            
+            for j, cell := range row {
+                isCursor := cursor.Row == i && cursor.Col == j
+                
+                // If we've reached the cursor, save current token and start a cursor token
+                if isCursor {
+                    // If we have accumulated characters, store the current token first
+                    if len(currentToken.Char) > 0 {
+                        tokenCopy := currentToken
+                        optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
+                    }
+                    
+                    // Create the cursor token
+                    cursorToken := Cell{
+                        Char:       cell.Char,
+                        Highlight:  -69420, // Special highlight for cursor
+                        Background: cell.Background,
+                        Foreground: cell.Foreground,
+                        Dirty:      true,
+                        Classes:    "cursor",
+                    }
+                    
+                    optimizedGrid[i] = append(optimizedGrid[i], &cursorToken)
+                    
+                    // Start a new token for characters after cursor
+                    currentToken = Cell{
+                        Char:       "",
+                        Highlight:  cell.Highlight,
+                        Background: cell.Background,
+                        Foreground: cell.Foreground,
+                        Dirty:      cell.Dirty,
+                    }
+                    lastHl = cell.Highlight
+                } else if lastHl == cell.Highlight || cell.Char == " " {
+                    // Same highlight or space, append to current token
+                    currentToken.Char += cell.Char
+                    currentToken.Dirty = currentToken.Dirty || cell.Dirty
+                } else {
+                    // Different highlight, store current token and start a new one
+                    if len(currentToken.Char) > 0 {
+                        tokenCopy := currentToken
+                        optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
+                    }
+                    
+                    // Start new token
+                    lastHl = cell.Highlight
+                    currentToken = Cell{
+                        Char:       cell.Char,
+                        Highlight:  cell.Highlight,
+                        Background: cell.Background,
+                        Foreground: cell.Foreground,
+                        Dirty:      cell.Dirty,
+                    }
+                }
+            }
+            
+            // Don't forget to add the last token from the row
+            if len(currentToken.Char) > 0 {
+                tokenCopy := currentToken
+                optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
+            }
+        }
+    }
+    
+    return optimizedGrid
 }
 
 func (s *Screen) createSparseUpdates() [][]*Cell {
