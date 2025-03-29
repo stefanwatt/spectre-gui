@@ -549,6 +549,7 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 
 func (s *Screen) modeChange(mode string) {
 	s.Mode = mode
+		Runtime.EventsEmit(s.ctx, "mode-changed", mode)
 	s.scheduleRender()
 }
 

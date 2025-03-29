@@ -7,7 +7,6 @@ import (
 	"nvim-gui/utils"
 
 	"github.com/neovim/go-client/nvim"
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type CursorState struct {
@@ -54,22 +53,9 @@ func StartListening(ctx context.Context) {
 	if err != nil {
 		utils.Log(err.Error())
 	}
-		
+
 	NvimInstance.RegisterHandler("redraw", func(updates ...[]interface{}) {
 		screen.handleRedraw(updates)
-	})
-
-	NvimInstance.RegisterHandler("nvim-gui-cursor-moved", func(v *nvim.Nvim, cursor_move_event CursorMoveEvent) {
-		cursorState.Row = cursor_move_event.Row
-		cursorState.Col = cursor_move_event.Col
-		UpdateCursor(ctx, cursor_move_event)
-	})
-
-	NvimInstance.RegisterHandler("nvim-gui-mode-changed", func(v *nvim.Nvim, args []string) {
-		mode := args[0]
-		currentMode = mode
-		Runtime.EventsEmit(ctx, "mode-changed", mode)
-		
 	})
 
 	if err := NvimInstance.Serve(); err != nil {

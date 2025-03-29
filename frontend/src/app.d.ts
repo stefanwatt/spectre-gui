@@ -36,7 +36,7 @@ declare global {
       Matches: RipgrepMatch[]
     }
 
-    type VimMode = "n" | "i" | "v" | "V" | "c"
+    type VimMode = "normal" | "insert" | "visual" | "cmdline_normal"
 
     interface NvimRange {
       start_row: number;

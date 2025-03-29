@@ -59,6 +59,7 @@
 		});
 
 		runtime.EventsOn('mode-changed', (new_mode) => {
+			console.log("mode changed", new_mode)
 			$mode = new_mode;
 		});
 
@@ -82,11 +83,12 @@
 	<input class="input input-ghost" type="text" autofocus />
 </dialog>
 <div class="flex h-screen flex-col font-mono">
-	<div class:mode-n={$mode === 'n'} class:mode-v={$mode === 'v'} class="flex-grow whitespace-pre">
-		{#each content as row, i}
+	<div class:mode-n={$mode === 'normal'} class:mode-v={$mode === 'visual'} class="flex-grow whitespace-pre">
+		{#each content as row}
 			<div>
-				{#each row as cell, j}
-					<span class="{cell?.classes}" style="color:{cell?.fg};background-color:{cell?.bg}">
+				{#each row as cell}
+					<span
+						class=" {cell?.classes}" style="color:{cell?.fg};background-color:{cell?.bg}">
 						{cell?.char || ' '}
 					</span>
 				{/each}
