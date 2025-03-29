@@ -10,7 +10,6 @@ import (
 type CursorMoveEvent struct {
 	Row        uint64 `msgpack:"row" json:"row"`
 	Col        uint64 `msgpack:"col" json:"col"`
-	Key        string `msgpack:"key" json:"key"`
 	TopLine    uint64 `msgpack:"top_line" json:"top_line"`
 	BottomLine uint64 `msgpack:"bottom_line" json:"bottom_line"`
 }
@@ -24,8 +23,5 @@ type NvimRange struct {
 
 func UpdateCursor(ctx context.Context, cursor_move_event CursorMoveEvent) {
 	log.Println("cursor moved ", cursor_move_event)
-	if cursor_move_event.Key == "" {
-		cursor_move_event.Key = " "
-	}
 	Runtime.EventsEmit(ctx, "cursor-changed", cursor_move_event)
 }

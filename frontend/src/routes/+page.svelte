@@ -19,7 +19,7 @@
 	/**@type{number|undefined}*/
 	let scroll_top = $state(0);
 
-	/**@type{{char:string}[][]}*/
+	/**@type{{char:string, fg:string, bg:string}[][]}*/
 	let content = $state([]);
 
 	$effect(() => {
@@ -76,7 +76,9 @@
 		{#each content as row}
 			<div>
 				{#each row as cell}
-					{cell?.char || ' '}
+					<span style="color:{cell.fg}">
+						{cell?.char || ' '}
+					</span>
 				{/each}
 			</div>
 		{/each}

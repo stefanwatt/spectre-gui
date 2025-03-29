@@ -33,8 +33,10 @@ func (g *Grid) toString() string {
 }
 
 type Cell struct {
-	Char      string `json:"char"`
-	Highlight int    `json:"highlight"`
+	Char       string `json:"char"`
+	Highlight  int
+	Foreground string `json:"fg"`
+	Background string `json:"bg"`
 }
 
 type Screen struct {
@@ -131,29 +133,71 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 		args := update[1:]
 
 		switch event {
-		case "grid_clear":
-			s.gridClear(args)
-		case "grid_line":
-			utils.Log("grid_line")
-			s.gridLine(args)
-		case "grid_scroll":
-			s.gridScroll(args)
-		case "grid_resize":
-			s.gridResize(args)
-		case "grid_cursor_goto":
-			s.gridCursorGoto(args)
 		case "flush":
-			s.flush()
+			s.scheduleRender()
+		case "grid_resize":
+			for _, arg := range args {
+				gridArgs := arg.([]interface{})
+				gridId := utils.ReflectToInt(gridArgs[0])
+				width := utils.ReflectToInt(gridArgs[1])
+				height := utils.ReflectToInt(gridArgs[2])
+				s.gridResize(gridId, width, height)
+			}
+		case "grid_line":
+			for _, arg := range args {
+				gridArgs := arg.([]interface{})
+				gridId := utils.ReflectToInt(gridArgs[0])
+				row := utils.ReflectToInt(gridArgs[1])
+				col := utils.ReflectToInt(gridArgs[2])
+				cells := gridArgs[3].([]interface{})
+				s.gridLine(gridId, row, col, cells)
+			}
+		case "grid_clear":
+			for _, arg := range args {
+				gridArgs := arg.([]interface{})
+				gridId := utils.ReflectToInt(gridArgs[0])
+				s.gridClear(gridId)
+			}
+		case "grid_scroll":
+			for _, arg := range args {
+				scrollArgs := arg.([]interface{})
+				gridId := utils.ReflectToInt(scrollArgs[0])
+				top := utils.ReflectToInt(scrollArgs[1])
+				bot := utils.ReflectToInt(scrollArgs[2])
+				left := utils.ReflectToInt(scrollArgs[3])
+				right := utils.ReflectToInt(scrollArgs[4])
+				rows := utils.ReflectToInt(scrollArgs[5])
+				cols := utils.ReflectToInt(scrollArgs[6])
+				s.gridScroll(gridId, top, bot, left, right, rows, cols)
+			}
+		case "grid_cursor_goto":
+			for _, arg := range args {
+				gridArgs := arg.([]interface{})
+				gridId := utils.ReflectToInt(gridArgs[0])
+				row := utils.ReflectToInt(gridArgs[1])
+				col := utils.ReflectToInt(gridArgs[2])
+				s.gridCursorGoto(gridId, row, col)
+			}
 		case "win_viewport":
 			s.handleWinViewport(args)
 		case "win_viewport_margins":
 			s.handleWinViewportMargins(args)
 		case "default_colors_set":
-			s.defaultColorsSet(args)
+			for _, arg := range args {
+				gridArgs := arg.([]interface{})
+				fg := utils.ReflectToInt(gridArgs[0])
+				bg := utils.ReflectToInt(gridArgs[1])
+				sp := utils.ReflectToInt(gridArgs[2])
+				s.defaultColorsSet(fg, bg, sp)
+			}
 		case "hl_attr_define":
 			s.hlAttrDefine(args)
 		case "mode_change":
-			s.modeChange(args)
+			for _, arg := range args {
+				gridArgs := arg.([]interface{})
+				mode, _ := gridArgs[0].(string)
+				s.modeChange(mode)
+			}
 		case "win_pos":
 			s.winPos(args)
 		case "win_float_pos":
@@ -166,23 +210,7 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 	}
 }
 
-func (s *Screen) gridScroll(args []interface{}) {
-	if len(args) < 1 {
-		return
-	}
-	scrollArgs, ok := args[0].([]interface{})
-	if !ok || len(scrollArgs) < 7 {
-		return
-	}
-
-	gridId := utils.ReflectToInt(scrollArgs[0])
-	top := utils.ReflectToInt(scrollArgs[1])
-	bot := utils.ReflectToInt(scrollArgs[2])
-	left := utils.ReflectToInt(scrollArgs[3])
-	right := utils.ReflectToInt(scrollArgs[4])
-	rows := utils.ReflectToInt(scrollArgs[5])
-	cols := utils.ReflectToInt(scrollArgs[6])
-
+func (s *Screen) gridScroll(gridId int, top int, bot int, left int, right int, rows int, cols int) {
 	grid, exists := s.Grids[gridId]
 	if !exists {
 		return
@@ -241,40 +269,19 @@ func (s *Screen) gridScroll(args []interface{}) {
 	s.scheduleRender()
 }
 
-func (s *Screen) gridLine(args []interface{}) {
-	if len(args) < 1 {
-		return
-	}
-	gridArgs, ok := args[0].([]interface{})
-	if !ok || len(gridArgs) < 4 {
-		return
-	}
-
-	gridId := utils.ReflectToInt(gridArgs[0])
-	utils.Log(fmt.Sprintf("grid_line event for grid#%d", gridId))
-	row := utils.ReflectToInt(gridArgs[1])
-	col := utils.ReflectToInt(gridArgs[2])
-
+func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 	grid, exists := s.Grids[gridId]
 	if !exists {
 		return
 	}
 
-	// Debug output for rows we're interested in
-	if row >= 7 && row <= 10 {
-		utils.Log(fmt.Sprintf("grid_line: grid=%d, row=%d, col=%d", gridId, row, col))
-	}
-
-	// Check if this row is within the grid
 	if row >= grid.Height || col >= grid.Width {
 		utils.Log(fmt.Sprintf("Row %d or col %d out of bounds for grid %d (max: %d,%d)",
 			row, col, gridId, grid.Height-1, grid.Width-1))
 		return
 	}
-
-	cells := gridArgs[3].([]interface{})
-
 	currentCol := col
+	lastHl := 0
 	for _, cell := range cells {
 		cellData, ok := cell.([]interface{})
 		if !ok || len(cellData) == 0 {
@@ -290,10 +297,16 @@ func (s *Screen) gridLine(args []interface{}) {
 		hl := 0
 		if len(cellData) > 1 {
 			hl = utils.ReflectToInt(cellData[1])
+			lastHl = hl
 		}
-
+		if char != " " { // Only log non-space characters to reduce noise
+			utils.Log(fmt.Sprintf("Char: '%s', Highlight ID: %d", char, hl))
+		}
 		for i := 0; i < repeat && currentCol < grid.Width; i++ {
 			if row < len(grid.Cells) && currentCol < len(grid.Cells[row]) {
+				if hl == 0 {
+					hl = lastHl
+				}
 				grid.Cells[row][currentCol] = &Cell{
 					Char:      char,
 					Highlight: hl,
@@ -302,39 +315,21 @@ func (s *Screen) gridLine(args []interface{}) {
 			}
 		}
 	}
-	s.scheduleRender()
 }
 
-func (s *Screen) flush() {
-	s.render()
-}
-
-func minInt(a, b int) int {
-	if a < b {
-		return a
+func (s *Screen) gridClear(gridId int) {
+	grid, exists := s.Grids[gridId]
+	if !exists {
+		return
 	}
-	return b
-}
-
-func (s *Screen) gridClear(args []interface{}) {
-	for _, arg := range args {
-		gridId := utils.ReflectToInt(arg.([]interface{})[0])
-		grid, exists := s.Grids[gridId]
-		if !exists {
-			continue
-		}
-
-		// Clear all content
-		for i := range grid.Cells {
-			for j := range grid.Cells[i] {
-				grid.Cells[i][j] = &Cell{
-					Char:      " ",
-					Highlight: 0,
-				}
+	for i := range grid.Cells {
+		for j := range grid.Cells[i] {
+			grid.Cells[i][j] = &Cell{
+				Char:      " ",
+				Highlight: 0,
 			}
 		}
 	}
-
 	s.scheduleRender()
 }
 
@@ -404,20 +399,7 @@ func (s *Screen) handleWinViewportMargins(args []interface{}) {
 		s.margins[0], s.margins[1], s.margins[2], s.margins[3]))
 }
 
-func (s *Screen) gridResize(args []interface{}) {
-	if len(args) < 1 {
-		return
-	}
-	resizeArgs, ok := args[0].([]interface{})
-	if !ok || len(resizeArgs) < 3 {
-		utils.Log("Invalid grid_resize args format")
-		return
-	}
-
-	gridId := utils.ReflectToInt(resizeArgs[0])
-	width := utils.ReflectToInt(resizeArgs[1])
-	height := utils.ReflectToInt(resizeArgs[2])
-
+func (s *Screen) gridResize(gridId int, width int, height int) {
 	utils.Log(fmt.Sprintf("grid_resize: grid=%d, width=%d, height=%d", gridId, width, height))
 
 	// Get or create the grid
@@ -459,20 +441,8 @@ func (s *Screen) gridResize(args []interface{}) {
 	s.scheduleRender()
 }
 
-func (s *Screen) gridCursorGoto(args []interface{}) {
-	if len(args) < 1 {
-		return
-	}
-
-	gotoArgs := args[0].([]interface{})
-	if len(gotoArgs) < 3 {
-		return
-	}
-
-	gridId := utils.ReflectToInt(gotoArgs[0])
-	row := utils.ReflectToInt(gotoArgs[1])
-	col := utils.ReflectToInt(gotoArgs[2])
-
+func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
+	//TODO: not sure why, but for some reason col is +6
 	grid, exists := s.Grids[gridId]
 	if !exists {
 		return
@@ -483,17 +453,16 @@ func (s *Screen) gridCursorGoto(args []interface{}) {
 	s.ActiveGrid = gridId
 
 	s.scheduleRender()
+	UpdateCursor(s.ctx, CursorMoveEvent{
+		Row:        uint64(row),
+		Col:        uint64(col - 6),
+		TopLine:    uint64(s.botLine),
+		BottomLine: uint64(s.topLine),
+	})
+
 }
 
-func (s *Screen) defaultColorsSet(args []interface{}) {
-	if len(args) < 3 {
-		return
-	}
-
-	fg := utils.ReflectToInt(args[0])
-	bg := utils.ReflectToInt(args[1])
-	sp := utils.ReflectToInt(args[2])
-
+func (s *Screen) defaultColorsSet(fg int, bg int, sp int) {
 	if fg >= 0 {
 		s.DefaultFg = fg
 	} else {
@@ -566,20 +535,14 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 			highlight.Strikethrough = strikethrough.(bool)
 		}
 
+		utils.Log("new Highlight: " + highlight.toString())
 		s.Highlights[id] = highlight
 	}
 
 	s.scheduleRender()
 }
 
-func (s *Screen) modeChange(args []interface{}) {
-	if len(args) < 2 {
-		return
-	}
-
-	mode := args[0].(string)
-	// modeIdx := utils.ReflectToInt(args[1])
-
+func (s *Screen) modeChange(mode string) {
 	s.Mode = mode
 	s.scheduleRender()
 }
@@ -599,9 +562,7 @@ func (s *Screen) winPos(args []interface{}) {
 	// Handle window positioning
 	if _, exists := s.Grids[gridId]; !exists {
 		// Create a new grid for this window
-		s.gridResize([]interface{}{
-			[]interface{}{gridId, width, height},
-		})
+		s.gridResize(gridId, width, height)
 	}
 }
 
@@ -622,9 +583,7 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	// Handle floating window positioning
 	if _, exists := s.Grids[gridId]; !exists {
 		// Create a new grid for this floating window with default size
-		s.gridResize([]interface{}{
-			[]interface{}{gridId, 10, 5}, // Default width=10, height=5
-		})
+		s.gridResize(gridId, 10, 5)
 	}
 }
 func (s *Screen) scheduleRender() {
@@ -641,13 +600,11 @@ func (s *Screen) scheduleRender() {
 }
 
 func (s *Screen) render() {
-	// Render all visible grids into the buffer
 	utils.Log(fmt.Sprintf("rendering %d grids", len(s.Grids)))
 	if len(s.Grids) == 1 {
 		utils.Log("grid 1 ", s.Grids[0])
 	}
 	for gridId, grid := range s.Grids {
-		utils.Log(fmt.Sprintf("grid#%d", gridId), grid.toString())
 		if gridId != 2 {
 			continue
 		}
@@ -657,6 +614,10 @@ func (s *Screen) render() {
 				if row < len(grid.Cells) && col < len(grid.Cells[row]) {
 					if grid.Cells[row][col] != nil {
 						s.Content[row][col] = grid.Cells[row][col]
+						hl_id := s.Content[row][col].Highlight
+						highlight := s.Highlights[hl_id]
+						s.Content[row][col].Foreground = highlight.fgHex()
+						s.Content[row][col].Background = highlight.bgHex()
 					}
 				}
 			}
