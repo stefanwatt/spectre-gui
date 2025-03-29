@@ -5,73 +5,25 @@ import type { Writable as _Writable } from "svelte/store";
 declare global {
 
   namespace App {
-    interface NvimGuiNode {
-      id: string
-      text: string
-      hl_group: string
-      start_top: uint64
-      end_top: uint64
-      start_left: uint64
-      end_left: uint64
-      children: NvimGuiNode[]
-    }
-
-
-    type NotificationLevel = "info" | "success" | "warning" | "error"
-
-    interface SearchFlag {
-      icon: SvelteComponent
-      text: "match_whole_word" | "case_sensitive" | "regex"
-    }
-
-    interface Toast {
-      level: NotificationLevel;
-      text: string;
-    }
-
-    type Modifier = 'c' | 's' | 'a'
-
-    interface RipgrepResult {
-      Path: string;
-      Matches: RipgrepMatch[]
-    }
-
-    type VimMode = "normal" | "insert" | "visual" | "cmdline_normal"
-
-    interface NvimRange {
-      start_row: number;
-      end_row: number;
-      start_col: number;
-      end_col: number;
-    }
     interface NvimPosition {
       row: number;
       col: number;
     }
 
-    interface HighlightToken {
-      text: string;
-      start_row: number;
-      end_row: number;
-      start_col: number;
-      end_col: number;
-      id: string;
-      foreground: string;
-      background: string
-      reverse: boolean;
-      underline: boolean;
-      undercurl: boolean;
-      strikethrough: boolean;
-      bold: boolean
-      italic: boolean;
-      hl_group: string;
+    interface NvimCell {
+      char: string;
+      fg: string;
+      bg: string;
+      classes: string;
+      highlight: string;
     }
 
-    interface BufLine {
-      sign: string;
-      row: number;
-      tokens: HighlightToken[]
+    interface NvimHighlight {
+      id: string;
+      [key: string]: any;
     }
+    type VimMode = "normal" | "insert" | "visual" | "cmdline_normal"
+
 
     interface CursorMoveEvent {
       row: number;
@@ -81,50 +33,12 @@ declare global {
       bottom_line: number;
     }
 
-    interface RipgrepMatch {
-      Id: string;
-      FileName: string;
-      AbsolutePath: string;
-      MatchedLine: string;
-      TextBeforeMatch: string;
-      TextAfterMatch: string;
-      MatchedText: string;
-      ReplacementText: string;
-      Row: number;
-      Col: number;
-      Html: string;
-    }
-
     type Writable<T> = _Writable<T>
 
     interface Keymap {
       mods: Modifier[];
       key: string;
       action: (e: KeyboardEvent) => void;
-    }
-
-    interface SearchResult {
-      GroupedMatches: RipgrepResult[]
-      PageIndex: number
-      TotalPages: number
-      TotalResults: number
-      TotalFiles: number
-    }
-
-    interface ToastEvent {
-      level: NotificationLevel;
-      message: string;
-    }
-    interface State {
-      SearchTerm: string
-      ReplaceTerm: string
-      Dir: string
-      Include: string
-      Exclude: string
-      CaseSensitive: string
-      Regex: string
-      MatchWholeWord: string
-      PreserveCase: string
     }
   }
 }

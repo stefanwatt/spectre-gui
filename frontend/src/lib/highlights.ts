@@ -1,21 +1,35 @@
-import { writable } from 'svelte/store';
+import { writable, type Writable } from 'svelte/store';
+
+// Define the highlight interface
+export interface Highlight {
+  id: number;
+  fg: string;
+  bg: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  undercurl?: boolean;
+  strikethrough?: boolean;
+  reverse?: boolean;
+}
+
+// Define the highlights store type
+export interface HighlightMap {
+  [id: number]: Highlight;
+}
 
 // Store for highlight definitions
-export const highlights = writable(new Map());
+export const highlights: Writable<HighlightMap> = writable({});
 
-// Function to generate CSS for all highlights
 /**
- * @param {Map<string, {fg: string, bg: string, bold: boolean, italic: boolean, underline: boolean, strikethrough: boolean, undercurl: boolean, reverse: boolean}>} highlightMap
- * @returns {string}
+ * Generates CSS for all highlights
+ * @param highlightMap - Map of highlight IDs to highlight definitions
+ * @returns CSS string with all highlight classes
  */
-export function generateHighlightCSS(highlightMap) {
+export function generateHighlightCSS(highlightMap: HighlightMap): string {
   let css = '';
   
-  Object.entries(highlightMap).forEach(
-    /**
-     * @param {[string, {fg: string, bg: string, bold: boolean, italic: boolean, underline: boolean, strikethrough: boolean, undercurl: boolean, reverse: boolean}]} id
-     */
-    ([id, highlight]) => {
+  Object.entries(highlightMap).forEach(([id, highlight]) => {
     css += `.hl-${id} {\n`;
     
     if (highlight.fg) {
@@ -58,10 +72,11 @@ export function generateHighlightCSS(highlightMap) {
   return css;
 }
 
-// Function to update the style element with new CSS
-/** @param {string} css*/
-export function updateHighlightStyles(css) {
-  console.log("updating css: ",css)
+/**
+ * Updates the style element with new CSS
+ * @param css - CSS string to update the style element with
+ */
+export function updateHighlightStyles(css: string): void {
   let styleEl = document.getElementById('neovim-highlights');
   
   if (!styleEl) {
