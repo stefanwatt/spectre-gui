@@ -56,6 +56,21 @@ declare global {
       key: string;
       action: (e: KeyboardEvent) => void;
     }
+
+    interface FloatingWindow {
+      id: number;
+      grid_id: number;
+      anchor_grid: number;
+      anchor: string;
+      row: number;
+      col: number;
+      width: number;
+      height: number;
+      z_index: number;
+      focusable: boolean;
+      is_popup: boolean;
+      content: string;
+    }
   }
 }
 

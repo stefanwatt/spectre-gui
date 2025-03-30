@@ -129,7 +129,7 @@
 	<div class="relative flex w-screen justify-center">
 		<div class="absolute top-24">
 			<div
-				class="cmdline-container command-mode flex items-center rounded-md border-l-blue p-2 shadow-md"
+				class="cmdline-container command-mode flex items-center rounded-md !border-l-blue p-2 shadow-md"
 			>
 				<div class="mr-4 text-blue">
 					<CommandIcon />

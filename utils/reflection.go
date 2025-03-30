@@ -1,5 +1,10 @@
 package utils
 
+import (
+	"fmt"
+	"reflect"
+)
+
 func ReflectToInt(iface interface{}) int {
 	i, ok := iface.(int64)
 	if ok {
@@ -17,6 +22,7 @@ func ReflectToInt(iface interface{}) int {
 	if ok {
 		return int(l)
 	}
+	Log(fmt.Sprintf("could not reflect type:%s to int",reflect.TypeOf(iface).String()))
 	return 0
 }
 

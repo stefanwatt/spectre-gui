@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"math"
 	"nvim-gui/utils"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/akiyosi/goneovim/util"
+	"github.com/neovim/go-client/nvim"
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -33,6 +35,19 @@ func (g *Grid) toString() string {
 		result += "\n"
 	}
 	return result
+}
+
+func (g *Grid) toHexString() string {
+	var hexChars []string
+	for _, row := range g.Cells {
+		for _, cell := range row {
+			for _, r := range cell.Char {
+				hexChars = append(hexChars, fmt.Sprintf("%x", r))
+			}
+		}
+		hexChars = append(hexChars, "0A")
+	}
+	return strings.Join(hexChars, ",")
 }
 
 type Cell struct {
@@ -62,6 +77,8 @@ type Screen struct {
 	Content       [][]*Cell
 	Grids         map[int]*Grid
 	Highlights    map[int]*Highlight
+	Windows       map[int]*Window // Map of window IDs to Window objects
+	GridToWindow  map[int]int     // Map of grid IDs to window IDs
 	DefaultFg     int
 	DefaultBg     int
 	DefaultSp     int
@@ -69,6 +86,7 @@ type Screen struct {
 	Mode          string
 	PendingRender bool
 	highlightsMu  sync.RWMutex // Mutex for Highlights map
+	windowsMu     sync.RWMutex // Mutex for Windows map
 }
 
 func NewScreen(ctx context.Context, cols int, rows int) *Screen {
@@ -107,6 +125,8 @@ func NewScreen(ctx context.Context, cols int, rows int) *Screen {
 		ctx:           ctx,
 		Grids:         grids,
 		Highlights:    highlights,
+		Windows:       make(map[int]*Window),
+		GridToWindow:  make(map[int]int),
 		DefaultFg:     0xffffff,
 		DefaultBg:     0x000000,
 		DefaultSp:     0xffffff,
@@ -114,6 +134,7 @@ func NewScreen(ctx context.Context, cols int, rows int) *Screen {
 		Mode:          "normal",
 		PendingRender: false,
 		Content:       content,
+		margins:       make([]int, 4), // Initialize margins slice
 	}
 }
 
@@ -137,7 +158,6 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 		}
 		event, ok := handleEvent(update[0])
 		if !ok {
-
 			continue
 		}
 
@@ -212,7 +232,15 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 		case "win_pos":
 			s.winPos(args)
 		case "win_float_pos":
-			s.winFloatPos(args)
+			for _, arg := range args {
+				gridArgs := arg.([]interface{})
+				s.winFloatPos(gridArgs)
+			}
+		case "win_close":
+			for _, arg := range args {
+				gridArgs := arg.([]interface{})
+				s.winClose(gridArgs)
+			}
 		case "cmdline_show":
 			s.handleCmdlineShow(args)
 		case "cmdline_pos":
@@ -229,9 +257,6 @@ func (s *Screen) gridScroll(gridId int, top int, bot int, left int, right int, r
 	if !exists {
 		return
 	}
-
-	utils.Log(fmt.Sprintf("gridScroll id:%d, top:%d, bot:%d, left:%d, right:%d, rows:%d, cols:%d",
-		gridId, top, bot, left, right, rows, cols))
 
 	// Handle vertical scrolling
 	if rows != 0 {
@@ -372,9 +397,6 @@ func (s *Screen) handleWinViewport(args []interface{}) {
 		s.scrollDelta = float64(utils.ReflectToInt(viewportArgs[7]))
 	}
 
-	utils.Log(fmt.Sprintf("Viewport: topLine=%d, botLine=%d, curLine=%d, lineCount=%d, scrollDelta=%f",
-		s.topLine, s.botLine, s.curLine, s.lineCount, s.scrollDelta))
-
 	// Emit viewport info to frontend
 	Runtime.EventsEmit(s.ctx, "viewport_changed", map[string]interface{}{
 		"top_line":   s.topLine,
@@ -405,12 +427,12 @@ func (s *Screen) handleWinViewportMargins(args []interface{}) {
 	s.margins[2] = utils.ReflectToInt(marginArgs[4]) // left
 	s.margins[3] = utils.ReflectToInt(marginArgs[5]) // right
 
-	utils.Log(fmt.Sprintf("Viewport margins: top=%d, bottom=%d, left=%d, right=%d",
-		s.margins[0], s.margins[1], s.margins[2], s.margins[3]))
 }
 
 func (s *Screen) gridResize(gridId int, width int, height int) {
-	// Get or create the grid
+	if gridId > 2 {
+		utils.Log(fmt.Sprintf("gridResize gridId: %d, width: %d, height: %d", gridId, width, height))
+	}
 	grid, exists := s.Grids[gridId]
 	if !exists {
 		grid = &Grid{
@@ -446,6 +468,22 @@ func (s *Screen) gridResize(gridId int, width int, height int) {
 	}
 
 	grid.Cells = newCells
+	// Update window dimensions if this grid is associated with a window
+	s.windowsMu.RLock()
+	if winId, exists := s.GridToWindow[gridId]; exists {
+		if window, exists := s.Windows[winId]; exists {
+			window.Width = width
+			window.Height = height
+
+			// If this is a small 1x1 window, it's probably not a completion window
+			if width == 1 && height == 1 {
+				window.IsPopupmenu = false
+			}
+
+			utils.Log(fmt.Sprintf("Updated window %d dimensions to %dx%d", winId, width, height))
+		}
+	}
+	s.windowsMu.RUnlock()
 	s.scheduleRender()
 }
 
@@ -520,7 +558,6 @@ func (s *Screen) sendInitialHighlights(optionalData ...interface{}) {
 	s.highlightsMu.RUnlock()
 
 	if len(highlightUpdates) > 0 {
-		utils.Log("sending initial highlight updates", highlightUpdates)
 		Runtime.EventsEmit(s.ctx, "highlight_defined", highlightUpdates)
 	}
 }
@@ -593,7 +630,6 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 
 	// Emit highlight definitions to frontend
 	if len(highlightUpdates) > 0 {
-		utils.Log("sending highlight updates", highlightUpdates)
 		Runtime.EventsEmit(s.ctx, "highlight_defined", highlightUpdates)
 	}
 
@@ -626,25 +662,69 @@ func (s *Screen) winPos(args []interface{}) {
 }
 
 func (s *Screen) winFloatPos(args []interface{}) {
+	utils.Log("winFloatPos: ", args)
 	if len(args) < 8 {
+		utils.Log(fmt.Sprintf("winFloatPos not enough args %d", len(args)))
 		return
 	}
 
 	gridId := utils.ReflectToInt(args[0])
-	// win := args[1]
-	// anchor := args[2].(string)
-	// anchorGrid := utils.ReflectToInt(args[3])
-	// anchorRow := utils.ReflectToInt(args[4])
-	// anchorCol := utils.ReflectToInt(args[5])
-	// focusable := args[6].(bool)
-	// zIndex := utils.ReflectToInt(args[7])
+	utils.Log(fmt.Sprintf("winFloatPos computing args for gridId %d", gridId), args)
+	nwindow := args[1].(nvim.Window)
+	// strings.Split(args[1].(string),":")[1]
+	winId, _ := strconv.Atoi(strings.Split(nwindow.String(), ":")[1])
+	anchor := args[2].(string)
+	anchorGrid := utils.ReflectToInt(args[3])
+	anchorRow := utils.ReflectToFloat(args[4])
+	anchorCol := utils.ReflectToFloat(args[5])
+	focusable := args[6].(bool)
+	zIndex := utils.ReflectToInt(args[7])
+	utils.Log(fmt.Sprintf("winFloatPos winId: %d row: %d col %d", winId, anchorRow, anchorCol), args)
 
-	// Handle floating window positioning
-	if _, exists := s.Grids[gridId]; !exists {
-		// Create a new grid for this floating window with default size
-		s.gridResize(gridId, 10, 5)
+	// Update window tracking
+	s.windowsMu.Lock()
+	defer s.windowsMu.Unlock()
+
+	window, exists := s.Windows[winId]
+	if !exists {
+		utils.Log(fmt.Sprintf("winFloatPos adding winId %d", winId))
+		window = NewWindow(winId, gridId)
+		s.Windows[winId] = window
+	} else {
+		utils.Log(fmt.Sprintf("winFloatPos already had winId %d", winId))
 	}
+
+	existingGrid := s.Grids[gridId]
+	if existingGrid != nil {
+		window.Width = existingGrid.Width
+		window.Height = existingGrid.Height
+	}
+
+	// Update window properties
+	window.GridID = gridId
+	window.Type = "floating"
+	window.Anchor = anchor
+	window.AnchorGrid = anchorGrid
+	window.Row = int(anchorRow)
+	window.Col = int(anchorCol)
+	window.Focusable = focusable
+	window.ZIndex = zIndex
+
+	// Check if this might be a completion window
+	// Completion windows are typically floating windows with specific characteristics
+	if window.Width > 1 && window.Height > 1 {
+		// This is a heuristic - we might need to refine this
+		window.IsPopupmenu = true
+	}
+
+	// Update grid to window mapping
+	s.GridToWindow[gridId] = winId
+
+	utils.Log(fmt.Sprintf("Floating window %d anchored at grid %d (%d,%d) with z-index %d",
+		winId, anchorGrid, anchorRow, anchorCol, zIndex))
+	s.scheduleRender()
 }
+
 func (s *Screen) scheduleRender() {
 	if !s.PendingRender {
 		s.PendingRender = true
@@ -685,6 +765,7 @@ func (s *Screen) render() {
 	}
 	// updates := s.createSparseUpdates()
 	// Runtime.EventsEmit(s.ctx, "flush", updates)
+	s.EmitFloatingWindows()
 	Runtime.EventsEmit(s.ctx, "flush", s.optimizeGrid())
 }
 
@@ -801,6 +882,7 @@ func (s *Screen) createSparseUpdates() [][]*Cell {
 	}
 	return nil
 }
+
 func sanitize(s string) string {
 	s = strings.Replace(s, " ", `&nbsp;`, -1)
 	s = strings.Replace(s, "\t", `&nbsp;`, -1)
@@ -809,6 +891,7 @@ func sanitize(s string) string {
 
 	return s
 }
+
 func (s *Screen) handleCmdlineShow(args []interface{}) {
 	arg := args[0].([]interface{})
 
@@ -850,9 +933,8 @@ func (s *Screen) handleCmdlineShow(args []interface{}) {
 
 // handleCmdlinePos processes the cmdline_pos event
 func (s *Screen) handleCmdlinePos(args []interface{}) {
-	cmdlineArgs:=args[0].([]interface{})
+	cmdlineArgs := args[0].([]interface{})
 	if len(cmdlineArgs) < 2 {
-		utils.Log("not enough args cmdline_pos")
 		return
 	}
 
@@ -863,4 +945,70 @@ func (s *Screen) handleCmdlinePos(args []interface{}) {
 		"pos":   pos,
 		"level": level,
 	})
+}
+
+func (s *Screen) winClose(args []interface{}) {
+	utils.Log("winClose", args)
+	if len(args) < 1 {
+		return
+	}
+
+	gridId := utils.ReflectToInt(args[0])
+	utils.Log("winClose", args)
+
+	// Find the grid associated with this window
+	s.windowsMu.RLock()
+	for grid, winId := range s.GridToWindow {
+		if grid == gridId {
+			delete(s.GridToWindow, grid)
+			delete(s.Windows, winId)
+			utils.Log(fmt.Sprintf("Window %d closed (grid %d)", winId, gridId))
+			Runtime.EventsEmit(s.ctx, "floating_window_closed", winId)
+			break
+		}
+	}
+	s.windowsMu.RUnlock()
+}
+
+func (s *Screen) EmitFloatingWindows() {
+	s.windowsMu.RLock()
+	defer s.windowsMu.RUnlock()
+
+	var floatingWindows []map[string]interface{}
+
+	for winId, window := range s.Windows {
+		if window.AnchorGrid != 2 || !window.IsFloating() {
+			continue
+		}
+		// Get the associated grid
+		grid, exists := s.Grids[window.GridID]
+		if !exists {
+			utils.Log(fmt.Sprintf("emitfloat got no grid for %d", window.GridID))
+			continue
+		} else {
+			utils.Log(fmt.Sprintf("emitfloat found grid for %d", window.GridID))
+		}
+
+		// Create a window info object
+		windowInfo := map[string]interface{}{
+			"id":          winId,
+			"grid_id":     window.GridID,
+			"anchor_grid": window.AnchorGrid,
+			"anchor":      window.Anchor,
+			"row":         window.Row,
+			"col":         window.Col,
+			"width":       window.Width,
+			"height":      window.Height,
+			"z_index":     window.ZIndex,
+			"focusable":   window.Focusable,
+			"is_popup":    window.IsPopupmenu,
+			"content":     grid.toHexString(), // Include the grid content as a string
+		}
+
+		floatingWindows = append(floatingWindows, windowInfo)
+	}
+
+	if len(floatingWindows) > 0 {
+		Runtime.EventsEmit(s.ctx, "floating_windows", floatingWindows)
+	}
 }

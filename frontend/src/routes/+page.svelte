@@ -5,10 +5,13 @@
 	import { mode } from './state.svelte';
 	import { highlights, generateHighlightCSS, updateHighlightStyles } from '$lib/highlights';
 	import CmdLine from './CmdLine.svelte';
+	import { calculatePosition } from './window.service';
+	import FloatingWindow from './FloatingWindow.svelte';
 
 	let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
 	let top_row = $state<number>(0);
 	let content = $state<App.NvimCell[][]>([]);
+	let floatingWindows = $state<App.FloatingWindow[]>([]);
 
 	let cmdline = $state<App.CmdLine>({
 		visible: false
@@ -67,6 +70,14 @@
 			console.log('mode changed', new_mode);
 			$mode = new_mode;
 		});
+		runtime.EventsOn('floating_windows', (windows: App.FloatingWindow[]) => {
+			console.log('Floating windows:', windows);
+			floatingWindows = windows;
+		});
+
+		runtime.EventsOn('floating_window_closed', (winId: number) => {
+			floatingWindows = floatingWindows.filter(win=>win.id === winId)
+		});
 	});
 
 	onDestroy(() => {
@@ -88,7 +99,7 @@
 	<div
 		class:mode-n={$mode === 'normal'}
 		class:mode-v={$mode === 'visual'}
-		class="flex-grow whitespace-pre"
+		class="flex-grow whitespace-pre relative"
 	>
 		{#each content as row}
 			<div class="flex overflow-hidden leading-none">
@@ -103,6 +114,10 @@
 					{/if}
 				{/each}
 			</div>
+		{/each}
+	{#each floatingWindows as win}
+			{@const position = calculatePosition(win)}
+			<FloatingWindow {position} {win}/>
 		{/each}
 	</div>
 	<StatusLine {cursor} mode={$mode}></StatusLine>
