@@ -11,6 +11,14 @@
 	let scroll_top = $state<number | undefined>(0);
 	let content = $state<App.NvimCell[][]>([]);
 
+
+	let cmdlineVisible = $state(false);
+	let cmdlineContent = $state('');
+	let cmdlinePos = $state(0);
+	let cmdlineFirstc = $state('');
+	let cmdlinePrompt = $state('');
+	let cmdlineIndent = $state(0);
+
 	$effect(() => {
 		console.log('top row changed', top_row);
 		if (!top_row) return;
@@ -31,11 +39,27 @@
 	onMount(async () => {
 		window.addEventListener('keydown', send_key);
 		const runtime = await import('$lib/wailsjs/runtime/runtime');
+		// Cmdline event handlers
+		runtime.EventsOn('cmdline_show', (data) => {
+			console.log("cmdline-show",data)
+			cmdlineVisible = true;
+			cmdlineContent = data.content;
+			cmdlinePos = data.pos;
+			cmdlineFirstc = data.firstc;
+			cmdlinePrompt = data.prompt;
+			cmdlineIndent = data.indent;
+		});
 
+		runtime.EventsOn('cmdline_pos', (data) => {
+			cmdlinePos = data.pos;
+		});
+
+		runtime.EventsOn('cmdline_hide', (data) => {
+			cmdlineVisible = false;
+		});
 		runtime.EventsEmit('get-highlights');
 
 		runtime.EventsOn('flush', (updated_content: App.NvimCell[][]) => {
-			console.log(updated_content);
 			content = updated_content;
 		});
 
@@ -56,26 +80,12 @@
 			console.log('mode changed', new_mode);
 			$mode = new_mode;
 		});
-
-		runtime.EventsOn('cmdline_show', () => {
-			const modal = document.getElementById('my_modal_1') as HTMLDialogElement;
-			if (modal) modal.showModal();
-		});
-
-		runtime.EventsOn('cmdline_hide', () => {
-			const modal = document.getElementById('my_modal_1') as HTMLDialogElement;
-			if (modal) modal.close();
-		});
 	});
 
 	onDestroy(() => {
 		window.removeEventListener('keydown', send_key);
 	});
 </script>
-
-<dialog id="my_modal_1" class="modal">
-	<input class="input input-ghost" type="text" autofocus />
-</dialog>
 
 <div class="victor-mono flex h-screen flex-col">
 	<div
@@ -98,6 +108,22 @@
 			</div>
 		{/each}
 	</div>
+	{#if cmdlineVisible}
+		<div class="cmdline-container flex items-center border-t border-gray-700 p-1">
+			{#if cmdlineFirstc}
+				<span class="cmdline-firstc mr-1">{cmdlineFirstc}</span>
+			{/if}
+			{#if cmdlinePrompt}
+				<span class="cmdline-prompt mr-1 ">{cmdlinePrompt}</span>
+			{/if}
+			{#if cmdlineIndent > 0}
+				<span class="cmdline-indent">{' '.repeat(cmdlineIndent)}</span>
+			{/if}
+			<div class="cmdline-content flex">
+				{cmdlineContent}
+			</div>
+		</div>
+	{/if}
 	<StatusLine {cursor} mode={$mode}></StatusLine>
 </div>
 

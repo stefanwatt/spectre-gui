@@ -5,12 +5,15 @@ go 1.21
 toolchain go1.22.2
 
 require (
+	github.com/akiyosi/goneovim v0.6.12
 	github.com/charmbracelet/lipgloss v0.10.0
 	github.com/wailsapp/wails/v2 v2.8.2
 )
 
 require (
+	github.com/akiyosi/qt v0.0.0-20240304155940-b43fff373ad5 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect

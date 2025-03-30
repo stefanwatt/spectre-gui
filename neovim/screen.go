@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/akiyosi/goneovim/util"
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -213,7 +214,9 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 		case "win_float_pos":
 			s.winFloatPos(args)
 		case "cmdline_show":
-			Runtime.EventsEmit(s.ctx, "cmdline_show")
+			s.handleCmdlineShow(args)
+		case "cmdline_pos":
+			s.handleCmdlinePos(args)
 		case "cmdline_hide":
 			Runtime.EventsEmit(s.ctx, "cmdline_hide")
 		}
@@ -797,4 +800,65 @@ func (s *Screen) createSparseUpdates() [][]*Cell {
 		return updates
 	}
 	return nil
+}
+func sanitize(s string) string {
+	s = strings.Replace(s, " ", `&nbsp;`, -1)
+	s = strings.Replace(s, "\t", `&nbsp;`, -1)
+	s = strings.Replace(s, "<", `&lt;`, -1)
+	s = strings.Replace(s, ">", `&gt;`, -1)
+
+	return s
+}
+func (s *Screen) handleCmdlineShow(args []interface{}) {
+	arg := args[0].([]interface{})
+
+	content := ""
+	contentChunks := arg[0].([]interface{})
+	for _, e := range contentChunks {
+		a := e.([]interface{})
+
+		if len(a) < 2 {
+			// content += a[0].(string)
+			content += strings.Replace(a[0].(string), "\t", " ", -1)
+		} else {
+			if len(contentChunks) == 1 {
+				// content += a[1].(string)
+				content += strings.Replace(a[1].(string), "\t", " ", -1)
+			} else {
+				content +=
+					sanitize(a[1].(string))
+			}
+		}
+	}
+	// content := arg[0].([]interface{})[0].([]interface{})[1].(string)
+
+	pos := util.ReflectToInt(arg[1])
+	firstc := arg[2].(string)
+	prompt := arg[3].(string)
+	indent := util.ReflectToInt(arg[4])
+	// level := util.ReflectToInt(arg[5])
+	// fmt.Println("cmdline show", content, pos, firstc, prompt, indent, level)
+
+	Runtime.EventsEmit(s.ctx, "cmdline_show", map[string]interface{}{
+		"content": content,
+		"pos":     pos,
+		"firstc":  firstc,
+		"prompt":  prompt,
+		"indent":  indent,
+	})
+}
+
+// handleCmdlinePos processes the cmdline_pos event
+func (s *Screen) handleCmdlinePos(args []interface{}) {
+	if len(args) < 2 {
+		return
+	}
+
+	pos := utils.ReflectToInt(args[0])
+	level := utils.ReflectToInt(args[1])
+
+	Runtime.EventsEmit(s.ctx, "cmdline_pos", map[string]interface{}{
+		"pos":   pos,
+		"level": level,
+	})
 }
