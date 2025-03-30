@@ -38,8 +38,11 @@ declare global {
       strikethrough: boolean;
       reverse: boolean;
     }
-    type VimMode = "normal" | "insert" | "visual" | "cmdline_normal"| "cmdline_insert"
-
+    type VimMode = "normal" | "insert" | "visual" | "cmdline_normal" | "cmdline_insert"
+    interface GridProps {
+      content: App.NvimCell[][] 
+      decode?: (input:string)=>string
+    }
 
     interface CursorMoveEvent {
       row: number;
@@ -69,7 +72,7 @@ declare global {
       z_index: number;
       focusable: boolean;
       is_popup: boolean;
-      content: string;
+      grid: NvimCell[][];
     }
   }
 }

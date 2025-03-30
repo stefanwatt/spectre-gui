@@ -37,17 +37,28 @@ func (g *Grid) toString() string {
 	return result
 }
 
-func (g *Grid) toHexString() string {
-	var hexChars []string
-	for _, row := range g.Cells {
-		for _, cell := range row {
-			for _, r := range cell.Char {
-				hexChars = append(hexChars, fmt.Sprintf("%x", r))
-			}
-		}
-		hexChars = append(hexChars, "0A")
+func (g *Grid) toHexGrid() *Grid {
+	newGrid := &Grid{
+		ID:     g.ID,
+		Width:  g.Width,
+		Height: g.Height,
 	}
-	return strings.Join(hexChars, ",")
+	newGrid.Cursor.Row = g.Cursor.Row
+	newGrid.Cursor.Col = g.Cursor.Col
+	newGrid.Cells = make([][]*Cell, len(g.Cells))
+	for i, row := range g.Cells {
+		newGrid.Cells[i] = make([]*Cell, len(row))
+		for j, cell := range row {
+			newCell := &Cell{}
+			var hexChar string
+			for _, r := range cell.Char {
+				hexChar += fmt.Sprintf("%x", r)
+			}
+			newCell.Char = hexChar
+			newGrid.Cells[i][j] = newCell
+		}
+	}
+	return newGrid
 }
 
 type Cell struct {
@@ -851,6 +862,56 @@ func (s *Screen) optimizeGrid() [][]*Cell {
 	return optimizedGrid
 }
 
+func optimizeGrid(grid [][]*Cell) [][]*Cell {
+	optimizedGrid := make([][]*Cell, len(grid))
+	for i, row := range grid {
+		optimizedGrid[i] = make([]*Cell, 0)
+		if len(row) == 0 {
+			continue
+		}
+		if len(row) > 0 {
+			firstCell := row[0]
+			lastHl := firstCell.Highlight
+			currentToken := Cell{
+				Char:      "",
+				Highlight: lastHl,
+				Dirty:     firstCell.Dirty,
+			}
+			for _, cell := range row {
+				if lastHl == cell.Highlight || cell.Char == " " {
+					// Same highlight or space, append to current token
+					currentToken.Char += cell.Char
+					currentToken.Dirty = currentToken.Dirty || cell.Dirty
+				} else {
+					// Different highlight, store current token and start a new one
+					if len(currentToken.Char) > 0 {
+						tokenCopy := currentToken
+						optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
+					}
+					// Start new token
+					lastHl = cell.Highlight
+					currentToken = Cell{
+						Char:      cell.Char,
+						Highlight: cell.Highlight,
+						Dirty:     cell.Dirty,
+					}
+				}
+			}
+			// Don't forget to add the last token from the row
+			if len(currentToken.Char) > 0 {
+				tokenCopy := currentToken
+				optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
+			}
+		}
+	}
+	for _, optimizedRow := range optimizedGrid {
+		if len(optimizedRow) > 0 {
+			optimizedRow[len(optimizedRow)-1].Char = strings.TrimRight(optimizedRow[len(optimizedRow)-1].Char, " ")
+		}
+	}
+	return optimizedGrid
+}
+
 func (s *Screen) createSparseUpdates() [][]*Cell {
 	updates := make([][]*Cell, len(s.Content))
 	hasChanges := false
@@ -1002,7 +1063,7 @@ func (s *Screen) EmitFloatingWindows() {
 			"z_index":     window.ZIndex,
 			"focusable":   window.Focusable,
 			"is_popup":    window.IsPopupmenu,
-			"content":     grid.toHexString(), // Include the grid content as a string
+			"grid":        grid.toHexGrid().Cells,
 		}
 
 		floatingWindows = append(floatingWindows, windowInfo)

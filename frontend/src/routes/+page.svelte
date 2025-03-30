@@ -7,6 +7,7 @@
 	import CmdLine from './CmdLine.svelte';
 	import { calculatePosition } from './window.service';
 	import FloatingWindow from './FloatingWindow.svelte';
+	import Grid from './Grid.svelte';
 
 	let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
 	let top_row = $state<number>(0);
@@ -101,33 +102,16 @@
 		class:mode-v={$mode === 'visual'}
 		class="flex-grow whitespace-pre relative"
 	>
-		{#each content as row}
-			<div class="flex overflow-hidden leading-none">
-				{#each row as cell}
-					{#if cell?.char}
-						<span
-							class="cell inline-block h-full hl-{cell?.highlight} {cell?.classes}"
-							style="color:{cell?.fg};background-color:{cell?.bg}"
-						>
-							{cell.char}
-						</span>
-					{/if}
-				{/each}
-			</div>
-		{/each}
+		<Grid {content}/>
 	{#each floatingWindows as win}
 			{@const position = calculatePosition(win)}
-			<FloatingWindow {position} {win}/>
+			<FloatingWindow {position} win={win}/>
 		{/each}
 	</div>
 	<StatusLine {cursor} mode={$mode}></StatusLine>
 </div>
 
 <style>
-	.cell {
-		padding-top: 3px;
-		padding-bottom: 3px;
-	}
 	.victor-mono {
 		font-family: VictorMono Nerd Font Mono;
 		font-size: 22px;
