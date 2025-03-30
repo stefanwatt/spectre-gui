@@ -8,6 +8,7 @@
 	mode_names.set('visual', 'visual');
 	mode_names.set('V', 'v-line');
 	mode_names.set('cmdline_normal', 'command');
+	mode_names.set('cmdline_insert', 'command');
 	$: mode_name = mode_names.get(mode);
 </script>
 

@@ -18,11 +18,27 @@ declare global {
       highlight: string;
     }
 
-    interface NvimHighlight {
-      id: string;
-      [key: string]: any;
+    interface CmdLine {
+      visible: boolean;
+      firstc?: string;
+      prompt?: string;
+      content?: string;
+      indent?: number;
+      pos?: number;
     }
-    type VimMode = "normal" | "insert" | "visual" | "cmdline_normal"
+
+    interface NvimHighlight {
+      id: number;
+      fg: string;
+      bg: string;
+      bold: boolean;
+      italic: boolean;
+      underline: boolean;
+      undercurl: boolean;
+      strikethrough: boolean;
+      reverse: boolean;
+    }
+    type VimMode = "normal" | "insert" | "visual" | "cmdline_normal"| "cmdline_insert"
 
 
     interface CursorMoveEvent {

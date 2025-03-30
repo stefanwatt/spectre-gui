@@ -850,12 +850,14 @@ func (s *Screen) handleCmdlineShow(args []interface{}) {
 
 // handleCmdlinePos processes the cmdline_pos event
 func (s *Screen) handleCmdlinePos(args []interface{}) {
-	if len(args) < 2 {
+	cmdlineArgs:=args[0].([]interface{})
+	if len(cmdlineArgs) < 2 {
+		utils.Log("not enough args cmdline_pos")
 		return
 	}
 
-	pos := utils.ReflectToInt(args[0])
-	level := utils.ReflectToInt(args[1])
+	pos := utils.ReflectToInt(cmdlineArgs[0])
+	level := utils.ReflectToInt(cmdlineArgs[1])
 
 	Runtime.EventsEmit(s.ctx, "cmdline_pos", map[string]interface{}{
 		"pos":   pos,

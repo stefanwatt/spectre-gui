@@ -2,28 +2,16 @@
 	import { SendKey } from '$lib/wailsjs/go/main/App';
 	import { onDestroy, onMount } from 'svelte';
 	import StatusLine from './StatusLine.svelte';
-	import { scroll_into_view } from './utils.service';
 	import { mode } from './state.svelte';
 	import { highlights, generateHighlightCSS, updateHighlightStyles } from '$lib/highlights';
+	import CmdLine from './CmdLine.svelte';
 
 	let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
 	let top_row = $state<number>(0);
-	let scroll_top = $state<number | undefined>(0);
 	let content = $state<App.NvimCell[][]>([]);
 
-
-	let cmdlineVisible = $state(false);
-	let cmdlineContent = $state('');
-	let cmdlinePos = $state(0);
-	let cmdlineFirstc = $state('');
-	let cmdlinePrompt = $state('');
-	let cmdlineIndent = $state(0);
-
-	$effect(() => {
-		console.log('top row changed', top_row);
-		if (!top_row) return;
-		scroll_top = top_row * 28;
-		scroll_into_view(top_row);
+	let cmdline = $state<App.CmdLine>({
+		visible: false
 	});
 
 	$effect(() => {
@@ -39,23 +27,22 @@
 	onMount(async () => {
 		window.addEventListener('keydown', send_key);
 		const runtime = await import('$lib/wailsjs/runtime/runtime');
-		// Cmdline event handlers
 		runtime.EventsOn('cmdline_show', (data) => {
-			console.log("cmdline-show",data)
-			cmdlineVisible = true;
-			cmdlineContent = data.content;
-			cmdlinePos = data.pos;
-			cmdlineFirstc = data.firstc;
-			cmdlinePrompt = data.prompt;
-			cmdlineIndent = data.indent;
+			cmdline.visible = true;
+			cmdline.content = data.content;
+			cmdline.pos = data.pos;
+			cmdline.firstc = data.firstc;
+			cmdline.prompt = data.prompt;
+			cmdline.indent = data.indent;
 		});
 
 		runtime.EventsOn('cmdline_pos', (data) => {
-			cmdlinePos = data.pos;
+			console.log("pos changed:", data)
+			cmdline.pos = data.pos;
 		});
 
 		runtime.EventsOn('cmdline_hide', (data) => {
-			cmdlineVisible = false;
+			cmdline.visible = false;
 		});
 		runtime.EventsEmit('get-highlights');
 
@@ -76,7 +63,7 @@
 			top_row = e.top_line;
 		});
 
-		runtime.EventsOn('mode-changed', (new_mode: string) => {
+		runtime.EventsOn('mode-changed', (new_mode: App.VimMode) => {
 			console.log('mode changed', new_mode);
 			$mode = new_mode;
 		});
@@ -87,6 +74,16 @@
 	});
 </script>
 
+{#if cmdline.visible}
+	<CmdLine
+		visible={true}
+		firstc={cmdline.firstc}
+		prompt={cmdline.prompt}
+		indent={cmdline.indent}
+		content={cmdline.content}
+		pos={cmdline.pos}
+	/>
+{/if}
 <div class="victor-mono flex h-screen flex-col">
 	<div
 		class:mode-n={$mode === 'normal'}
@@ -108,22 +105,6 @@
 			</div>
 		{/each}
 	</div>
-	{#if cmdlineVisible}
-		<div class="cmdline-container flex items-center border-t border-gray-700 p-1">
-			{#if cmdlineFirstc}
-				<span class="cmdline-firstc mr-1">{cmdlineFirstc}</span>
-			{/if}
-			{#if cmdlinePrompt}
-				<span class="cmdline-prompt mr-1 ">{cmdlinePrompt}</span>
-			{/if}
-			{#if cmdlineIndent > 0}
-				<span class="cmdline-indent">{' '.repeat(cmdlineIndent)}</span>
-			{/if}
-			<div class="cmdline-content flex">
-				{cmdlineContent}
-			</div>
-		</div>
-	{/if}
 	<StatusLine {cursor} mode={$mode}></StatusLine>
 </div>
 
