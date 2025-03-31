@@ -5,13 +5,10 @@
 		top: string;
 		left: string;
 	}
-	interface FloatingWindow {
-		z_index: number;
-		grid: App.NvimCell[][];
-	}
+
 	interface FloatingWindowProps {
 		position: Position;
-		win: FloatingWindow;
+		win: App.FloatingWindow;
 	}
 	let { position, win }: FloatingWindowProps = $props();
 	function decode(message: string) {
@@ -24,10 +21,10 @@
 		}
 		return result;
 	}
-  $effect(()=>{console.log("floating grid:", win.grid)})
 </script>
 
 <div
+	id="{"win-"+win.id}"
 	class="absolute overflow-hidden whitespace-pre rounded-md border border-surface0 bg-crust p-1 text-text"
 	style="top: {position.top}; left: {position.left}; z-index: {win.z_index || 100};"
 >

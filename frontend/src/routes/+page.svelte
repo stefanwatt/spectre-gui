@@ -72,12 +72,12 @@
 			$mode = new_mode;
 		});
 		runtime.EventsOn('floating_windows', (windows: App.FloatingWindow[]) => {
-			console.log('Floating windows:', windows);
 			floatingWindows = windows;
 		});
 
 		runtime.EventsOn('floating_window_closed', (winId: number) => {
-			floatingWindows = floatingWindows.filter(win=>win.id === winId)
+			console.log(`floating_window_closed id: ${winId}`)
+			floatingWindows = floatingWindows.filter(win=>win.id !== winId)
 		});
 	});
 
