@@ -55,6 +55,7 @@ func (g *Grid) toHexGrid() *Grid {
 				hexChar += fmt.Sprintf("%x", r)
 			}
 			newCell.Char = hexChar
+			newCell.Highlight = cell.Highlight
 			newGrid.Cells[i][j] = newCell
 		}
 	}
@@ -323,7 +324,9 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 	if !exists {
 		return
 	}
-
+	if gridId > 2 {
+		utils.Log(fmt.Sprintf("gridLine cells for %d", gridId), cells)
+	}
 	if row >= grid.Height || col >= grid.Width {
 		utils.Log(fmt.Sprintf("Row %d or col %d out of bounds for grid %d (max: %d,%d)",
 			row, col, gridId, grid.Height-1, grid.Width-1))
@@ -338,6 +341,7 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 		}
 
 		char := cellData[0].(string)
+
 		repeat := 1
 		if len(cellData) > 2 {
 			repeat = utils.ReflectToInt(cellData[2])
@@ -353,10 +357,11 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 				if hl == 0 {
 					hl = lastHl
 				}
-				grid.Cells[row][currentCol] = &Cell{
+				newCell := Cell{
 					Char:      char,
 					Highlight: hl,
 				}
+				grid.Cells[row][currentCol] = &newCell
 				currentCol++
 			}
 		}

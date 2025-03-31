@@ -30,7 +30,7 @@ func StartListening(ctx context.Context) {
 	var err error
 	NvimInstance, err = nvim.NewChildProcess(
 		nvim.ChildProcessCommand("nvim"),
-		nvim.ChildProcessArgs("--embed", "/home/stefan/Projects/nvim-gui/neovim/screen.go"),
+		nvim.ChildProcessArgs("--embed", "/home/stefan/Projects/nvim-gui/neovim/neovim.go"),
 		nvim.ChildProcessContext(context.Background()),
 	)
 	if err != nil {
