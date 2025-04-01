@@ -14,6 +14,7 @@
 	let totalResults = 17;
 	let resultIndex = 1;
 	let searchIconSize = '16';
+	
 
 	let isSubstitute = $derived(content && content.includes('s/'));
 	let substituteCommand = $derived(
@@ -21,7 +22,6 @@
 	);
 
 	function parseSubstituteCommand(cmd: string) {
-		console.log('parseSubstituteCommand');
 		const match = cmd.match(/^(.*?)s\/(.*?)\/(.*?)(?:\/([gicI]*))?$/);
 		if (!match) {
 			return null;
@@ -30,21 +30,28 @@
 
 		const hasVeryMagic = search.startsWith('\\v');
 		const searchTerm = hasVeryMagic ? search.substring(2) : search;
-		let searchPos = 0;
-		let replacePos = 0;
+		
+		// Calculate field positions
+		const searchStart = range.length + 2; // After "s/"
+		const searchEnd = searchStart + search.length;
+		const replaceStart = searchEnd + 1; // After the second "/"
+		const replaceEnd = replaceStart + replace.length;
+		
+		// Determine which field has focus
 		let isInSearchField = false;
 		let isInReplaceField = false;
+		let searchPos = undefined;
+		let replacePos = undefined;
+		
 		if (pos !== undefined) {
-			searchPos =
-				pos > range.length + 2 ? Math.min(pos - (range.length + 2), searchTerm.length) : 0;
-			replacePos =
-				pos > range.length + 3 + search.length
-					? Math.min(pos - (range.length + 3 + search.length), replace.length)
-					: 0;
-			isInSearchField = pos > range.length + 2 && pos <= range.length + 2 + search.length;
-			isInReplaceField =
-				pos > range.length + 3 + search.length &&
-				pos <= range.length + 3 + search.length + replace.length;
+			isInSearchField = pos >= searchStart && pos <= searchEnd;
+			isInReplaceField = pos >= replaceStart && pos <= replaceEnd;
+			
+			if (isInSearchField) {
+				searchPos = pos - searchStart;
+			} else if (isInReplaceField) {
+				replacePos = pos - replaceStart;
+			}
 		}
 
 		return {
@@ -60,9 +67,13 @@
 			searchPos,
 			replacePos,
 			isInSearchField,
-			isInReplaceField
+			isInReplaceField,
+			searchStart,
+			replaceStart,
 		};
 	}
+	//TODO: prevent the user from moving out of the bounds of the fields
+	// sendKey logic for the substitute command should not be handled in +page.svelte
 </script>
 
 {#if isSubstitute && substituteCommand}

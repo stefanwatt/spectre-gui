@@ -23,7 +23,7 @@ var (
 
 var screen *Screen
 
-func StartListening(ctx context.Context) {	
+func StartListening(ctx context.Context) {
 	cols := 140
 	rows := 49
 	screen = NewScreen(ctx, cols, rows)
@@ -37,7 +37,8 @@ func StartListening(ctx context.Context) {
 		log.Println(err)
 		return
 	}
-	Runtime.EventsOn(ctx,"get-highlights",screen.sendInitialHighlights)
+	Runtime.EventsOn(ctx, "get-highlights", screen.sendInitialHighlights)
+	Runtime.EventsOn(ctx, "substitute-jump", HandleSubstituteJump)
 	defer NvimInstance.Close()
 
 	opts := map[string]interface{}{

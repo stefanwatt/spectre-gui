@@ -22,6 +22,10 @@ func ReflectToInt(iface interface{}) int {
 	if ok {
 		return int(l)
 	}
+	b, ok := iface.(byte)
+	if ok {
+		return int(b)
+	}
 	Log(fmt.Sprintf("could not reflect type:%s to int",reflect.TypeOf(iface).String()))
 	return 0
 }

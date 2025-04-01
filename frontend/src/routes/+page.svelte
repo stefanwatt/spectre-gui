@@ -2,7 +2,6 @@
 	import { SendKey } from '$lib/wailsjs/go/main/App';
 	import { onDestroy, onMount } from 'svelte';
 	import StatusLine from './StatusLine.svelte';
-	import { mode } from './state.svelte';
 	import { highlights, generateHighlightCSS, updateHighlightStyles } from '$lib/highlights';
 	import CmdLine from './CmdLine.svelte';
 	import { calculatePosition } from './window.service';
@@ -13,6 +12,7 @@
 	let top_row = $state<number>(0);
 	let content = $state<App.NvimCell[][]>([]);
 	let floatingWindows = $state<App.FloatingWindow[]>([]);
+	let mode = $state<App.VimMode>('normal');
 
 	let cmdline = $state<App.CmdLine>({
 		visible: false
@@ -23,13 +23,22 @@
 		updateHighlightStyles(css);
 	});
 
-	function send_key(e: KeyboardEvent): void {
+	async function sendKey(e: KeyboardEvent): Promise<void> {
+	if (e.key === 'Tab' && cmdline.visible && cmdline.content && cmdline.content.includes('s/')) {
+		e.preventDefault();
+		// Emit custom event for substitute field navigation
+		const runtime = await import('$lib/wailsjs/runtime/runtime');
+		if (runtime) {
+			runtime.EventsEmit('substitute-jump', { shiftKey: e.shiftKey });
+		}
+		return;
+	}
 		e.preventDefault();
 		SendKey(e.key, e.altKey, e.shiftKey, e.ctrlKey);
 	}
 
 	onMount(async () => {
-		window.addEventListener('keydown', send_key);
+		window.addEventListener('keydown', sendKey);
 		const runtime = await import('$lib/wailsjs/runtime/runtime');
 		runtime.EventsOn('cmdline_show', (data) => {
 			cmdline.visible = true;
@@ -82,7 +91,7 @@
 	});
 
 	onDestroy(() => {
-		window.removeEventListener('keydown', send_key);
+		window.removeEventListener('keydown', sendKey);
 	});
 </script>
 
@@ -98,8 +107,8 @@
 {/if}
 <div class="victor-mono flex h-screen flex-col">
 	<div
-		class:mode-n={$mode === 'normal'}
-		class:mode-v={$mode === 'visual'}
+		class:mode-n={mode === 'normal'}
+		class:mode-v={mode === 'visual'}
 		class="flex-grow whitespace-pre relative"
 	>
 		<Grid {content}/>
@@ -108,7 +117,7 @@
 			<FloatingWindow {position} win={win}/>
 		{/each}
 	</div>
-	<StatusLine {cursor} mode={$mode}></StatusLine>
+	<StatusLine {cursor} mode={mode}></StatusLine>
 </div>
 
 <style>
