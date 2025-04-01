@@ -18,6 +18,14 @@ declare global {
       highlight: string;
     }
 
+    interface NvimWindow {
+      id: number;
+      content: NvimCell[][];
+      type: string;
+      width: number;
+      height: number;
+    }
+
     interface CmdLine {
       visible: boolean;
       firstc?: string;
@@ -40,8 +48,8 @@ declare global {
     }
     type VimMode = "normal" | "insert" | "visual" | "cmdline_normal" | "cmdline_insert"
     interface GridProps {
-      content: App.NvimCell[][] 
-      decode?: (input:string)=>string
+      content: App.NvimCell[][]
+      decode?: (input: string) => string
     }
 
     interface CursorMoveEvent {

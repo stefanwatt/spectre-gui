@@ -10,8 +10,8 @@ import (
 var ctx context.Context
 
 type App struct {
-	ctx        context.Context
-	File       string
+	ctx  context.Context
+	File string
 }
 
 func NewApp() *App {
@@ -19,7 +19,7 @@ func NewApp() *App {
 }
 
 func (a *App) mounted(ctx context.Context) {
-		go neovim.StartListening( a.ctx)
+	go neovim.StartListening(a.ctx)
 }
 
 func (a *App) startup(ctx context.Context) {

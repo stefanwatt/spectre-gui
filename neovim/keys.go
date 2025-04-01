@@ -3,6 +3,7 @@ package neovim
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"nvim-gui/utils"
 )
@@ -54,6 +55,10 @@ func SendKey(key string, alt bool, shift bool, ctrl bool) error {
 
 	if termcode, ok := specialKeys[key]; ok {
 		key = termcode
+		if ctrl || alt || shift {
+			key = strings.TrimLeft(key,"<")
+			key = strings.TrimRight(key,">")
+		}
 	}
 
 	sequence := ""
@@ -72,6 +77,7 @@ func SendKey(key string, alt bool, shift bool, ctrl bool) error {
 	} else {
 		sequence = key
 	}
+	utils.Log("SendKey sequence:", sequence)
 
 	_, err = NvimInstance.Input(sequence)
 	if err != nil {

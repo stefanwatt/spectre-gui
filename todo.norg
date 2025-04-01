@@ -5,6 +5,7 @@
   - ( ) handle multiple grids for splits etc.
   - ( ) refactor screen.go -> probably has too much logic
   - ( ) calculate left offset for floating windows etc. in go 
+  - ( ) we need a mechanism for writing the dynamic css to disk. it's annoying to have to wait for the colors to load and also just unnecessary
 ** ( ) cmdline QoL
   - ( ) completion
 *** ( ) search

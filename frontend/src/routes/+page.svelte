@@ -9,8 +9,7 @@
 	import Grid from './Grid.svelte';
 
 	let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
-	let top_row = $state<number>(0);
-	let content = $state<App.NvimCell[][]>([]);
+	let windows = $state<App.NvimWindow[]>([]);
 	let floatingWindows = $state<App.FloatingWindow[]>([]);
 	let mode = $state<App.VimMode>('normal');
 
@@ -24,15 +23,15 @@
 	});
 
 	async function sendKey(e: KeyboardEvent): Promise<void> {
-	if (e.key === 'Tab' && cmdline.visible && cmdline.content && cmdline.content.includes('s/')) {
-		e.preventDefault();
-		// Emit custom event for substitute field navigation
-		const runtime = await import('$lib/wailsjs/runtime/runtime');
-		if (runtime) {
-			runtime.EventsEmit('substitute-jump', { shiftKey: e.shiftKey });
+		if (e.key === 'Tab' && cmdline.visible && cmdline.content && cmdline.content.includes('s/')) {
+			e.preventDefault();
+			// Emit custom event for substitute field navigation
+			const runtime = await import('$lib/wailsjs/runtime/runtime');
+			if (runtime) {
+				runtime.EventsEmit('substitute-jump', { shiftKey: e.shiftKey });
+			}
+			return;
 		}
-		return;
-	}
 		e.preventDefault();
 		SendKey(e.key, e.altKey, e.shiftKey, e.ctrlKey);
 	}
@@ -40,6 +39,10 @@
 	onMount(async () => {
 		window.addEventListener('keydown', sendKey);
 		const runtime = await import('$lib/wailsjs/runtime/runtime');
+
+		window.addEventListener('resize', function () {
+			runtime.EventsEmit('resize');
+		});
 		runtime.EventsOn('cmdline_show', (data) => {
 			cmdline.visible = true;
 			cmdline.content = data.content;
@@ -50,7 +53,7 @@
 		});
 
 		runtime.EventsOn('cmdline_pos', (data) => {
-			console.log("pos changed:", data)
+			console.log('pos changed:', data);
 			cmdline.pos = data.pos;
 		});
 
@@ -59,8 +62,9 @@
 		});
 		runtime.EventsEmit('get-highlights');
 
-		runtime.EventsOn('flush', (updated_content: App.NvimCell[][]) => {
-			content = updated_content;
+		runtime.EventsOn('flush', (updated_windows: App.NvimWindow[]) => {
+			console.log(updated_windows);
+			windows = updated_windows.sort((win1, win2) => win1.id - win2.id);
 		});
 
 		runtime.EventsOn('highlight_defined', (highlightUpdates: App.NvimHighlight[]) => {
@@ -73,20 +77,20 @@
 
 		runtime.EventsOn('cursor-changed', (e: { row: number; col: number; top_line: number }) => {
 			cursor = { row: e.row, col: e.col };
-			top_row = e.top_line;
 		});
 
 		runtime.EventsOn('mode-changed', (new_mode: App.VimMode) => {
 			console.log('mode changed', new_mode);
-			$mode = new_mode;
+			mode = new_mode;
 		});
+
 		runtime.EventsOn('floating_windows', (windows: App.FloatingWindow[]) => {
 			floatingWindows = windows;
 		});
 
 		runtime.EventsOn('floating_window_closed', (winId: number) => {
-			console.log(`floating_window_closed id: ${winId}`)
-			floatingWindows = floatingWindows.filter(win=>win.id !== winId)
+			console.log(`floating_window_closed id: ${winId}`);
+			floatingWindows = floatingWindows.filter((win) => win.id !== winId);
 		});
 	});
 
@@ -109,15 +113,21 @@
 	<div
 		class:mode-n={mode === 'normal'}
 		class:mode-v={mode === 'visual'}
-		class="flex-grow whitespace-pre relative"
+		class="relative flex-grow whitespace-pre"
 	>
-		<Grid {content}/>
-	{#each floatingWindows as win}
+		<div class="flex">
+			{#each windows as win}
+				<div style="width:{win.width}%">
+					<Grid content={win.content} />
+				</div>
+			{/each}
+		</div>
+		{#each floatingWindows as win}
 			{@const position = calculatePosition(win)}
-			<FloatingWindow {position} win={win}/>
+			<FloatingWindow {position} {win} />
 		{/each}
 	</div>
-	<StatusLine {cursor} mode={mode}></StatusLine>
+	<StatusLine {cursor} {mode}></StatusLine>
 </div>
 
 <style>

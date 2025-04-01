@@ -17,15 +17,14 @@ import (
 
 type Screen struct {
 	margins       []int
-	rows          int
-	cols          int
+	Height        int //in number of cells
+	Width         int //in number of cells
 	topLine       int
 	botLine       int
 	curLine       int
 	lineCount     int
 	scrollDelta   float64
 	ctx           context.Context
-	Content       [][]*Cell
 	Grids         map[int]*Grid
 	Highlights    map[int]*Highlight
 	Windows       map[int]*Window // Map of window IDs to Window objects
@@ -74,6 +73,8 @@ func NewScreen(ctx context.Context, cols int, rows int) *Screen {
 
 	return &Screen{
 		ctx:           ctx,
+		Width:         cols,
+		Height:        rows,
 		Grids:         grids,
 		Highlights:    highlights,
 		Windows:       make(map[int]*Window),
@@ -84,7 +85,6 @@ func NewScreen(ctx context.Context, cols int, rows int) *Screen {
 		ActiveGrid:    2,
 		Mode:          "normal",
 		PendingRender: false,
-		Content:       content,
 		margins:       make([]int, 4), // Initialize margins slice
 	}
 }
@@ -100,6 +100,12 @@ func handleEvent(update interface{}) (event string, ok bool) {
 	}
 
 	return event, ok
+}
+
+func (s *Screen) Resize(width int, height int) {
+	screen.Width = width
+	screen.Height = height
+	NvimInstance.TryResizeUI(width,height)
 }
 
 func (s *Screen) handleRedraw(updates [][]interface{}) {
@@ -181,7 +187,10 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 				s.modeChange(mode)
 			}
 		case "win_pos":
-			s.winPos(args)
+			for _, arg := range args {
+				gridArgs := arg.([]interface{})
+				s.winPos(gridArgs)
+			}
 		case "win_float_pos":
 			for _, arg := range args {
 				gridArgs := arg.([]interface{})
@@ -597,17 +606,60 @@ func (s *Screen) modeChange(mode string) {
 	s.scheduleRender()
 }
 
+func (s *Screen) winClose(args []interface{}) {
+	utils.Log("winClose", args)
+	if len(args) < 1 {
+		return
+	}
+
+	gridId := utils.ReflectToInt(args[0])
+	utils.Log("winClose", args)
+
+	// Find the grid associated with this window
+	s.windowsMu.RLock()
+	for grid, winId := range s.GridToWindow {
+		if grid == gridId {
+			if s.Windows[winId].IsFloating() {
+				Runtime.EventsEmit(s.ctx, "floating_window_closed", winId)
+			}
+			delete(s.GridToWindow, grid)
+			delete(s.Windows, winId)
+			utils.Log(fmt.Sprintf("Window %d closed (grid %d)", winId, gridId))
+			utils.Log(fmt.Sprintf("winPos got %d windows now", len(s.Windows)))
+			break
+		}
+	}
+	s.windowsMu.RUnlock()
+}
+
 func (s *Screen) winPos(args []interface{}) {
 	if len(args) < 6 {
 		return
 	}
 
 	gridId := utils.ReflectToInt(args[0])
-	// win := args[1]
-	// row := utils.ReflectToInt(args[2])
-	// col := utils.ReflectToInt(args[3])
+	nwindow := args[1].(nvim.Window)
+	winId, _ := strconv.Atoi(strings.Split(nwindow.String(), ":")[1])
+	row := utils.ReflectToInt(args[2])
+	col := utils.ReflectToInt(args[3])
 	width := utils.ReflectToInt(args[4])
 	height := utils.ReflectToInt(args[5])
+
+	s.windowsMu.RLock()
+	window, exists := s.Windows[winId]
+	if !exists {
+		window = NewWindow(winId, s.Grids[gridId])
+		window.Width = width
+		window.Height = height
+		window.StartRow = row
+		window.StartCol = col
+		s.Windows[winId] = window
+		s.GridToWindow[gridId] = winId
+		Runtime.EventsEmit(s.ctx, "window_opened")
+		utils.Log("winPos spawned window with id ", winId)
+		utils.Log(fmt.Sprintf("winPos got %d windows now", len(s.Windows)))
+	}
+	s.windowsMu.RUnlock()
 
 	// Handle window positioning
 	if _, exists := s.Grids[gridId]; !exists {
@@ -626,7 +678,6 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	gridId := utils.ReflectToInt(args[0])
 	utils.Log(fmt.Sprintf("winFloatPos computing args for gridId %d", gridId), args)
 	nwindow := args[1].(nvim.Window)
-	// strings.Split(args[1].(string),":")[1]
 	winId, _ := strconv.Atoi(strings.Split(nwindow.String(), ":")[1])
 	anchor := args[2].(string)
 	anchorGrid := utils.ReflectToInt(args[3])
@@ -634,7 +685,7 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	anchorCol := utils.ReflectToFloat(args[5])
 	focusable := args[6].(bool)
 	zIndex := utils.ReflectToInt(args[7])
-	utils.Log(fmt.Sprintf("winFloatPos winId: %d row: %d col %d", winId, anchorRow, anchorCol), args)
+	utils.Log(fmt.Sprintf("winFloatPos winId: %d row: %f col %f", winId, anchorRow, anchorCol), args)
 
 	// Update window tracking
 	s.windowsMu.Lock()
@@ -643,7 +694,7 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	window, exists := s.Windows[winId]
 	if !exists {
 		utils.Log(fmt.Sprintf("winFloatPos adding winId %d", winId))
-		window = NewWindow(winId, gridId)
+		window = NewWindow(winId, s.Grids[gridId])
 		s.Windows[winId] = window
 	} else {
 		utils.Log(fmt.Sprintf("winFloatPos already had winId %d", winId))
@@ -656,12 +707,12 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	}
 
 	// Update window properties
-	window.GridID = gridId
+	window.Grid.ID = gridId
 	window.Type = "floating"
 	window.Anchor = anchor
 	window.AnchorGrid = anchorGrid
-	window.Row = int(anchorRow)
-	window.Col = int(anchorCol)
+	window.StartRow = int(anchorRow)
+	window.StartCol = int(anchorCol)
 	window.Focusable = focusable
 	window.ZIndex = zIndex
 
@@ -675,7 +726,7 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	// Update grid to window mapping
 	s.GridToWindow[gridId] = winId
 
-	utils.Log(fmt.Sprintf("Floating window %d anchored at grid %d (%d,%d) with z-index %d",
+	utils.Log(fmt.Sprintf("Floating window %d anchored at grid %d (%f,%f) with z-index %d",
 		winId, anchorGrid, anchorRow, anchorCol, zIndex))
 	s.scheduleRender()
 }
@@ -694,41 +745,36 @@ func (s *Screen) scheduleRender() {
 }
 
 func (s *Screen) render() {
-	var grid *Grid
-	for gridId, g := range s.Grids {
-		if gridId != 2 {
+	s.EmitFloatingWindows()
+	var windows = []WindowAPI{}
+
+	for winId, window := range s.Windows {
+		width := utils.CalculatePercentage(window.Width, s.Width)
+		height := utils.CalculatePercentage(window.Height, s.Height)
+		utils.Log(fmt.Sprintf("render window windowWidth=%d windowHeight=%d screenWidth=%d screenHeight=%d", window.Width, window.Height, s.Width, s.Height))
+		if window.IsFloating() {
 			continue
 		}
-		grid = g
-	}
-	if grid == nil {
-		return
+		w := WindowAPI{
+			ID:       winId,
+			Content:  s.optimizeGrid(window.Grid),
+			Type:     window.Type,
+			Width:    width,
+			Height:   height,
+			StartRow: window.StartRow,
+			StartCol: window.StartCol,
+		}
+		windows = append(windows, w)
 	}
 
-	for row := 0; row < grid.Height && row < len(s.Content); row++ {
-		for col := 0; col < grid.Width && col < len(s.Content[row]); col++ {
-			if row < len(grid.Cells) && col < len(grid.Cells[row]) {
-				if grid.Cells[row][col] != nil {
-					updatedCell := grid.Cells[row][col]
-					if !updatedCell.Equals(s.Content[row][col]) {
-						updatedCell.Dirty = true
-					}
-					s.Content[row][col] = updatedCell
-				}
-			}
-		}
-	}
-	// updates := s.createSparseUpdates()
-	// Runtime.EventsEmit(s.ctx, "flush", updates)
-	s.EmitFloatingWindows()
-	Runtime.EventsEmit(s.ctx, "flush", s.optimizeGrid())
+	Runtime.EventsEmit(s.ctx, "flush", windows)
 }
 
-func (s *Screen) optimizeGrid() [][]*Cell {
-	cursor := s.Grids[2].Cursor
-	optimizedGrid := make([][]*Cell, len(s.Content))
+func (s *Screen) optimizeGrid(grid *Grid) [][]*Cell {
+	cursor := s.Grids[grid.ID].Cursor
+	optimizedGrid := make([][]*Cell, len(grid.Cells))
 
-	for i, row := range s.Content {
+	for i, row := range grid.Cells {
 		optimizedGrid[i] = make([]*Cell, 0)
 		if len(row) == 0 {
 			continue
@@ -806,88 +852,6 @@ func (s *Screen) optimizeGrid() [][]*Cell {
 	return optimizedGrid
 }
 
-func optimizeGrid(grid [][]*Cell) [][]*Cell {
-	optimizedGrid := make([][]*Cell, len(grid))
-	for i, row := range grid {
-		optimizedGrid[i] = make([]*Cell, 0)
-		if len(row) == 0 {
-			continue
-		}
-		if len(row) > 0 {
-			firstCell := row[0]
-			lastHl := firstCell.Highlight
-			currentToken := Cell{
-				Char:      "",
-				Highlight: lastHl,
-				Dirty:     firstCell.Dirty,
-			}
-			for _, cell := range row {
-				if lastHl == cell.Highlight || cell.Char == " " {
-					// Same highlight or space, append to current token
-					currentToken.Char += cell.Char
-					currentToken.Dirty = currentToken.Dirty || cell.Dirty
-				} else {
-					// Different highlight, store current token and start a new one
-					if len(currentToken.Char) > 0 {
-						tokenCopy := currentToken
-						optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
-					}
-					// Start new token
-					lastHl = cell.Highlight
-					currentToken = Cell{
-						Char:      cell.Char,
-						Highlight: cell.Highlight,
-						Dirty:     cell.Dirty,
-					}
-				}
-			}
-			// Don't forget to add the last token from the row
-			if len(currentToken.Char) > 0 {
-				tokenCopy := currentToken
-				optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
-			}
-		}
-	}
-	for _, optimizedRow := range optimizedGrid {
-		if len(optimizedRow) > 0 {
-			optimizedRow[len(optimizedRow)-1].Char = strings.TrimRight(optimizedRow[len(optimizedRow)-1].Char, " ")
-		}
-	}
-	return optimizedGrid
-}
-
-func (s *Screen) createSparseUpdates() [][]*Cell {
-	updates := make([][]*Cell, len(s.Content))
-	hasChanges := false
-
-	// Compare each cell and only include changed ones
-	for i, row := range s.Content {
-		rowHasChanges := false
-		updates[i] = make([]*Cell, len(row))
-
-		for j, cell := range row {
-			if cell.Dirty {
-				updates[i][j] = cell
-				cell.Dirty = false
-				rowHasChanges = true
-				hasChanges = true
-			} else {
-				updates[i][j] = nil // Unchanged cell
-			}
-		}
-
-		if !rowHasChanges {
-			updates[i] = nil // Entire row unchanged
-		}
-	}
-
-	// Only return updates if there are changes
-	if hasChanges {
-		return updates
-	}
-	return nil
-}
-
 func sanitize(s string) string {
 	s = strings.Replace(s, " ", `&nbsp;`, -1)
 	s = strings.Replace(s, "\t", `&nbsp;`, -1)
@@ -952,29 +916,6 @@ func (s *Screen) handleCmdlinePos(args []interface{}) {
 	})
 }
 
-func (s *Screen) winClose(args []interface{}) {
-	utils.Log("winClose", args)
-	if len(args) < 1 {
-		return
-	}
-
-	gridId := utils.ReflectToInt(args[0])
-	utils.Log("winClose", args)
-
-	// Find the grid associated with this window
-	s.windowsMu.RLock()
-	for grid, winId := range s.GridToWindow {
-		if grid == gridId {
-			delete(s.GridToWindow, grid)
-			delete(s.Windows, winId)
-			utils.Log(fmt.Sprintf("Window %d closed (grid %d)", winId, gridId))
-			Runtime.EventsEmit(s.ctx, "floating_window_closed", winId)
-			break
-		}
-	}
-	s.windowsMu.RUnlock()
-}
-
 func (s *Screen) EmitFloatingWindows() {
 	s.windowsMu.RLock()
 	defer s.windowsMu.RUnlock()
@@ -986,22 +927,22 @@ func (s *Screen) EmitFloatingWindows() {
 			continue
 		}
 		// Get the associated grid
-		grid, exists := s.Grids[window.GridID]
+		grid, exists := s.Grids[window.Grid.ID]
 		if !exists {
-			utils.Log(fmt.Sprintf("emitfloat got no grid for %d", window.GridID))
+			utils.Log(fmt.Sprintf("emitfloat got no grid for %d", window.Grid.ID))
 			continue
 		} else {
-			utils.Log(fmt.Sprintf("emitfloat found grid for %d", window.GridID))
+			utils.Log(fmt.Sprintf("emitfloat found grid for %d", window.Grid.ID))
 		}
 
 		// Create a window info object
 		windowInfo := map[string]interface{}{
 			"id":          winId,
-			"grid_id":     window.GridID,
+			"grid_id":     window.Grid.ID,
 			"anchor_grid": window.AnchorGrid,
 			"anchor":      window.Anchor,
-			"row":         window.Row,
-			"col":         window.Col,
+			"row":         window.StartRow,
+			"col":         window.StartCol,
 			"width":       window.Width,
 			"height":      window.Height,
 			"z_index":     window.ZIndex,

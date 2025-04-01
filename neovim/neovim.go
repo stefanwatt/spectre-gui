@@ -2,6 +2,7 @@ package neovim
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"nvim-gui/utils"
@@ -23,10 +24,27 @@ var (
 
 var screen *Screen
 
+func CalculateGridSize(windowWidth, windowHeight int) (rows, cols int) {
+	cellWidth := 12
+	cellHeight := 28
+	statusLineHeight := 36
+	availableHeight := windowHeight - statusLineHeight
+	cols = windowWidth / cellWidth
+	rows = availableHeight / cellHeight
+	return rows, cols
+}
+
 func StartListening(ctx context.Context) {
-	cols := 140
-	rows := 49
+	width, height := Runtime.WindowGetSize(ctx)
+	rows, cols := CalculateGridSize(width, height)
+	utils.Log(fmt.Sprintf("StartListening initializing screen with width=%d height=%d rows=%d cols=%d", width, height, rows, cols))
+
 	screen = NewScreen(ctx, cols, rows)
+	Runtime.EventsOn(ctx, "resize", func(optionalData ...interface{}) {
+		width, height := Runtime.WindowGetSize(ctx)
+		rows, cols := CalculateGridSize(width, height)
+		screen.Resize(cols,rows)
+	})
 	var err error
 	NvimInstance, err = nvim.NewChildProcess(
 		nvim.ChildProcessCommand("nvim"),

@@ -2,13 +2,13 @@ package neovim
 
 // Window represents a Neovim window, which can be a regular window or a floating window
 type Window struct {
-	ID          int    // Window ID
-	GridID      int    // Associated grid ID
+	ID          int // Window ID
+	Grid        *Grid
 	Type        string // "normal" or "floating"
 	Anchor      string // Anchor position for floating windows
 	AnchorGrid  int    // Grid ID this window is anchored to
-	Row         int    // Row position
-	Col         int    // Column position
+	StartRow    int    // Row position
+	StartCol    int    // Column position
 	Width       int    // Window width
 	Height      int    // Window height
 	Focusable   bool   // Whether the window can be focused
@@ -16,16 +16,26 @@ type Window struct {
 	IsPopupmenu bool   // Whether this is a completion menu
 }
 
+type WindowAPI struct {
+	ID       int       `json:"id"`
+	Content  [][]*Cell `json:"content"`
+	Type     string    `json:"type"`
+	Width    float64       `json:"width"`  // in percent of screen
+	Height   float64       `json:"height"` // in percent of screen
+	StartRow int       `json:"startRow"`
+	StartCol int       `json:"startCol"`
+}
+
 // NewWindow creates a new window with the given ID and grid ID
-func NewWindow(id int, gridID int) *Window {
+func NewWindow(id int, grid *Grid) *Window {
 	return &Window{
 		ID:          id,
-		GridID:      gridID,
+		Grid:        grid,
 		Type:        "normal",
 		Anchor:      "",
 		AnchorGrid:  0,
-		Row:         0,
-		Col:         0,
+		StartRow:    0,
+		StartCol:    0,
 		Width:       0,
 		Height:      0,
 		Focusable:   true,
