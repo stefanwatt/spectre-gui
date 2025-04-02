@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind base;
 
+
+.cmdline-container {
+  border: 1px solid;
+  @apply border-base;
+  @apply rounded-md;
+  position: absolute;
+}
+
+.cmdline-indent {
+  user-select: none;
+}
+
 .bg-dark {
   background-color: #1b1e29;
 }

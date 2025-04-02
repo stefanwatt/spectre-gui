@@ -144,7 +144,6 @@
 						style="grid-column-start: {win.colStart}; grid-column-end:{win.colEnd}; grid-row-start: {win.rowStart}; grid-row-end:{win.rowEnd};"
 					>
 						<Grid content={nvimWindows[win.id]} />
-						<!-- <Grid {content} /> -->
 						{#each floatingWindows.filter((fw) => fw.anchorWindow === win.id) as floatingWin}
 							{@const position = calculatePosition(floatingWin)}
 							<FloatingWindow {position} win={floatingWin} />
