@@ -10,6 +10,8 @@
 
 	let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
 	let layout = $state<App.NvimLayout>();
+	let nvimWindows = $state<App.NvimWindowMap>({});
+	// let content = $state<App.NvimCell[][]>();
 	let floatingWindows = $state<App.FloatingWindow[]>([]);
 	let mode = $state<App.VimMode>('normal');
 
@@ -62,9 +64,16 @@
 		});
 		runtime.EventsEmit('get-highlights');
 
-		runtime.EventsOn('flush', (updated_layout: App.NvimLayout) => {
-			console.log('updated layout', updated_layout);
-			layout = updated_layout;
+		runtime.EventsOn('layout-updated', (updatedLayout: App.NvimLayout) => {
+			console.log('updatedLayout', updatedLayout);
+			layout = updatedLayout;
+		});
+
+		runtime.EventsOn('content-updated', (winId: number, updatedContent: App.NvimCell[][]) => {
+			nvimWindows[winId] = updatedContent;
+			// if (winId === 1000) {
+			// 	content = updatedContent;
+			// }
 		});
 
 		runtime.EventsOn('highlight_defined', (highlightUpdates: App.NvimHighlight[]) => {
@@ -75,9 +84,14 @@
 			highlights.set(updatedHighlights);
 		});
 
-		runtime.EventsOn('cursor-changed', (e: { row: number; col: number; top_line: number }) => {
-			cursor = { row: e.row, col: e.col };
-		});
+		runtime.EventsOn(
+			'cursor-changed',
+			(e: { row: number; col: number; activeWindowId: number }) => {
+				cursor = { row: e.row, col: e.col };
+				if (!layout) return;
+				layout.activeWindowId = e.activeWindowId;
+			}
+		);
 
 		runtime.EventsOn('mode-changed', (new_mode: App.VimMode) => {
 			console.log('mode changed', new_mode);
@@ -100,14 +114,16 @@
 </script>
 
 {#if cmdline.visible}
-	<CmdLine
-		visible={true}
-		firstc={cmdline.firstc}
-		prompt={cmdline.prompt}
-		indent={cmdline.indent}
-		content={cmdline.content}
-		pos={cmdline.pos}
-	/>
+	<div class="z-50">
+		<CmdLine
+			visible={true}
+			firstc={cmdline.firstc}
+			prompt={cmdline.prompt}
+			indent={cmdline.indent}
+			content={cmdline.content}
+			pos={cmdline.pos}
+		/>
+	</div>
 {/if}
 
 <div class="victor-mono flex h-screen flex-col">
@@ -123,9 +139,14 @@
 			>
 				{#each layout.windows as win}
 					<div
+						id="win-{win.id}"
+						class:active-window={layout.activeWindowId === win.id}
+						class:inactive-window={layout.activeWindowId !== win.id}
+						class="border border-solid border-transparent"
 						style="grid-column-start: {win.colStart}; grid-column-end:{win.colEnd}; grid-row-start: {win.rowStart}; grid-row-end:{win.rowEnd};"
 					>
-						<Grid content={win.content} />
+						<Grid content={nvimWindows[win.id]} />
+						<!-- <Grid {content} /> -->
 					</div>
 				{/each}
 			</div>
@@ -139,6 +160,9 @@
 </div>
 
 <style>
+	.inactive-window {
+		opacity: 0.85;
+	}
 	.victor-mono {
 		font-family: VictorMono Nerd Font Mono;
 		font-size: 22px;

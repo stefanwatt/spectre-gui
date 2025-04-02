@@ -17,16 +17,23 @@ declare global {
       classes: string;
       highlight: string;
     }
+    interface NvimWindowMap {
+      [key: number]: NvimCell[][];
+    }
+    interface NvimContent {
+      winId: number
+      content: NvimCell[][]
+    }
 
     interface NvimLayout {
       cols: string
       rows: string
+      activeWindowId: number
       windows: NvimWindow[]
     }
 
     interface NvimWindow {
       id: number;
-      content: NvimCell[][];
       type: string;
       width: number;
       height: number;
@@ -58,7 +65,7 @@ declare global {
     }
     type VimMode = "normal" | "insert" | "visual" | "cmdline_normal" | "cmdline_insert"
     interface GridProps {
-      content: App.NvimCell[][]
+      content?: App.NvimCell[][]
       decode?: (input: string) => string
     }
 

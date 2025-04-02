@@ -11,6 +11,7 @@ type CursorMoveEvent struct {
 	Col        uint64 `msgpack:"col" json:"col"`
 	TopLine    uint64 `msgpack:"top_line" json:"top_line"`
 	BottomLine uint64 `msgpack:"bottom_line" json:"bottom_line"`
+	ActiveWindowId int `json:"activeWindowId"`
 }
 
 type NvimRange struct {

@@ -78,12 +78,12 @@
 
 {#if isSubstitute && substituteCommand}
 	<div class="relative w-screen text-sm">
-		<div class="absolute right-8 top-8">
+		<div class="absolute right-8 top-8 z-50 bg-crust">
 			<div
-				class="w-[25rem] rounded-md border border-l-4 border-overlay1 border-l-mauve bg-surface0 bg-opacity-95 shadow-md backdrop-blur-sm"
+				class="w-[25rem] rounded-md border border-l-4 border-overlay1 border-l-mauve shadow-md"
 			>
 				<div
-					class:bg-surface1={substituteCommand.isInSearchField}
+					class:bg-base={substituteCommand.isInSearchField}
 					class="flex items-center border-b border-overlay1 px-3 py-2"
 				>
 					<div class="mr-2 text-blue">
@@ -115,7 +115,7 @@
 					</div>
 				</div>
 				<div
-					class:bg-surface1={substituteCommand.isInReplaceField}
+					class:bg-base={substituteCommand.isInReplaceField}
 					class="flex items-center px-3 py-2"
 				>
 					<div class="mr-2 text-green">
@@ -138,9 +138,9 @@
 	</div>
 {:else if firstc === ':'}
 	<div class="relative flex w-screen justify-center">
-		<div class="absolute top-24">
+		<div class="absolute top-24 z-50">
 			<div
-				class="cmdline-container command-mode flex items-center rounded-md !border-l-blue p-2 shadow-md"
+				class="cmdline-container bg-crust command-mode flex items-center rounded-md !border-l-blue p-2 shadow-md"
 			>
 				<div class="mr-4 text-blue">
 					<CommandIcon />
@@ -161,7 +161,7 @@
 	</div>
 {:else if firstc === '/' || firstc === '?'}
 	<div class="relative w-screen text-sm">
-		<div class="absolute right-8 top-8">
+		<div class="absolute right-8 top-8 z-50 bg-crust">
 			<div
 				class="cmdline-container search-mode flex items-center rounded-md !border-l-peach p-2 shadow-md"
 			>
@@ -207,11 +207,6 @@
 {/if}
 
 <style>
-	.cmdline-container {
-		background-color: rgba(31, 34, 45, 0.95);
-		backdrop-filter: blur(4px);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-	}
 	.search-mode {
 		width: 25rem;
 		border-left: 3px solid;
@@ -225,7 +220,6 @@
 	}
 
 	.cmdline-indent {
-		opacity: 0.5;
 		user-select: none;
 	}
 </style>

@@ -33,6 +33,7 @@ type Screen struct {
 	DefaultBg     int
 	DefaultSp     int
 	ActiveGrid    int
+	ActiveWindow  int
 	Mode          string
 	PendingRender bool
 	highlightsMu  sync.RWMutex // Mutex for Highlights map
@@ -263,7 +264,6 @@ func (s *Screen) gridScroll(gridId int, top int, bot int, left int, right int, r
 				}
 			}
 		}
-		s.scheduleRender()
 	}
 }
 
@@ -272,9 +272,6 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 	if !exists {
 		return
 	}
-	if gridId > 2 {
-		utils.Log(fmt.Sprintf("gridLine cells for %d", gridId), cells)
-	}
 	if row >= grid.Height || col >= grid.Width {
 		utils.Log(fmt.Sprintf("Row %d or col %d out of bounds for grid %d (max: %d,%d)",
 			row, col, gridId, grid.Height-1, grid.Width-1))
@@ -282,6 +279,17 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 	}
 	currentCol := col
 	lastHl := 0
+	if len(cells) == 0 {
+		return
+	}
+
+	winId, exists := s.GridToWindow[gridId]
+	if exists {
+		s.windowsMu.Lock()
+		window, _ := s.Windows[winId]
+		window.Dirty = true
+		s.windowsMu.Unlock()
+	}
 	for _, cell := range cells {
 		cellData, ok := cell.([]interface{})
 		if !ok || len(cellData) == 0 {
@@ -329,7 +337,7 @@ func (s *Screen) gridClear(gridId int) {
 			}
 		}
 	}
-	s.scheduleRender()
+	// s.scheduleRender()
 }
 
 func (s *Screen) handleWinViewport(args []interface{}) {
@@ -448,7 +456,8 @@ func (s *Screen) gridResize(gridId int, width int, height int) {
 		}
 	}
 	s.windowsMu.RUnlock()
-	s.scheduleRender()
+	// s.scheduleRender()
+	//TODO: probably dont wanna recalculate everything since only the fractions will change
 }
 
 func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
@@ -461,14 +470,17 @@ func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
 	grid.Cursor.Col = col
 
 	s.ActiveGrid = gridId
+	s.ActiveWindow = s.GridToWindow[gridId]
+
+	utils.Log("gridCursorGoto updated active Window to ", s.ActiveWindow)
 
 	UpdateCursor(s.ctx, CursorMoveEvent{
-		Row:        uint64(row),
-		Col:        uint64(col),
-		TopLine:    uint64(s.botLine),
-		BottomLine: uint64(s.topLine),
+		Row:            uint64(row),
+		Col:            uint64(col),
+		TopLine:        uint64(s.botLine),
+		BottomLine:     uint64(s.topLine),
+		ActiveWindowId: s.ActiveWindow,
 	})
-	s.scheduleRender()
 }
 
 func (s *Screen) defaultColorsSet(fg int, bg int, sp int) {
@@ -603,7 +615,6 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 func (s *Screen) modeChange(mode string) {
 	s.Mode = mode
 	Runtime.EventsEmit(s.ctx, "mode-changed", mode)
-	s.scheduleRender()
 }
 
 func (s *Screen) winClose(args []interface{}) {
@@ -649,16 +660,17 @@ func (s *Screen) winPos(args []interface{}) {
 	window, exists := s.Windows[winId]
 	if !exists {
 		window = NewWindow(winId, s.Grids[gridId])
-		window.Width = width
-		window.Height = height
-		window.StartRow = row
-		window.StartCol = col
+
 		s.Windows[winId] = window
 		s.GridToWindow[gridId] = winId
 		Runtime.EventsEmit(s.ctx, "window_opened")
-		utils.Log(fmt.Sprintf("winPos spawned window with id %d", winId))
-		utils.Log(fmt.Sprintf("winPos got %d windows now", len(s.Windows)))
+		utils.Log(fmt.Sprintf("winPos spawned with id=%d got %d windows now", winId, len(s.Windows)))
 	}
+	window.Width = width
+	window.Height = height
+	window.StartRow = row
+	window.StartCol = col
+	utils.Log(fmt.Sprintf("winPos id=%d StartRow=%d StartCol=%d Width=%d Height=%d", winId, row, col, width, height))
 	s.windowsMu.RUnlock()
 
 	// Handle window positioning
@@ -666,6 +678,12 @@ func (s *Screen) winPos(args []interface{}) {
 		// Create a new grid for this window
 		s.gridResize(gridId, width, height)
 	}
+}
+
+func (s *Screen) updateLayout() {
+	layout := s.CalculateGridLayout()
+	layout.ActiveWindowId = s.GridToWindow[s.ActiveGrid]
+	Runtime.EventsEmit(s.ctx, "layout-updated", layout)
 }
 
 func (s *Screen) winFloatPos(args []interface{}) {
@@ -728,7 +746,6 @@ func (s *Screen) winFloatPos(args []interface{}) {
 
 	utils.Log(fmt.Sprintf("Floating window %d anchored at grid %d (%f,%f) with z-index %d",
 		winId, anchorGrid, anchorRow, anchorCol, zIndex))
-	s.scheduleRender()
 }
 
 func (s *Screen) scheduleRender() {
@@ -746,8 +763,14 @@ func (s *Screen) scheduleRender() {
 
 func (s *Screen) render() {
 	s.EmitFloatingWindows()
-	layout := s.CalculateGridLayout()
-	Runtime.EventsEmit(s.ctx, "flush", layout)
+	s.updateLayout()
+	for winId, window := range s.Windows {
+		if !window.Dirty {
+			continue
+		}
+		window.Dirty = false
+		Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(window.Grid))
+	}
 }
 
 func (s *Screen) optimizeGrid(grid *Grid) [][]*Cell {

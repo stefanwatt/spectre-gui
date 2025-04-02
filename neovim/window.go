@@ -3,6 +3,7 @@ package neovim
 // Window represents a Neovim window, which can be a regular window or a floating window
 type Window struct {
 	ID          int // Window ID
+	Dirty       bool
 	Grid        *Grid
 	Type        string // "normal" or "floating"
 	Anchor      string // Anchor position for floating windows
@@ -32,6 +33,7 @@ type WindowAPI struct {
 func NewWindow(id int, grid *Grid) *Window {
 	return &Window{
 		ID:          id,
+		Dirty:       true,
 		Grid:        grid,
 		Type:        "normal",
 		Anchor:      "",
