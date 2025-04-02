@@ -14,7 +14,6 @@
 	let totalResults = 17;
 	let resultIndex = 1;
 	let searchIconSize = '16';
-	
 
 	let isSubstitute = $derived(content && content.includes('s/'));
 	let substituteCommand = $derived(
@@ -30,23 +29,23 @@
 
 		const hasVeryMagic = search.startsWith('\\v');
 		const searchTerm = hasVeryMagic ? search.substring(2) : search;
-		
+
 		// Calculate field positions
 		const searchStart = range.length + 2; // After "s/"
 		const searchEnd = searchStart + search.length;
 		const replaceStart = searchEnd + 1; // After the second "/"
 		const replaceEnd = replaceStart + replace.length;
-		
+
 		// Determine which field has focus
 		let isInSearchField = false;
 		let isInReplaceField = false;
 		let searchPos = undefined;
 		let replacePos = undefined;
-		
+
 		if (pos !== undefined) {
 			isInSearchField = pos >= searchStart && pos <= searchEnd;
 			isInReplaceField = pos >= replaceStart && pos <= replaceEnd;
-			
+
 			if (isInSearchField) {
 				searchPos = pos - searchStart;
 			} else if (isInReplaceField) {
@@ -69,7 +68,7 @@
 			isInSearchField,
 			isInReplaceField,
 			searchStart,
-			replaceStart,
+			replaceStart
 		};
 	}
 	//TODO: prevent the user from moving out of the bounds of the fields
@@ -78,15 +77,12 @@
 
 {#if isSubstitute && substituteCommand}
 	<div class="relative w-screen text-sm">
-		<div class="absolute right-8 top-8 z-50 bg-crust">
-			<div
-				class="w-[25rem] rounded-md border border-l-4 border-overlay1 border-l-mauve shadow-md"
-			>
+		<div class="cmdline-container bg-dark right-8 top-8 z-50">
+			<div class="w-[25rem]">
 				<div
-					class:bg-base={substituteCommand.isInSearchField}
-					class="flex items-center border-b border-overlay1 px-3 py-2"
+					class="flex items-center px-3 py-2 border-b border-b-base"
 				>
-					<div class="mr-2 text-blue">
+					<div class="mr-2 ">
 						<SearchIcon size={searchIconSize} />
 					</div>
 					<div class="grow text-text">
@@ -115,10 +111,8 @@
 					</div>
 				</div>
 				<div
-					class:bg-base={substituteCommand.isInReplaceField}
-					class="flex items-center px-3 py-2"
-				>
-					<div class="mr-2 text-green">
+					class="flex items-center px-3 py-2">
+					<div class="mr-2 ">
 						<ReplaceIcon size={searchIconSize} />
 					</div>
 					<div class="grow text-text">
@@ -138,15 +132,13 @@
 	</div>
 {:else if firstc === ':'}
 	<div class="relative flex w-screen justify-center">
-		<div class="absolute top-24 z-50">
-			<div
-				class="cmdline-container bg-crust command-mode flex items-center rounded-md !border-l-blue p-2 shadow-md"
-			>
-				<div class="mr-4 text-blue">
+		<div class="top-24 z-50 cmdline-container bg-dark">
+			<div class="command-mode flex items-center p-2">
+				<div class="mr-4 ">
 					<CommandIcon />
 				</div>
 				{#if prompt}
-					<span class="cmdline-prompt mr-1 font-semibold text-blue">{prompt}</span>
+					<span class="cmdline-prompt mr-1 font-semibold ">{prompt}</span>
 				{/if}
 				{#if indent && indent > 0}
 					<span class="cmdline-indent">{' '.repeat(indent)}</span>
@@ -161,10 +153,8 @@
 	</div>
 {:else if firstc === '/' || firstc === '?'}
 	<div class="relative w-screen text-sm">
-		<div class="absolute right-8 top-8 z-50 bg-crust">
-			<div
-				class="cmdline-container search-mode flex items-center rounded-md !border-l-peach p-2 shadow-md"
-			>
+		<div class="right-8 top-8 z-50 cmdline-container bg-dark">
+			<div class=" search-mode flex items-center p-2">
 				<div class="search-icon-container mr-2 text-overlay2">
 					<SearchIcon size={searchIconSize} />
 				</div>
@@ -190,8 +180,8 @@
 {:else}
 	<!-- Normal mode or other command types -->
 	<div class="relative flex w-screen justify-center">
-		<div class="absolute top-24">
-			<div class="cmdline-container normal-mode flex items-center rounded-md p-2 shadow-md">
+		<div class="top-24 bg-dark cmdline-container bg-dark">
+			<div class=" normal-mode flex items-center  p-2 shadow-md">
 				{#if prompt}
 					<span class="cmdline-prompt mr-1 text-green">{prompt}</span>
 				{/if}
@@ -209,11 +199,15 @@
 <style>
 	.search-mode {
 		width: 25rem;
-		border-left: 3px solid;
 	}
 	.command-mode {
 		width: 60rem;
-		border-left: 3px solid;
+	}
+	.cmdline-container {
+		border: 1px solid;
+		@apply border-base;
+		@apply rounded-md;
+		position: absolute
 	}
 	.search-controls button {
 		transition: background-color 0.07s;

@@ -54,7 +54,7 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+		BackgroundColour: &options.RGBA{R: 39, G: 42, B: 56, A: 1},
 		OnStartup:        app.startup,
 		OnDomReady:       app.mounted,
 		Bind: []interface{}{

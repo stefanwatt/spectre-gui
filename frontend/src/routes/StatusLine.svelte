@@ -12,7 +12,7 @@
 	$: mode_name = mode_names.get(mode);
 </script>
 
-<div class="flex h-10 w-full items-center bg-mantle p-1 text-text">
+<div class="flex h-full w-full items-center bg-crust p-1 text-text">
 	<span
 		class:bg-blue={mode === 'normal'}
 		class:bg-green={mode === 'insert'}

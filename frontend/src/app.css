@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind base;
 
+.bg-dark {
+  background-color: #1b1e29;
+}
+
+.bg-darker {
+  background-color: #161821;
+}
+
 /* Background */
 .spectre-bg {
   color: #c6d0f5;

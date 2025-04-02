@@ -11,7 +11,6 @@
 	let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
 	let layout = $state<App.NvimLayout>();
 	let nvimWindows = $state<App.NvimWindowMap>({});
-	// let content = $state<App.NvimCell[][]>();
 	let floatingWindows = $state<App.FloatingWindow[]>([]);
 	let mode = $state<App.VimMode>('normal');
 
@@ -135,14 +134,13 @@
 		{#if layout}
 			<div
 				style="grid-template-columns: {layout.cols}; grid-template-rows: {layout.rows};"
-				class="grid"
+				class="grid h-full bg-surface0"
 			>
 				{#each layout.windows as win}
 					<div
 						id="win-{win.id}"
 						class:active-window={layout.activeWindowId === win.id}
-						class:inactive-window={layout.activeWindowId !== win.id}
-						class="border border-solid border-transparent"
+						class="nvim-window border border-solid border-transparent bg-base-100"
 						style="grid-column-start: {win.colStart}; grid-column-end:{win.colEnd}; grid-row-start: {win.rowStart}; grid-row-end:{win.rowEnd};"
 					>
 						<Grid content={nvimWindows[win.id]} />
@@ -156,15 +154,18 @@
 			{/each}
 		{/if}
 	</div>
-	<StatusLine {cursor} {mode}></StatusLine>
+	<div class="h-10">
+		<StatusLine {cursor} {mode}></StatusLine>
+	</div>
 </div>
 
 <style>
-	.inactive-window {
-		opacity: 0.85;
+	.grid {
+		gap: 1px;
 	}
 	.victor-mono {
 		font-family: VictorMono Nerd Font Mono;
 		font-size: 22px;
+		line-height: 22px;
 	}
 </style>
