@@ -9,7 +9,7 @@
 	import Grid from './Grid.svelte';
 
 	let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
-	let windows = $state<App.NvimWindow[]>([]);
+	let layout = $state<App.NvimLayout>();
 	let floatingWindows = $state<App.FloatingWindow[]>([]);
 	let mode = $state<App.VimMode>('normal');
 
@@ -62,9 +62,9 @@
 		});
 		runtime.EventsEmit('get-highlights');
 
-		runtime.EventsOn('flush', (updated_windows: App.NvimWindow[]) => {
-			console.log(updated_windows);
-			windows = updated_windows.sort((win1, win2) => win1.id - win2.id);
+		runtime.EventsOn('flush', (updated_layout: App.NvimLayout) => {
+			console.log('updated layout', updated_layout);
+			layout = updated_layout;
 		});
 
 		runtime.EventsOn('highlight_defined', (highlightUpdates: App.NvimHighlight[]) => {
@@ -109,23 +109,31 @@
 		pos={cmdline.pos}
 	/>
 {/if}
+
 <div class="victor-mono flex h-screen flex-col">
 	<div
 		class:mode-n={mode === 'normal'}
 		class:mode-v={mode === 'visual'}
 		class="relative flex-grow whitespace-pre"
 	>
-		<div class="flex">
-			{#each windows as win}
-				<div style="width:{win.width}%">
-					<Grid content={win.content} />
-				</div>
+		{#if layout}
+			<div
+				style="grid-template-columns: {layout.cols}; grid-template-rows: {layout.rows};"
+				class="grid"
+			>
+				{#each layout.windows as win}
+					<div
+						style="grid-column-start: {win.colStart}; grid-column-end:{win.colEnd}; grid-row-start: {win.rowStart}; grid-row-end:{win.rowEnd};"
+					>
+						<Grid content={win.content} />
+					</div>
+				{/each}
+			</div>
+			{#each floatingWindows as win}
+				{@const position = calculatePosition(win)}
+				<FloatingWindow {position} {win} />
 			{/each}
-		</div>
-		{#each floatingWindows as win}
-			{@const position = calculatePosition(win)}
-			<FloatingWindow {position} {win} />
-		{/each}
+		{/if}
 	</div>
 	<StatusLine {cursor} {mode}></StatusLine>
 </div>

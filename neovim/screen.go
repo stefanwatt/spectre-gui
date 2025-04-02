@@ -105,7 +105,7 @@ func handleEvent(update interface{}) (event string, ok bool) {
 func (s *Screen) Resize(width int, height int) {
 	screen.Width = width
 	screen.Height = height
-	NvimInstance.TryResizeUI(width,height)
+	NvimInstance.TryResizeUI(width, height)
 }
 
 func (s *Screen) handleRedraw(updates [][]interface{}) {
@@ -656,7 +656,7 @@ func (s *Screen) winPos(args []interface{}) {
 		s.Windows[winId] = window
 		s.GridToWindow[gridId] = winId
 		Runtime.EventsEmit(s.ctx, "window_opened")
-		utils.Log("winPos spawned window with id ", winId)
+		utils.Log(fmt.Sprintf("winPos spawned window with id %d", winId))
 		utils.Log(fmt.Sprintf("winPos got %d windows now", len(s.Windows)))
 	}
 	s.windowsMu.RUnlock()
@@ -746,28 +746,8 @@ func (s *Screen) scheduleRender() {
 
 func (s *Screen) render() {
 	s.EmitFloatingWindows()
-	var windows = []WindowAPI{}
-
-	for winId, window := range s.Windows {
-		width := utils.CalculatePercentage(window.Width, s.Width)
-		height := utils.CalculatePercentage(window.Height, s.Height)
-		utils.Log(fmt.Sprintf("render window windowWidth=%d windowHeight=%d screenWidth=%d screenHeight=%d", window.Width, window.Height, s.Width, s.Height))
-		if window.IsFloating() {
-			continue
-		}
-		w := WindowAPI{
-			ID:       winId,
-			Content:  s.optimizeGrid(window.Grid),
-			Type:     window.Type,
-			Width:    width,
-			Height:   height,
-			StartRow: window.StartRow,
-			StartCol: window.StartCol,
-		}
-		windows = append(windows, w)
-	}
-
-	Runtime.EventsEmit(s.ctx, "flush", windows)
+	layout := s.CalculateGridLayout()
+	Runtime.EventsEmit(s.ctx, "flush", layout)
 }
 
 func (s *Screen) optimizeGrid(grid *Grid) [][]*Cell {

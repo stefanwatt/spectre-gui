@@ -20,10 +20,12 @@ type WindowAPI struct {
 	ID       int       `json:"id"`
 	Content  [][]*Cell `json:"content"`
 	Type     string    `json:"type"`
-	Width    float64       `json:"width"`  // in percent of screen
-	Height   float64       `json:"height"` // in percent of screen
-	StartRow int       `json:"startRow"`
-	StartCol int       `json:"startCol"`
+	Width    float64   `json:"width"`  // in percent of screen
+	Height   float64   `json:"height"` // in percent of screen
+	ColStart int       `json:"colStart"`
+	ColEnd   int       `json:"colEnd"`
+	RowStart int       `json:"rowStart"`
+	RowEnd   int       `json:"rowEnd"`
 }
 
 // NewWindow creates a new window with the given ID and grid ID

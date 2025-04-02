@@ -18,12 +18,22 @@ declare global {
       highlight: string;
     }
 
+    interface NvimLayout {
+      cols: string
+      rows: string
+      windows: NvimWindow[]
+    }
+
     interface NvimWindow {
       id: number;
       content: NvimCell[][];
       type: string;
       width: number;
       height: number;
+      colStart: number;
+      colEnd: number;
+      rowStart: number;
+      rowEnd: number;
     }
 
     interface CmdLine {
