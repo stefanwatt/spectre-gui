@@ -926,7 +926,7 @@ func (s *Screen) EmitFloatingWindows() {
 	var floatingWindows []map[string]interface{}
 
 	for winId, window := range s.Windows {
-		if window.AnchorGrid != 2 || !window.IsFloating() {
+		if !window.IsFloating() {
 			continue
 		}
 		// Get the associated grid
@@ -938,20 +938,30 @@ func (s *Screen) EmitFloatingWindows() {
 			utils.Log(fmt.Sprintf("emitfloat found grid for %d", window.Grid.ID))
 		}
 
+		str := strings.TrimSpace(grid.toString())
+		// seems arbitrary, but theres some weird floating windows with bs content
+		// idk wtf they are and i dont care. i want them gone. cant imagine they could be important with 3 chars
+		if len(str) < 4 {
+			continue
+		} else {
+			utils.Log(fmt.Sprintf("EmitFloatingWindows %d longer than 3 chars:%s", len(str), str))
+		}
+		anchorWindow, _ := s.GridToWindow[window.AnchorGrid]
+
 		// Create a window info object
 		windowInfo := map[string]interface{}{
-			"id":          winId,
-			"grid_id":     window.Grid.ID,
-			"anchor_grid": window.AnchorGrid,
-			"anchor":      window.Anchor,
-			"row":         window.StartRow,
-			"col":         window.StartCol,
-			"width":       window.Width,
-			"height":      window.Height,
-			"z_index":     window.ZIndex,
-			"focusable":   window.Focusable,
-			"is_popup":    window.IsPopupmenu,
-			"grid":        grid.toHexGrid().Cells,
+			"id":           winId,
+			"grid_id":      window.Grid.ID,
+			"anchorWindow": anchorWindow,
+			"anchor":       window.Anchor,
+			"row":          window.StartRow,
+			"col":          window.StartCol,
+			"width":        window.Width,
+			"height":       window.Height,
+			"z_index":      window.ZIndex,
+			"focusable":    window.Focusable,
+			"is_popup":     window.IsPopupmenu,
+			"grid":         grid.toHexGrid().Cells,
 		}
 
 		floatingWindows = append(floatingWindows, windowInfo)

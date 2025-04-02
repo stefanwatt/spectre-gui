@@ -88,7 +88,7 @@ declare global {
     interface FloatingWindow {
       id: number;
       grid_id: number;
-      anchor_grid: number;
+      anchorWindow: number;
       anchor: string;
       row: number;
       col: number;

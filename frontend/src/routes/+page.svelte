@@ -140,18 +140,18 @@
 					<div
 						id="win-{win.id}"
 						class:active-window={layout.activeWindowId === win.id}
-						class="nvim-window border border-solid border-transparent bg-base-100"
+						class="nvim-window relative border border-solid border-transparent bg-base-100"
 						style="grid-column-start: {win.colStart}; grid-column-end:{win.colEnd}; grid-row-start: {win.rowStart}; grid-row-end:{win.rowEnd};"
 					>
 						<Grid content={nvimWindows[win.id]} />
 						<!-- <Grid {content} /> -->
+						{#each floatingWindows.filter((fw) => fw.anchorWindow === win.id) as floatingWin}
+							{@const position = calculatePosition(floatingWin)}
+							<FloatingWindow {position} win={floatingWin} />
+						{/each}
 					</div>
 				{/each}
 			</div>
-			{#each floatingWindows as win}
-				{@const position = calculatePosition(win)}
-				<FloatingWindow {position} {win} />
-			{/each}
 		{/if}
 	</div>
 	<div class="h-10">
