@@ -52,19 +52,23 @@ func (s *Screen) CalculateGridLayout() GridLayout {
 	rowsStr := strings.Join(utils.MapArray(rowsFractions, func(i int) string { return strconv.Itoa(i) }), "fr ") + "fr"
 
 	// Step 4: Calculate the grid position for each window
-	windows := make([]WindowAPI, 0, len(s.Windows))
+	windowAPIs := make([]WindowAPI, 0, len(s.Windows))
 
+	var windows []*Window
+	var floatingWindows []*Window
 	for winId, window := range s.Windows {
-		if window.IsFloating() {
+		if window.Hidden || window.IsFloating() {
+			floatingWindows = append(floatingWindows, window)
 			continue
 		}
+		windows = append(windows, window)
 
 		// Find grid indices for this window
 		// colStart := findIndex(cols, window.StartCol)
 		// window.StartCol == 0 -> colStart 1
 
 		// window.EndCol == s.Width -> colStart len(colsFractions)+1
-		utils.Log(fmt.Sprintf("CalculateGridLayout calculating position for window with id=%d starcol=%d startrow=%d width=%d height=%d",winId, window.StartCol, window.StartRow, window.Width, window.Height))
+		utils.Log(fmt.Sprintf("CalculateGridLayout calculating position for window with id=%d starcol=%d startrow=%d width=%d height=%d", winId, window.StartCol, window.StartRow, window.Width, window.Height))
 		colStart := findStartIndex(colsFractions, window.StartCol)
 		rowStart := findStartIndex(rowsFractions, window.StartRow)
 		colEnd := findEndIndex(colsFractions, window.StartCol+window.Width, s.Width)
@@ -75,7 +79,6 @@ func (s *Screen) CalculateGridLayout() GridLayout {
 
 		w := WindowAPI{
 			ID:       winId,
-			Content:  s.optimizeGrid(window.Grid),
 			Type:     window.Type,
 			Width:    utils.CalculatePercentage(width, s.Width),
 			Height:   utils.CalculatePercentage(height, s.Height),
@@ -85,20 +88,38 @@ func (s *Screen) CalculateGridLayout() GridLayout {
 			RowEnd:   rowEnd,
 		}
 
-		windows = append(windows, w)
+		windowAPIs = append(windowAPIs, w)
 	}
-
-	sort.SliceStable(windows,func(i, j int) bool {return windows[i].ID < windows[j].ID})
+	s.clearResidualWindows(windows, floatingWindows)
+	sort.SliceStable(windowAPIs, func(i, j int) bool { return windowAPIs[i].ID < windowAPIs[j].ID })
 	return GridLayout{
 		Cols:    colsStr,
 		Rows:    rowsStr,
-		Windows: windows,
+		Windows: windowAPIs,
+	}
+}
+
+// NOTE: i have no idea why this is necessary, but for some reason
+// i dont receive a close event for some windows that are closed
+// this happens with trek.nvim and also fzf.lua
+func (s *Screen) clearResidualWindows(windows []*Window, floatingWindows []*Window) {
+	fullWidthWin, error := utils.Find(windows, func(w *Window) bool {
+		return w.Width == s.Width
+	})
+	if error == nil {
+		s.windowsMu.Lock()
+		clear(s.Windows)
+		s.Windows[fullWidthWin.ID] = fullWidthWin
+		for _, win := range floatingWindows {
+			s.Windows[win.ID] = win
+		}
+		s.windowsMu.Unlock()
 	}
 }
 
 // calculateFractions constructs CSS grid-template string
 func calculateFractions(positions []int, totalSize int) []int {
-	utils.Log(fmt.Sprintf("calculateFractions totalSize=%d positions:",totalSize),positions)
+	utils.Log(fmt.Sprintf("calculateFractions totalSize=%d positions:", totalSize), positions)
 	if len(positions) <= 1 {
 		return []int{1}
 	}
@@ -115,27 +136,27 @@ func calculateFractions(positions []int, totalSize int) []int {
 // findStartIndex finds the index of a value in a sorted slice
 // findStartIndex finds the CSS grid line for the window's start position (inclusive)
 func findStartIndex(fractions []int, val int) int {
-    cumulative := 0
-    for line, size := range fractions {
-        if val <= cumulative {
-            return line + 1 // CSS lines start at 1
-        }
-        cumulative += size
-    }
-    return len(fractions) + 1
+	cumulative := 0
+	for line, size := range fractions {
+		if val <= cumulative {
+			return line + 1 // CSS lines start at 1
+		}
+		cumulative += size
+	}
+	return len(fractions) + 1
 }
 
 // findEndIndex finds the CSS grid line for the window's end position (exclusive)
 func findEndIndex(fractions []int, val int, max int) int {
-    if val >= max {
-        return len(fractions) + 1
-    }
-    cumulative := 0
-    for line, size := range fractions {
-        cumulative += size
-        if val < cumulative {
-            return line + 2 // End line is next after the track containing val
-        }
-    }
-    return len(fractions) + 1
+	if val >= max {
+		return len(fractions) + 1
+	}
+	cumulative := 0
+	for line, size := range fractions {
+		cumulative += size
+		if val < cumulative {
+			return line + 2 // End line is next after the track containing val
+		}
+	}
+	return len(fractions) + 1
 }

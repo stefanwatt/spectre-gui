@@ -49,6 +49,24 @@ func (g *Grid) toHexGrid() *Grid {
 	return newGrid
 }
 
+func toHexCells(cells [][]*Cell) [][]Cell {
+	newCells := make([][]Cell, len(cells))
+	for i, row := range cells {
+		newCells[i] = make([]Cell, len(row))
+		for j, cell := range row {
+			var hexChar string
+			for _, r := range cell.Char {
+				hexChar += fmt.Sprintf("%x", r)
+			}
+			newCells[i][j] = Cell{
+				Char:      hexChar,
+				Highlight: cell.Highlight,
+			}
+		}
+	}
+	return newCells
+}
+
 type Cell struct {
 	Char      string `json:"char"`
 	Highlight int    `json:"highlight"`

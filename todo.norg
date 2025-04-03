@@ -1,11 +1,14 @@
 * ( ) Todo
-  - ( ) calculate line height based on available space such that there's  never empty space between the content and the status line
   - ( ) implement Markdown
   - ( ) visual selection has some bugs with the beginning of the row not having the correct background color
-  - ( ) handle multiple grids for splits etc.
   - ( ) refactor screen.go -> probably has too much logic
-  - ( ) calculate left offset for floating windows etc. in go 
-  - ( ) we need a mechanism for writing the dynamic css to disk. it's annoying to have to wait for the colors to load and also just unnecessary
+  - ( ) we need a mechanism for writing the dynamic css to disk.
+        it's annoying to have to wait for the colors to load and also just unnecessary.
+        there's 7000 lines of css. this has to be optimized somehow. im sure theres a ton of redundant classes
+  - ( ) bug with floating window: not sure what this is called. when you are in a function that's longer than the viewport
+        then you get the first line of the function as context. this is apparently coded as a floating window
+        and its not rendered well
+  - ( ) pickers: add stuff from spectre-gui back in 
 ** ( ) cmdline QoL
   - ( ) completion
 *** ( ) search
@@ -14,7 +17,6 @@
 *** ( ) substitute
   - (-) jump between search and replace term
   - ( ) toggle flags with keymaps
-  - ( ) mouse support?
 
 
 * Done
@@ -22,3 +24,5 @@
   - (x) make sure there's no gaps between rows such that visual selection etc. doesnt have weird gaps with different colors inbetween
   - (x) apply highlighting with css classes instead of style attribute
   - (x) completion
+  - (x) handle multiple grids for splits etc.
+  - (x) calculate left offset for floating windows etc. in go 

@@ -65,6 +65,7 @@
 
 		runtime.EventsOn('layout-updated', (updatedLayout: App.NvimLayout) => {
 			console.log('updatedLayout', updatedLayout);
+			console.log(nvimWindows)
 			layout = updatedLayout;
 		});
 
@@ -98,6 +99,7 @@
 		});
 
 		runtime.EventsOn('floating_windows', (windows: App.FloatingWindow[]) => {
+			console.log('floating windows', windows);
 			floatingWindows = windows;
 		});
 
@@ -105,8 +107,13 @@
 			console.log(`floating_window_closed id: ${winId}`);
 			floatingWindows = floatingWindows.filter((win) => win.id !== winId);
 		});
+
+		runtime.EventsOn('hide-window', (winId:number) => {
+			delete nvimWindows[winId]
+		});
 	});
 
+	let rootFloatingWindows = $derived(floatingWindows.filter((fw) => fw.anchorWindow === 0));
 	onDestroy(() => {
 		window.removeEventListener('keydown', sendKey);
 	});
@@ -125,7 +132,7 @@
 	</div>
 {/if}
 
-<div class="victor-mono flex h-screen flex-col">
+<div class="victor-mono flex h-screen flex-col overflow-hidden">
 	<div
 		class:mode-n={mode === 'normal'}
 		class:mode-v={mode === 'visual'}
@@ -152,6 +159,11 @@
 				{/each}
 			</div>
 		{/if}
+
+		{#each rootFloatingWindows as floatingWin}
+			{@const position = calculatePosition(floatingWin)}
+			<FloatingWindow {position} win={floatingWin} />
+		{/each}
 	</div>
 	<div class="h-10">
 		<StatusLine {cursor} {mode}></StatusLine>

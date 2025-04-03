@@ -43,13 +43,14 @@ func StartListening(ctx context.Context) {
 	Runtime.EventsOn(ctx, "resize", func(optionalData ...interface{}) {
 		width, height := Runtime.WindowGetSize(ctx)
 		rows, cols := CalculateGridSize(width, height)
-		screen.Resize(cols,rows)
+		screen.Resize(cols, rows)
 	})
 	var err error
+	// nvimCtx, _ := context.WithCancel(ctx)
 	NvimInstance, err = nvim.NewChildProcess(
 		nvim.ChildProcessCommand("nvim"),
 		nvim.ChildProcessArgs("--embed", "/home/stefan/Projects/nvim-gui/neovim/neovim.go"),
-		nvim.ChildProcessContext(context.Background()),
+		nvim.ChildProcessContext(ctx),
 	)
 	if err != nil {
 		log.Println(err)

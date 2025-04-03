@@ -198,9 +198,19 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 				s.winFloatPos(gridArgs)
 			}
 		case "win_close":
+			utils.Log("redraw win_close args:", args)
+			utils.Log("redraw win_close s.Grids", s.Grids)
 			for _, arg := range args {
 				gridArgs := arg.([]interface{})
 				s.winClose(gridArgs)
+			}
+
+		case "win_hide":
+			utils.Log("redraw win_hide args:", args)
+			utils.Log("redraw win_hide s.Grids", s.Grids)
+			for _, arg := range args {
+				gridArgs := arg.([]interface{})
+				s.winHide(gridArgs)
 			}
 		case "cmdline_show":
 			s.handleCmdlineShow(args)
@@ -286,8 +296,10 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 	winId, exists := s.GridToWindow[gridId]
 	if exists {
 		s.windowsMu.Lock()
-		window, _ := s.Windows[winId]
-		window.Dirty = true
+		window, exists := s.Windows[winId]
+		if exists {
+			window.Dirty = true
+		}
 		s.windowsMu.Unlock()
 	}
 	for _, cell := range cells {
@@ -617,26 +629,42 @@ func (s *Screen) modeChange(mode string) {
 	Runtime.EventsEmit(s.ctx, "mode-changed", mode)
 }
 
+func (s *Screen) winHide(args []interface{}) {
+	utils.Log("winHide args", args)
+	gridId := utils.ReflectToInt(args[0])
+	winId := s.GridToWindow[gridId]
+	if winId == 0 {
+		return
+	}
+	s.windowsMu.Lock()
+	window, exists := s.Windows[winId]
+	if exists {
+		window.Hidden = true
+	}
+	s.windowsMu.Unlock()
+	utils.Log(fmt.Sprintf("winHide hiding window with id=%d, s.Windows:", winId), s.Windows)
+	Runtime.EventsEmit(s.ctx, "hide-window", winId)
+	s.updateLayout()
+}
 func (s *Screen) winClose(args []interface{}) {
-	utils.Log("winClose", args)
 	if len(args) < 1 {
 		return
 	}
 
 	gridId := utils.ReflectToInt(args[0])
-	utils.Log("winClose", args)
-
 	// Find the grid associated with this window
+	utils.Log(fmt.Sprintf("winClose closing gridId:%d", gridId))
 	s.windowsMu.RLock()
 	for grid, winId := range s.GridToWindow {
 		if grid == gridId {
-			if s.Windows[winId].IsFloating() {
+			win, exists := s.Windows[winId]
+			if exists && win.IsFloating() {
 				Runtime.EventsEmit(s.ctx, "floating_window_closed", winId)
 			}
 			delete(s.GridToWindow, grid)
 			delete(s.Windows, winId)
-			utils.Log(fmt.Sprintf("Window %d closed (grid %d)", winId, gridId))
-			utils.Log(fmt.Sprintf("winPos got %d windows now", len(s.Windows)))
+			utils.Log(fmt.Sprintf("winClose Window %d closed (grid %d)", winId, gridId))
+			utils.Log(fmt.Sprintf("winClose got %d windows now", len(s.Windows)))
 			break
 		}
 	}
@@ -670,7 +698,8 @@ func (s *Screen) winPos(args []interface{}) {
 	window.Height = height
 	window.StartRow = row
 	window.StartCol = col
-	utils.Log(fmt.Sprintf("winPos id=%d StartRow=%d StartCol=%d Width=%d Height=%d", winId, row, col, width, height))
+	window.Hidden = false
+	utils.Log(fmt.Sprintf("winPos id=%d gridId=%d StartRow=%d StartCol=%d Width=%d Height=%d", winId, gridId, row, col, width, height))
 	s.windowsMu.RUnlock()
 
 	// Handle window positioning
@@ -694,6 +723,12 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	}
 
 	gridId := utils.ReflectToInt(args[0])
+	str := strings.TrimSpace(s.Grids[gridId].toString())
+	//NOTE: seems arbitrary, but theres some weird floating windows with bs content
+	// idk wtf they are and i dont care. i want them gone. cant imagine they could be important with 3 chars
+	if len(str) < 4 {
+		return
+	}
 	utils.Log(fmt.Sprintf("winFloatPos computing args for gridId %d", gridId), args)
 	nwindow := args[1].(nvim.Window)
 	winId, _ := strconv.Atoi(strings.Split(nwindow.String(), ":")[1])
@@ -765,7 +800,7 @@ func (s *Screen) render() {
 	s.EmitFloatingWindows()
 	s.updateLayout()
 	for winId, window := range s.Windows {
-		if !window.Dirty {
+		if window.Hidden || !window.Dirty {
 			continue
 		}
 		window.Dirty = false
@@ -938,14 +973,6 @@ func (s *Screen) EmitFloatingWindows() {
 			utils.Log(fmt.Sprintf("emitfloat found grid for %d", window.Grid.ID))
 		}
 
-		str := strings.TrimSpace(grid.toString())
-		// seems arbitrary, but theres some weird floating windows with bs content
-		// idk wtf they are and i dont care. i want them gone. cant imagine they could be important with 3 chars
-		if len(str) < 4 {
-			continue
-		} else {
-			utils.Log(fmt.Sprintf("EmitFloatingWindows %d longer than 3 chars:%s", len(str), str))
-		}
 		anchorWindow, _ := s.GridToWindow[window.AnchorGrid]
 
 		// Create a window info object

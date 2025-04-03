@@ -15,11 +15,11 @@ type Window struct {
 	Focusable   bool   // Whether the window can be focused
 	ZIndex      int    // Z-index for floating windows
 	IsPopupmenu bool   // Whether this is a completion menu
+	Hidden      bool
 }
 
 type WindowAPI struct {
 	ID       int       `json:"id"`
-	Content  [][]*Cell `json:"content"`
 	Type     string    `json:"type"`
 	Width    float64   `json:"width"`  // in percent of screen
 	Height   float64   `json:"height"` // in percent of screen
