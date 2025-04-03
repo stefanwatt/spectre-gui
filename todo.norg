@@ -9,6 +9,9 @@
         then you get the first line of the function as context. this is apparently coded as a floating window
         and its not rendered well
   - ( ) pickers: add stuff from spectre-gui back in 
+  - ( ) handle extmarks
+  - ( ) :Lazy is somehow not emitted as a floating window
+  - ( ) horizontal! cursor movement is slow af to re-render
 ** ( ) cmdline QoL
   - ( ) completion
 *** ( ) search

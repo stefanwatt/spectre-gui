@@ -38,6 +38,7 @@ type Screen struct {
 	PendingRender bool
 	highlightsMu  sync.RWMutex // Mutex for Highlights map
 	windowsMu     sync.RWMutex // Mutex for Windows map
+	layout        *GridLayout
 }
 
 func NewScreen(ctx context.Context, cols int, rows int) *Screen {
@@ -87,6 +88,7 @@ func NewScreen(ctx context.Context, cols int, rows int) *Screen {
 		Mode:          "normal",
 		PendingRender: false,
 		margins:       make([]int, 4), // Initialize margins slice
+		layout:        NewGridLayout(),
 	}
 }
 
@@ -710,9 +712,15 @@ func (s *Screen) winPos(args []interface{}) {
 }
 
 func (s *Screen) updateLayout() {
-	layout := s.CalculateGridLayout()
-	layout.ActiveWindowId = s.GridToWindow[s.ActiveGrid]
-	Runtime.EventsEmit(s.ctx, "layout-updated", layout)
+	s.CalculateGridLayout()
+	if s.layout.ActiveWindowId != s.ActiveWindow {
+		s.layout.ActiveWindowId = s.ActiveWindow
+		s.layout.dirty = true
+	}
+	if s.layout.dirty {
+		Runtime.EventsEmit(s.ctx, "layout-updated", s.layout)
+		s.layout.dirty = false
+	}
 }
 
 func (s *Screen) winFloatPos(args []interface{}) {
@@ -745,6 +753,7 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	defer s.windowsMu.Unlock()
 
 	window, exists := s.Windows[winId]
+
 	if !exists {
 		utils.Log(fmt.Sprintf("winFloatPos adding winId %d", winId))
 		window = NewWindow(winId, s.Grids[gridId])
@@ -759,6 +768,15 @@ func (s *Screen) winFloatPos(args []interface{}) {
 		window.Height = existingGrid.Height
 	}
 
+	if winId != 0 {
+		filetype, error := getBufferFiletype(winId)
+		if error == nil && filetype != nil {
+			utils.Log(fmt.Sprintf("winFloatPos window with id=%d has filetype=%s", winId, *filetype))
+			window.Filetype = filetype
+		} else {
+			utils.Log(fmt.Sprintf("winFloatPos could not get the filetype for window with id=%d error:%s", winId, error.Error()))
+		}
+	}
 	// Update window properties
 	window.Grid.ID = gridId
 	window.Type = "floating"
@@ -804,7 +822,11 @@ func (s *Screen) render() {
 			continue
 		}
 		window.Dirty = false
-		Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(window.Grid))
+		if window.IsFloating() {
+			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.renderFloatingWindow(window))
+		} else {
+			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(window.Grid))
+		}
 	}
 }
 
@@ -965,7 +987,7 @@ func (s *Screen) EmitFloatingWindows() {
 			continue
 		}
 		// Get the associated grid
-		grid, exists := s.Grids[window.Grid.ID]
+		_, exists := s.Grids[window.Grid.ID]
 		if !exists {
 			utils.Log(fmt.Sprintf("emitfloat got no grid for %d", window.Grid.ID))
 			continue
@@ -978,19 +1000,25 @@ func (s *Screen) EmitFloatingWindows() {
 		// Create a window info object
 		windowInfo := map[string]interface{}{
 			"id":           winId,
-			"grid_id":      window.Grid.ID,
+			"gridId":       window.Grid.ID,
 			"anchorWindow": anchorWindow,
 			"anchor":       window.Anchor,
 			"row":          window.StartRow,
 			"col":          window.StartCol,
 			"width":        window.Width,
 			"height":       window.Height,
-			"z_index":      window.ZIndex,
+			"zIndex":       window.ZIndex,
 			"focusable":    window.Focusable,
-			"is_popup":     window.IsPopupmenu,
-			"grid":         grid.toHexGrid().Cells,
+			"isPopup":      window.IsPopupmenu,
 		}
+		if window.Filetype != nil {
+			windowInfo["filetype"] = &window.Filetype
+		}
+		//NOTE: need hex encoding for some nerdfont stuff (e.g. completion window)
 
+		//For some reason everything freezes and i have huge cpu load when i uncomment this:
+		windowInfo["isHex"] = isHex(window)
+		s.Windows[winId].Dirty = true
 		floatingWindows = append(floatingWindows, windowInfo)
 	}
 

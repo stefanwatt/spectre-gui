@@ -4,13 +4,15 @@
 
 {#if content}
 	{#each content as row}
-		<div class="flex overflow-hidden leading-none">
+		<div class="flex overflow-hidden whitespace-pre leading-none">
 			{#each row as cell}
 				{#if cell?.char}
 					<span class="cell inline-block h-full hl-{cell?.highlight} {cell?.classes}">
 						{decode ? decode(cell.char) : cell.char}
 					</span>
 				{/if}
+			{:else}
+				<span class="cell inline-block h-full">⠀</span>
 			{/each}
 		</div>
 	{/each}

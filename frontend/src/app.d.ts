@@ -87,17 +87,17 @@ declare global {
 
     interface FloatingWindow {
       id: number;
-      grid_id: number;
+      gridId: number;
       anchorWindow: number;
       anchor: string;
       row: number;
       col: number;
       width: number;
       height: number;
-      z_index: number;
+      zIndex: number;
       focusable: boolean;
-      is_popup: boolean;
-      grid: NvimCell[][];
+      isPopup: boolean;
+      isHex: boolean;
     }
   }
 }

@@ -9,24 +9,33 @@
 	interface FloatingWindowProps {
 		position: Position;
 		win: App.FloatingWindow;
+		content?: App.NvimCell[][];
 	}
-	let { position, win }: FloatingWindowProps = $props();
+	let { position, win, content }: FloatingWindowProps = $props();
 	function decode(message: string) {
-		const hexValues = message.split(',');
+		if (!win.isHex) return message;
 		let result = '';
+		try {
+			const hexValues = message.split(',');
 
-		for (const hex of hexValues) {
-			const codePoint = parseInt(hex, 16);
-			result += String.fromCodePoint(codePoint);
+			for (const hex of hexValues) {
+				const codePoint = parseInt(hex, 16);
+				result += String.fromCodePoint(codePoint);
+			}
+		} catch (error) {
+			return message;
 		}
 		return result;
 	}
+	$effect(() => {
+		console.log('FloatingWindow content updated:', content);
+	});
 </script>
 
 <div
-	id="{"win-"+win.id}"
-	class="absolute overflow-hidden whitespace-pre rounded-md border border-surface0 bg-crust p-1 text-text"
-	style="top: {position.top}; left: {position.left}; z-index: {win.z_index || 100};"
+	id={'win-' + win.id}
+	class="absolute overflow-hidden whitespace-pre rounded-md border border-surface0 bg-base-100 p-2 text-text drop-shadow-md"
+	style="top: {position.top}; left: {position.left}; z-index: {win.zIndex || 100};"
 >
-	<Grid content={win.grid} {decode} />
+	<Grid {content} {decode} />
 </div>

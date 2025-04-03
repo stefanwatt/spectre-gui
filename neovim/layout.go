@@ -9,14 +9,29 @@ import (
 )
 
 type GridLayout struct {
-	Cols           string      `json:"cols"`
-	Rows           string      `json:"rows"`
-	ActiveWindowId int         `json:"activeWindowId"`
-	Windows        []WindowAPI `json:"windows"`
+	Cols           string       `json:"cols"`
+	Rows           string       `json:"rows"`
+	ActiveWindowId int          `json:"activeWindowId"`
+	Windows        []*WindowAPI `json:"windows"`
+	dirty          bool
+}
+
+func NewGridLayout() *GridLayout {
+	return &GridLayout{
+		Cols:           "1fr",
+		Rows:           "1fr",
+		ActiveWindowId: 1000,
+		Windows:        []*WindowAPI{},
+		dirty:          true,
+	}
+}
+
+func (gl *GridLayout) equals(*GridLayout) {
+
 }
 
 // CalculateGridLayout determines the grid structure and window positions
-func (s *Screen) CalculateGridLayout() GridLayout {
+func (s *Screen) CalculateGridLayout() {
 	// Step 1: Collect all unique row and column positions
 	rowPositions := make(map[int]bool)
 	colPositions := make(map[int]bool)
@@ -52,7 +67,7 @@ func (s *Screen) CalculateGridLayout() GridLayout {
 	rowsStr := strings.Join(utils.MapArray(rowsFractions, func(i int) string { return strconv.Itoa(i) }), "fr ") + "fr"
 
 	// Step 4: Calculate the grid position for each window
-	windowAPIs := make([]WindowAPI, 0, len(s.Windows))
+	windowAPIs := make([]*WindowAPI, 0, len(s.Windows))
 
 	var windows []*Window
 	var floatingWindows []*Window
@@ -77,7 +92,7 @@ func (s *Screen) CalculateGridLayout() GridLayout {
 		width := window.Width
 		height := window.Height
 
-		w := WindowAPI{
+		w := &WindowAPI{
 			ID:       winId,
 			Type:     window.Type,
 			Width:    utils.CalculatePercentage(width, s.Width),
@@ -92,11 +107,25 @@ func (s *Screen) CalculateGridLayout() GridLayout {
 	}
 	s.clearResidualWindows(windows, floatingWindows)
 	sort.SliceStable(windowAPIs, func(i, j int) bool { return windowAPIs[i].ID < windowAPIs[j].ID })
-	return GridLayout{
-		Cols:    colsStr,
-		Rows:    rowsStr,
-		Windows: windowAPIs,
+
+	windowAPIsChanged := false
+	if len(s.layout.Windows) == len(windowAPIs) {
+		// for i, windowAPI := range windowAPIs {
+		// 	if !s.layout.Windows[i].Equal(windowAPI) {
+		// 		windowAPIsChanged = true
+		// 		break
+		// 	}
+		// }
+	} else {
+		windowAPIsChanged = true
 	}
+	if s.layout.Cols != colsStr || s.layout.Rows != rowsStr || windowAPIsChanged {
+		s.layout.dirty = true
+	}
+
+	s.layout.Cols = colsStr
+	s.layout.Rows = rowsStr
+	s.layout.Windows = windowAPIs
 }
 
 // NOTE: i have no idea why this is necessary, but for some reason

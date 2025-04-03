@@ -11,6 +11,7 @@
 	let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
 	let layout = $state<App.NvimLayout>();
 	let nvimWindows = $state<App.NvimWindowMap>({});
+	//TODO: keep the content of floating windows in nvimWindows as well
 	let floatingWindows = $state<App.FloatingWindow[]>([]);
 	let mode = $state<App.VimMode>('normal');
 
@@ -70,6 +71,7 @@
 		});
 
 		runtime.EventsOn('content-updated', (winId: number, updatedContent: App.NvimCell[][]) => {
+			console.log(`content-updated for winId=${winId}`, updatedContent)
 			nvimWindows[winId] = updatedContent;
 			// if (winId === 1000) {
 			// 	content = updatedContent;
@@ -88,6 +90,7 @@
 			'cursor-changed',
 			(e: { row: number; col: number; activeWindowId: number }) => {
 				cursor = { row: e.row, col: e.col };
+				console.log("cursor changed",cursor)
 				if (!layout) return;
 				layout.activeWindowId = e.activeWindowId;
 			}
@@ -152,8 +155,8 @@
 					>
 						<Grid content={nvimWindows[win.id]} />
 						{#each floatingWindows.filter((fw) => fw.anchorWindow === win.id) as floatingWin}
-							{@const position = calculatePosition(floatingWin)}
-							<FloatingWindow {position} win={floatingWin} />
+							{@const position = calculatePosition(floatingWin.row, floatingWin.col)}
+							<FloatingWindow {position} win={floatingWin} content={nvimWindows[win.id]}/>
 						{/each}
 					</div>
 				{/each}
@@ -161,8 +164,8 @@
 		{/if}
 
 		{#each rootFloatingWindows as floatingWin}
-			{@const position = calculatePosition(floatingWin)}
-			<FloatingWindow {position} win={floatingWin} />
+			{@const position = calculatePosition(floatingWin.row, floatingWin.col)}
+			<FloatingWindow {position} win={floatingWin} content={nvimWindows[floatingWin.id]}/>
 		{/each}
 	</div>
 	<div class="h-10">
