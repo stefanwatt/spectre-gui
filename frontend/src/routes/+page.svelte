@@ -7,6 +7,7 @@
 	import { calculatePosition } from './window.service';
 	import FloatingWindow from './FloatingWindow.svelte';
 	import Grid from './Grid.svelte';
+	import FloatingWindowContainer from './FloatingWindowContainer.svelte';
 
 	let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
 	let layout = $state<App.NvimLayout>();
@@ -66,12 +67,12 @@
 
 		runtime.EventsOn('layout-updated', (updatedLayout: App.NvimLayout) => {
 			console.log('updatedLayout', updatedLayout);
-			console.log(nvimWindows)
+			console.log(nvimWindows);
 			layout = updatedLayout;
 		});
 
 		runtime.EventsOn('content-updated', (winId: number, updatedContent: App.NvimCell[][]) => {
-			console.log(`content-updated for winId=${winId}`, updatedContent)
+			console.log(`content-updated for winId=${winId}`, updatedContent);
 			nvimWindows[winId] = updatedContent;
 			// if (winId === 1000) {
 			// 	content = updatedContent;
@@ -90,7 +91,7 @@
 			'cursor-changed',
 			(e: { row: number; col: number; activeWindowId: number }) => {
 				cursor = { row: e.row, col: e.col };
-				console.log("cursor changed",cursor)
+				console.log('cursor changed', cursor);
 				if (!layout) return;
 				layout.activeWindowId = e.activeWindowId;
 			}
@@ -111,12 +112,11 @@
 			floatingWindows = floatingWindows.filter((win) => win.id !== winId);
 		});
 
-		runtime.EventsOn('hide-window', (winId:number) => {
-			delete nvimWindows[winId]
+		runtime.EventsOn('hide-window', (winId: number) => {
+			delete nvimWindows[winId];
 		});
 	});
 
-	let rootFloatingWindows = $derived(floatingWindows.filter((fw) => fw.anchorWindow === 0));
 	onDestroy(() => {
 		window.removeEventListener('keydown', sendKey);
 	});
@@ -139,7 +139,7 @@
 	<div
 		class:mode-n={mode === 'normal'}
 		class:mode-v={mode === 'visual'}
-		class="relative flex-grow whitespace-pre"
+		class="relative flex-grow overflow-hidden whitespace-pre"
 	>
 		{#if layout}
 			<div
@@ -154,19 +154,12 @@
 						style="grid-column-start: {win.colStart}; grid-column-end:{win.colEnd}; grid-row-start: {win.rowStart}; grid-row-end:{win.rowEnd};"
 					>
 						<Grid content={nvimWindows[win.id]} />
-						{#each floatingWindows.filter((fw) => fw.anchorWindow === win.id) as floatingWin}
-							{@const position = calculatePosition(floatingWin.row, floatingWin.col)}
-							<FloatingWindow {position} win={floatingWin} content={nvimWindows[win.id]}/>
-						{/each}
+						<FloatingWindowContainer {floatingWindows} {nvimWindows} anchorWindow={win.id} />
 					</div>
 				{/each}
 			</div>
 		{/if}
-
-		{#each rootFloatingWindows as floatingWin}
-			{@const position = calculatePosition(floatingWin.row, floatingWin.col)}
-			<FloatingWindow {position} win={floatingWin} content={nvimWindows[floatingWin.id]}/>
-		{/each}
+		<FloatingWindowContainer {floatingWindows} {nvimWindows} anchorWindow={0} />
 	</div>
 	<div class="h-10">
 		<StatusLine {cursor} {mode}></StatusLine>

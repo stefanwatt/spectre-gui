@@ -846,6 +846,7 @@ func (s *Screen) render() {
 
 		grid := window.Grid
 		if window.IsFloating() {
+			utils.Log(fmt.Sprintf("render content-updated winId=%d filetype=%s", winId, *window.Filetype))
 			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.renderFloatingWindow(window))
 		} else {
 			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid))
@@ -1014,8 +1015,8 @@ func (s *Screen) EmitFloatingWindows() {
 			"gridId":       window.Grid.ID,
 			"anchorWindow": anchorWindow,
 			"anchor":       window.Anchor,
-			"row":          window.StartRow,
 			"col":          window.StartCol,
+			"row":          window.StartRow,
 			"width":        window.Width,
 			"height":       window.Height,
 			"zIndex":       window.ZIndex,

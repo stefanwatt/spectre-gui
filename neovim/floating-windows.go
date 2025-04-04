@@ -36,6 +36,11 @@ func getBufferFiletype(winId int) (*string, error) {
 	if error != nil {
 		return nil, error
 	}
+	if filetype == "" {
+		var treesitterContext bool
+		NvimInstance.WindowVar(*foundWindow, "treesitter_context", treesitterContext)
+		filetype = "treesitter_context"
+	}
 	return &filetype, nil
 }
 
@@ -44,7 +49,7 @@ func isHex(window *Window) bool {
 	if window.Filetype != nil {
 		ft = *window.Filetype
 	}
-	return !(ft == "fzflua_backdrop" || ft == "smear-cursor")
+	return !(ft == "fzflua_backdrop")
 }
 
 func (s *Screen) renderFloatingWindow(window *Window) [][]*Cell {

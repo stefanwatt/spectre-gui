@@ -98,6 +98,7 @@ declare global {
       focusable: boolean;
       isPopup: boolean;
       isHex: boolean;
+      filetype:string
     }
   }
 }

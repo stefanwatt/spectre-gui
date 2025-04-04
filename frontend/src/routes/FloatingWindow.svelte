@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Grid from './Grid.svelte';
+	import { calculatePosition } from './window.service';
 
 	interface Position {
 		top: string;
@@ -7,11 +8,13 @@
 	}
 
 	interface FloatingWindowProps {
-		position: Position;
 		win: App.FloatingWindow;
-		content?: App.NvimCell[][];
+		nvimWindows: App.NvimWindowMap;
 	}
-	let { position, win, content }: FloatingWindowProps = $props();
+	let { win, nvimWindows }: FloatingWindowProps = $props();
+
+	let content = $derived(nvimWindows[win.id])
+	let position: Position = $derived(calculatePosition(win.row, win.col, win.filetype));
 	function decode(message: string) {
 		if (!win.isHex) return message;
 		let result = '';
@@ -27,9 +30,6 @@
 		}
 		return result;
 	}
-	$effect(() => {
-		console.log('FloatingWindow content updated:', content);
-	});
 </script>
 
 <div
