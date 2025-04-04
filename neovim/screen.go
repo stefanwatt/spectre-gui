@@ -277,6 +277,18 @@ func (s *Screen) gridScroll(gridId int, top int, bot int, left int, right int, r
 			}
 		}
 	}
+	startRow := top
+	endRow := bot
+	if rows < 0 {
+		startRow = top + (-rows)
+	} else {
+		endRow = bot - rows
+	}
+	for r := startRow; r < endRow; r++ {
+		if r >= 0 && r < len(grid.DirtyRows) {
+			grid.DirtyRows[r] = true
+		}
+	}
 }
 
 func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
@@ -336,6 +348,8 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 			}
 		}
 	}
+
+	grid.DirtyRows[row] = true
 }
 
 func (s *Screen) gridClear(gridId int) {
@@ -470,8 +484,11 @@ func (s *Screen) gridResize(gridId int, width int, height int) {
 		}
 	}
 	s.windowsMu.RUnlock()
-	// s.scheduleRender()
-	//TODO: probably dont wanna recalculate everything since only the fractions will change
+	grid.DirtyRows = make([]bool, height)
+	grid.OptimizedRows = make([][]*Cell, height)
+	for i := range grid.DirtyRows {
+		grid.DirtyRows[i] = true
+	}
 }
 
 func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
@@ -495,6 +512,9 @@ func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
 		BottomLine:     uint64(s.topLine),
 		ActiveWindowId: s.ActiveWindow,
 	})
+	if row >= 0 && row < grid.Height {
+		grid.DirtyRows[row] = true
+	}
 }
 
 func (s *Screen) defaultColorsSet(fg int, bg int, sp int) {
@@ -817,99 +837,90 @@ func (s *Screen) scheduleRender() {
 func (s *Screen) render() {
 	s.EmitFloatingWindows()
 	s.updateLayout()
+
 	for winId, window := range s.Windows {
-		if window.Hidden || !window.Dirty {
+		if window.Hidden {
 			continue
 		}
 		window.Dirty = false
+
+		grid := window.Grid
 		if window.IsFloating() {
 			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.renderFloatingWindow(window))
 		} else {
-			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(window.Grid))
+			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid))
 		}
 	}
 }
 
 func (s *Screen) optimizeGrid(grid *Grid) [][]*Cell {
-	cursor := s.Grids[grid.ID].Cursor
-	optimizedGrid := make([][]*Cell, len(grid.Cells))
+	optimizedGrid := make([][]*Cell, grid.Height)
+	for row := 0; row < grid.Height; row++ {
+		if grid.DirtyRows[row] {
+			optimizedGrid[row] = s.optimizeRow(grid, row)
+			grid.OptimizedRows[row] = optimizedGrid[row]
+			grid.DirtyRows[row] = false
+		} else {
+			optimizedGrid[row] = grid.OptimizedRows[row]
+		}
+	}
+	return optimizedGrid
+}
 
-	for i, row := range grid.Cells {
-		optimizedGrid[i] = make([]*Cell, 0)
-		if len(row) == 0 {
+func (s *Screen) optimizeRow(grid *Grid, row int) []*Cell {
+	optimizedRow := make([]*Cell, 0)
+	if row >= len(grid.Cells) {
+		return optimizedRow
+	}
+
+	currentRow := grid.Cells[row]
+	cursor := grid.Cursor
+	var currentToken *Cell
+	lastHl := 0
+
+	for col, cell := range currentRow {
+		isCursor := cursor.Row == row && cursor.Col == col
+
+		if isCursor {
+			if currentToken != nil {
+				optimizedRow = append(optimizedRow, currentToken)
+				currentToken = nil
+			}
+			cursorCell := &Cell{
+				Char:      cell.Char,
+				Highlight: cell.Highlight,
+				Classes:   "cursor",
+			}
+			optimizedRow = append(optimizedRow, cursorCell)
+			lastHl = cell.Highlight
 			continue
 		}
 
-		if len(row) > 0 {
-			firstCell := row[0]
-			lastHl := firstCell.Highlight
-			currentToken := Cell{
-				Char:      "",
-				Highlight: lastHl,
-				Dirty:     firstCell.Dirty,
+		if cell.Highlight != lastHl || currentToken == nil {
+			if currentToken != nil {
+				optimizedRow = append(optimizedRow, currentToken)
 			}
-
-			for j, cell := range row {
-				isCursor := cursor.Row == i && cursor.Col == j
-
-				// If we've reached the cursor, save current token and start a cursor token
-				if isCursor {
-					// If we have accumulated characters, store the current token first
-					if len(currentToken.Char) > 0 {
-						tokenCopy := currentToken
-						optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
-					}
-
-					// Create the cursor token
-					cursorToken := Cell{
-						Char:      cell.Char,
-						Highlight: cell.Highlight,
-						Dirty:     true,
-						Classes:   "cursor",
-					}
-
-					optimizedGrid[i] = append(optimizedGrid[i], &cursorToken)
-
-					// Start a new token for characters after cursor
-					currentToken = Cell{
-						Char:      "",
-						Highlight: cell.Highlight,
-						Dirty:     cell.Dirty,
-					}
-					lastHl = cell.Highlight
-				} else if lastHl == cell.Highlight || cell.Char == " " {
-					// Same highlight or space, append to current token
-					currentToken.Char += cell.Char
-					currentToken.Dirty = currentToken.Dirty || cell.Dirty
-				} else {
-					// Different highlight, store current token and start a new one
-					if len(currentToken.Char) > 0 {
-						tokenCopy := currentToken
-						optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
-					}
-
-					// Start new token
-					lastHl = cell.Highlight
-					currentToken = Cell{
-						Char:      cell.Char,
-						Highlight: cell.Highlight,
-						Dirty:     cell.Dirty,
-					}
-				}
+			currentToken = &Cell{
+				Char:      cell.Char,
+				Highlight: cell.Highlight,
 			}
-
-			// Don't forget to add the last token from the row
-			if len(currentToken.Char) > 0 {
-				tokenCopy := currentToken
-				optimizedGrid[i] = append(optimizedGrid[i], &tokenCopy)
-			}
+			lastHl = cell.Highlight
+		} else {
+			currentToken.Char += cell.Char
 		}
 	}
-	for _, optimizedRow := range optimizedGrid {
-		optimizedRow[len(optimizedRow)-1].Char = strings.TrimRight(optimizedRow[len(optimizedRow)-1].Char, " ")
+
+	if currentToken != nil {
+		optimizedRow = append(optimizedRow, currentToken)
 	}
 
-	return optimizedGrid
+	// Trim trailing whitespace
+	if len(optimizedRow) > 0 {
+		lastToken := optimizedRow[len(optimizedRow)-1]
+		lastToken.Char = strings.TrimRight(lastToken.Char, " ")
+	}
+
+	return optimizedRow
 }
 
 func sanitize(s string) string {
@@ -1015,8 +1026,6 @@ func (s *Screen) EmitFloatingWindows() {
 			windowInfo["filetype"] = &window.Filetype
 		}
 		//NOTE: need hex encoding for some nerdfont stuff (e.g. completion window)
-
-		//For some reason everything freezes and i have huge cpu load when i uncomment this:
 		windowInfo["isHex"] = isHex(window)
 		s.Windows[winId].Dirty = true
 		floatingWindows = append(floatingWindows, windowInfo)

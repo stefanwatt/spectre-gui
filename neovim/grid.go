@@ -11,6 +11,8 @@ type Grid struct {
 		Row int
 		Col int
 	}
+	DirtyRows     []bool 
+	OptimizedRows [][]*Cell
 }
 
 func (g *Grid) toString() string {
