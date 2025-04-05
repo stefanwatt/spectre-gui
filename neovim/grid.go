@@ -11,12 +11,15 @@ type Grid struct {
 		Row int
 		Col int
 	}
-	DirtyRows     []bool 
+	DirtyRows     []bool
 	OptimizedRows [][]*Cell
 }
 
 func (g *Grid) toString() string {
 	result := ""
+	if g == nil {
+		return ""
+	}
 	for _, row := range g.Cells {
 		for _, cell := range row {
 			result += cell.Char
@@ -26,17 +29,10 @@ func (g *Grid) toString() string {
 	return result
 }
 
-func (g *Grid) toHexGrid() *Grid {
-	newGrid := &Grid{
-		ID:     g.ID,
-		Width:  g.Width,
-		Height: g.Height,
-	}
-	newGrid.Cursor.Row = g.Cursor.Row
-	newGrid.Cursor.Col = g.Cursor.Col
-	newGrid.Cells = make([][]*Cell, len(g.Cells))
+func (g *Grid) toHex() []ContentRow {
+	newContentRows := make([]ContentRow, len(g.Cells))
 	for i, row := range g.Cells {
-		newGrid.Cells[i] = make([]*Cell, len(row))
+		newContentRows[i].Tokens = make([]*Cell, len(row))
 		for j, cell := range row {
 			newCell := &Cell{}
 			var hexChar string
@@ -45,10 +41,10 @@ func (g *Grid) toHexGrid() *Grid {
 			}
 			newCell.Char = hexChar
 			newCell.Highlight = cell.Highlight
-			newGrid.Cells[i][j] = newCell
+			newContentRows[i].Tokens[j] = newCell
 		}
 	}
-	return newGrid
+	return newContentRows
 }
 
 func toHexCells(cells [][]*Cell) [][]Cell {
@@ -70,7 +66,7 @@ func toHexCells(cells [][]*Cell) [][]Cell {
 }
 
 type Cell struct {
-	Char      string `json:"char"`
+	Char      string `json:"text"`
 	Highlight int    `json:"highlight"`
 	Dirty     bool
 	Classes   string `json:"classes"`

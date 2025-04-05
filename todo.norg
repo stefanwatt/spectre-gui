@@ -11,7 +11,7 @@
   - ( ) pickers: add stuff from spectre-gui back in 
   - ( ) handle extmarks
   - ( ) :Lazy is somehow not emitted as a floating window
-  - ( ) horizontal! cursor movement is slow af to re-render
+  - ( ) continuous scrolling with down arrow is lagging
 ** ( ) cmdline QoL
   - ( ) completion
 *** ( ) search
@@ -23,9 +23,11 @@
 
 
 * Done
+  - (x) kill nvim-gui when underlying neovim instance dies
   - (x) implement cmdline
   - (x) make sure there's no gaps between rows such that visual selection etc. doesnt have weird gaps with different colors inbetween
   - (x) apply highlighting with css classes instead of style attribute
   - (x) completion
   - (x) handle multiple grids for splits etc.
   - (x) calculate left offset for floating windows etc. in go 
+  - (x) horizontal! cursor movement is slow af to re-render

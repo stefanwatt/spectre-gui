@@ -3,12 +3,12 @@
 </script>
 
 {#if content}
-	{#each content as row}
-		<div class="flex overflow-hidden whitespace-pre leading-none">
-			{#each row as cell}
-				{#if cell?.char}
-					<span class="cell inline-block h-full hl-{cell?.highlight} {cell?.classes}">
-						{decode ? decode(cell.char) : cell.char}
+	{#each content as row (row.index)}
+		<div id="row-{row.index}" class="flex overflow-hidden whitespace-pre leading-none">
+			{#each row.tokens as token}
+				{#if token?.text}
+					<span class="cell inline-block h-full hl-{token?.highlight} {token?.classes}">
+						{decode ? decode(token.text) : token.text}
 					</span>
 				{/if}
 			{:else}

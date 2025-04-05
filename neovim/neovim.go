@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"nvim-gui/utils"
 
@@ -35,57 +36,99 @@ func CalculateGridSize(windowWidth, windowHeight int) (rows, cols int) {
 }
 
 func StartListening(ctx context.Context) {
-	width, height := Runtime.WindowGetSize(ctx)
-	rows, cols := CalculateGridSize(width, height)
-	utils.Log(fmt.Sprintf("StartListening initializing screen with width=%d height=%d rows=%d cols=%d", width, height, rows, cols))
-
-	screen = NewScreen(ctx, cols, rows)
-	Runtime.EventsOn(ctx, "resize", func(optionalData ...interface{}) {
-		width, height := Runtime.WindowGetSize(ctx)
-		rows, cols := CalculateGridSize(width, height)
-		screen.Resize(cols, rows)
-	})
-	var err error
-	// nvimCtx, _ := context.WithCancel(ctx)
-	NvimInstance, err = nvim.NewChildProcess(
-		nvim.ChildProcessCommand("nvim"),
-		nvim.ChildProcessArgs("--embed", "/home/stefan/Projects/nvim-gui/neovim/neovim.go"),
-		nvim.ChildProcessContext(ctx),
-	)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	Runtime.EventsOn(ctx, "get-highlights", screen.sendInitialHighlights)
-	Runtime.EventsOn(ctx, "substitute-jump", HandleSubstituteJump)
-	defer NvimInstance.Close()
-
-	opts := map[string]interface{}{
-		"rgb":            true,
-		"ext_linegrid":   true,
-		"ext_multigrid":  true,
-		"ext_hlstate":    true,
-		"ext_termcolors": true,
-		"ext_cmdline":    true,
-		"ext_popupmenu":  true,
-		"ext_tabline":    true,
-		"ext_messages":   true,
-	}
-	err = NvimInstance.AttachUI(cols, rows, opts)
-	if err != nil {
-		utils.Log(err.Error())
-	}
-
-	NvimInstance.RegisterHandler("redraw", func(updates ...[]interface{}) {
-		screen.handleRedraw(updates)
-	})
-
-	if err := NvimInstance.Serve(); err != nil {
-		log.Fatal(err)
-	}
-	log.Println("listening terminating")
+    width, height := Runtime.WindowGetSize(ctx)
+    rows, cols := CalculateGridSize(width, height)
+    utils.Log(fmt.Sprintf("StartListening initializing screen with width=%d height=%d rows=%d cols=%d", width, height, rows, cols))
+    screen = NewScreen(ctx, cols, rows)
+    
+    // Set up resize handler
+    Runtime.EventsOn(ctx, "resize", func(optionalData ...interface{}) {
+        width, height := Runtime.WindowGetSize(ctx)
+        rows, cols := CalculateGridSize(width, height)
+        screen.Resize(cols, rows)
+    })
+    
+    nvimCtx, nvimCancel := context.WithCancel(ctx)
+    nvimExitChan := make(chan struct{})
+    
+    var err error
+    var nvimArgs nvim.ChildProcessOption
+    if len(os.Args) > 1 {
+        filepath := os.Args[1]
+        nvimArgs = nvim.ChildProcessArgs("--embed", filepath)
+    } else {
+        nvimArgs = nvim.ChildProcessArgs("--embed")
+    }
+    
+    NvimInstance, err = nvim.NewChildProcess(
+        nvim.ChildProcessCommand("nvim"),
+        nvimArgs,
+        nvim.ChildProcessContext(nvimCtx),
+    )
+    
+    if err != nil {
+        log.Println(err)
+        nvimCancel() 
+        Runtime.Quit(ctx)
+        return
+    }
+    
+    Runtime.EventsOn(ctx, "get-highlights", screen.sendInitialHighlights)
+    Runtime.EventsOn(ctx, "substitute-jump", HandleSubstituteJump)
+    
+    // Run a goroutine to handle Neovim serving and exit
+    go func() {
+        defer close(nvimExitChan)
+        defer NvimInstance.Close()
+        
+        opts := map[string]interface{}{
+            "rgb":            true,
+            "ext_linegrid":   true,
+            "ext_multigrid":  true,
+            "ext_hlstate":    true,
+            "ext_termcolors": true,
+            "ext_cmdline":    true,
+            "ext_popupmenu":  true,
+            "ext_tabline":    true,
+            "ext_messages":   true,
+        }
+        
+        err = NvimInstance.AttachUI(cols, rows, opts)
+        if err != nil {
+            utils.Log(err.Error())
+            nvimCancel()
+            return
+        }
+        
+        NvimInstance.RegisterHandler("redraw", func(updates ...[]interface{}) {
+            screen.handleRedraw(updates)
+        })
+        
+        if err := NvimInstance.Serve(); err != nil {
+            utils.Log(fmt.Sprintf("Neovim process terminated: %v", err))
+        }
+        
+        // Neovim has exited, signal to quit the app
+        utils.Log("Neovim process has terminated, quitting application")
+    }()
+    
+    // Wait for Neovim to exit or context to be cancelled
+    select {
+    case <-nvimExitChan:
+        // Neovim exited, quit the app
+        utils.Log("Detected Neovim exit, shutting down application")
+        Runtime.Quit(ctx)
+    case <-ctx.Done():
+        // Parent context was cancelled
+        nvimCancel()
+    }
+    
+    log.Println("listening terminating")
 }
 
 func isVisualMode(mode string) bool {
 	return mode == "v" || mode == "V" || mode == "\x16" // Normal, line, and block visual modes
 }
+
+
+

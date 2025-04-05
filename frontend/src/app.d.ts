@@ -10,19 +10,25 @@ declare global {
       col: number;
     }
 
-    interface NvimCell {
-      char: string;
+    interface NvimToken {
+      text: string;
       fg: string;
       bg: string;
       classes: string;
       highlight: string;
     }
+
+    interface NvimRow{
+      index:number;
+      tokens: NvimToken[]
+    }
+
     interface NvimWindowMap {
-      [key: number]: NvimCell[][];
+      [key: number]: NvimRow[];
     }
     interface NvimContent {
       winId: number
-      content: NvimCell[][]
+      content: NvimToken[][]
     }
 
     interface NvimLayout {
@@ -41,6 +47,7 @@ declare global {
       colEnd: number;
       rowStart: number;
       rowEnd: number;
+      filetype: string;
     }
 
     interface CmdLine {
@@ -65,7 +72,7 @@ declare global {
     }
     type VimMode = "normal" | "insert" | "visual" | "cmdline_normal" | "cmdline_insert"
     interface GridProps {
-      content?: App.NvimCell[][]
+      content?: App.NvimRow[]
       decode?: (input: string) => string
     }
 

@@ -52,37 +52,37 @@ func isHex(window *Window) bool {
 	return !(ft == "fzflua_backdrop")
 }
 
-func (s *Screen) renderFloatingWindow(window *Window) [][]*Cell {
+func (s *Screen) renderFloatingWindow(window *Window) []ContentRow {
 	if isHex(window) {
-		return window.Grid.toHexGrid().Cells
+		return window.Grid.toHex()
 	} else {
 		return s.renderFzfLua(window.Grid)
 	}
 }
 
-func (s *Screen) renderFzfLua(grid *Grid) [][]*Cell {
+func (s *Screen) renderFzfLua(grid *Grid) []ContentRow {
 	content := s.optimizeGrid(grid)
 	return trimPerimeter(content)
 }
 
-func trimPerimeter(cells [][]*Cell) [][]*Cell {
-	if len(cells) < 3 {
+func trimPerimeter(contentRows []ContentRow) []ContentRow {
+	if len(contentRows) < 3 {
 		// Return an empty slice if there are fewer than 3 rows
-		return [][]*Cell{}
+		return []ContentRow{}
 	}
 
 	// Remove first and last row
-	cells = cells[1 : len(cells)-1]
+	contentRows = contentRows[1 : len(contentRows)-1]
 
-	for i := range cells {
-		if len(cells[i]) < 3 {
+	for i := range contentRows {
+		if len(contentRows[i].Tokens) < 3 {
 			// If a row has fewer than 3 cells, make it empty
-			cells[i] = []*Cell{}
+			contentRows[i].Tokens = []*Cell{}
 		} else {
 			// Remove first and last cell of the row
-			cells[i] = cells[i][1 : len(cells[i])-1]
+			contentRows[i].Tokens = contentRows[i].Tokens[1 : len(contentRows[i].Tokens)-1]
 		}
 	}
 
-	return cells
+	return contentRows
 }

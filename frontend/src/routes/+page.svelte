@@ -4,15 +4,13 @@
 	import StatusLine from './StatusLine.svelte';
 	import { highlights, generateHighlightCSS, updateHighlightStyles } from '$lib/highlights';
 	import CmdLine from './CmdLine.svelte';
-	import { calculatePosition } from './window.service';
-	import FloatingWindow from './FloatingWindow.svelte';
 	import Grid from './Grid.svelte';
 	import FloatingWindowContainer from './FloatingWindowContainer.svelte';
+	import { marked } from 'marked';
 
 	let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
 	let layout = $state<App.NvimLayout>();
 	let nvimWindows = $state<App.NvimWindowMap>({});
-	//TODO: keep the content of floating windows in nvimWindows as well
 	let floatingWindows = $state<App.FloatingWindow[]>([]);
 	let mode = $state<App.VimMode>('normal');
 
@@ -56,7 +54,6 @@
 		});
 
 		runtime.EventsOn('cmdline_pos', (data) => {
-			console.log('pos changed:', data);
 			cmdline.pos = data.pos;
 		});
 
@@ -67,11 +64,11 @@
 
 		runtime.EventsOn('layout-updated', (updatedLayout: App.NvimLayout) => {
 			console.log('updatedLayout', updatedLayout);
-			console.log(nvimWindows);
+			console.log($state.snapshot(nvimWindows));
 			layout = updatedLayout;
 		});
 
-		runtime.EventsOn('content-updated', (winId: number, updatedContent: App.NvimCell[][]) => {
+		runtime.EventsOn('content-updated', (winId: number, updatedContent: App.NvimRow[]) => {
 			console.log(`content-updated for winId=${winId}`, updatedContent);
 			nvimWindows[winId] = updatedContent;
 			// if (winId === 1000) {
@@ -91,14 +88,13 @@
 			'cursor-changed',
 			(e: { row: number; col: number; activeWindowId: number }) => {
 				cursor = { row: e.row, col: e.col };
-				console.log('cursor changed', cursor);
+				console.log('cursor changed', $state.snapshot(cursor));
 				if (!layout) return;
 				layout.activeWindowId = e.activeWindowId;
 			}
 		);
 
 		runtime.EventsOn('mode-changed', (new_mode: App.VimMode) => {
-			console.log('mode changed', new_mode);
 			mode = new_mode;
 		});
 
@@ -146,7 +142,7 @@
 				style="grid-template-columns: {layout.cols}; grid-template-rows: {layout.rows};"
 				class="grid h-full bg-surface0"
 			>
-				{#each layout.windows as win}
+				{#each layout.windows as win (win.id)}
 					<div
 						id="win-{win.id}"
 						class:active-window={layout.activeWindowId === win.id}

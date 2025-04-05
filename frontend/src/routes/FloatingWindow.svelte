@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { marked } from 'marked';
 	import Grid from './Grid.svelte';
 	import { calculatePosition } from './window.service';
 
@@ -13,7 +14,7 @@
 	}
 	let { win, nvimWindows }: FloatingWindowProps = $props();
 
-	let content = $derived(nvimWindows[win.id])
+	let content = $derived(nvimWindows[win.id]);
 	let position: Position = $derived(calculatePosition(win.row, win.col, win.filetype));
 	function decode(message: string) {
 		if (!win.isHex) return message;

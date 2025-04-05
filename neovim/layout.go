@@ -101,6 +101,10 @@ func (s *Screen) CalculateGridLayout() {
 			ColEnd:   colEnd,
 			RowStart: rowStart,
 			RowEnd:   rowEnd,
+			Filetype: "",
+		}
+		if window.Filetype != nil {
+			w.Filetype = *window.Filetype
 		}
 
 		windowAPIs = append(windowAPIs, w)

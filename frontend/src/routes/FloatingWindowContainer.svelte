@@ -14,6 +14,6 @@
 	);
 </script>
 
-{#each filteredFloatingWindows as floatingWin}
+{#each filteredFloatingWindows as floatingWin (floatingWin.id)}
 	<FloatingWindow  win={floatingWin} {nvimWindows} />
 {/each}
