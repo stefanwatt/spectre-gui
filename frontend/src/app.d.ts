@@ -18,8 +18,8 @@ declare global {
       highlight: string;
     }
 
-    interface NvimRow{
-      index:number;
+    interface NvimRow {
+      index: number;
       tokens: NvimToken[]
     }
 
@@ -74,6 +74,7 @@ declare global {
     interface GridProps {
       content?: App.NvimRow[]
       decode?: (input: string) => string
+      cursor?: { row: number, col: number }
     }
 
     interface CursorMoveEvent {
@@ -105,7 +106,7 @@ declare global {
       focusable: boolean;
       isPopup: boolean;
       isHex: boolean;
-      filetype:string
+      filetype: string
     }
   }
 }

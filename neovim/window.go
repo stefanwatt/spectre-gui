@@ -1,5 +1,15 @@
 package neovim
 
+import (
+	"errors"
+	"fmt"
+	"nvim-gui/utils"
+	"strconv"
+	"strings"
+
+	"github.com/neovim/go-client/nvim"
+)
+
 // Window represents a Neovim window, which can be a regular window or a floating window
 type Window struct {
 	ID          int // Window ID
@@ -88,4 +98,27 @@ func (w *Window) IsCompletionWindow() bool {
 	}
 
 	return false
+}
+
+func extractWindowId(window nvim.Window) (int, error) {
+	return strconv.Atoi(strings.Split(window.String(), ":")[1])
+}
+
+func getWindow(winId int) (*nvim.Window, error) {
+	if winId < 1{
+		return nil, errors.New(fmt.Sprintf("invalid winId %d",winId))
+	}
+	utils.Log(fmt.Sprintf("GetWindow winId=%d",winId))
+	nvimWindows, err := NvimInstance.Windows()
+	if err != nil {
+		return nil, err
+	}
+	foundWin, err := utils.Find(nvimWindows, func(win nvim.Window) bool {
+		currentWinId, extractErr := extractWindowId(win)
+		return extractErr == nil && currentWinId == winId
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &foundWin, err
 }

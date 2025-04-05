@@ -6,7 +6,6 @@
 	import CmdLine from './CmdLine.svelte';
 	import Grid from './Grid.svelte';
 	import FloatingWindowContainer from './FloatingWindowContainer.svelte';
-	import { marked } from 'marked';
 
 	let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
 	let layout = $state<App.NvimLayout>();
@@ -88,7 +87,6 @@
 			'cursor-changed',
 			(e: { row: number; col: number; activeWindowId: number }) => {
 				cursor = { row: e.row, col: e.col };
-				console.log('cursor changed', $state.snapshot(cursor));
 				if (!layout) return;
 				layout.activeWindowId = e.activeWindowId;
 			}
@@ -149,7 +147,7 @@
 						class="nvim-window relative border border-solid border-transparent bg-base-100"
 						style="grid-column-start: {win.colStart}; grid-column-end:{win.colEnd}; grid-row-start: {win.rowStart}; grid-row-end:{win.rowEnd};"
 					>
-						<Grid content={nvimWindows[win.id]} />
+						<Grid content={nvimWindows[win.id]} {cursor} />
 						<FloatingWindowContainer {floatingWindows} {nvimWindows} anchorWindow={win.id} />
 					</div>
 				{/each}

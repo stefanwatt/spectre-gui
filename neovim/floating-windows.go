@@ -2,8 +2,6 @@ package neovim
 
 import (
 	"errors"
-	"strconv"
-	"strings"
 
 	"github.com/neovim/go-client/nvim"
 )
@@ -16,7 +14,7 @@ func getBufferFiletype(winId int) (*string, error) {
 
 	var foundWindow *nvim.Window
 	for _, window := range windows {
-		currentWinId, _ := strconv.Atoi(strings.Split(window.String(), ":")[1])
+		currentWinId, _ := extractWindowId(window)
 		if currentWinId == winId {
 			foundWindow = &window
 		}
@@ -61,7 +59,7 @@ func (s *Screen) renderFloatingWindow(window *Window) []ContentRow {
 }
 
 func (s *Screen) renderFzfLua(grid *Grid) []ContentRow {
-	content := s.optimizeGrid(grid)
+	content := s.optimizeFloatingGrid(grid)
 	return trimPerimeter(content)
 }
 

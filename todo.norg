@@ -1,33 +1,44 @@
-* ( ) Todo
-  - ( ) implement Markdown
-  - ( ) visual selection has some bugs with the beginning of the row not having the correct background color
-  - ( ) refactor screen.go -> probably has too much logic
-  - ( ) we need a mechanism for writing the dynamic css to disk.
-        it's annoying to have to wait for the colors to load and also just unnecessary.
-        there's 7000 lines of css. this has to be optimized somehow. im sure theres a ton of redundant classes
-  - ( ) bug with floating window: not sure what this is called. when you are in a function that's longer than the viewport
-        then you get the first line of the function as context. this is apparently coded as a floating window
-        and its not rendered well
-  - ( ) pickers: add stuff from spectre-gui back in 
-  - ( ) handle extmarks
-  - ( ) :Lazy is somehow not emitted as a floating window
-  - ( ) continuous scrolling with down arrow is lagging
-** ( ) cmdline QoL
-  - ( ) completion
+* (-) Todo
+**  ( ) general 
+
+    - ( ) implement Markdown
+    - ( ) visual selection has some bugs with the beginning of the row not having the correct background color
+    - ( ) refactor screen.go -> probably has too much logic
+    - ( ) we need a mechanism for writing the dynamic css to disk.
+          it's annoying to have to wait for the colors to load and also just unnecessary.
+          there's 7000 lines of css. this has to be optimized somehow. im sure theres a ton of redundant classes
+    - ( ) pickers: add stuff from spectre-gui back in 
+    - ( ) handle extmarks
+    - ( ) :Lazy is somehow not emitted as a floating window
+    - ( ) theres a bug where the current line number gets stuck in relative number mode when scrolling a lot with arrows
+    - ( ) keyed each block for rows fails when theres multiple grid rows for the same buffer line (e.g. todo.norg)
+    - ( ) dont trim line gutter from floating window
+    - ( ) why does it just freeze up???? seems to have a conncetion with dev tools
+    - ( ) we cannot always rely on line numbers being present and some windows like start menu shouldnt have them
+    - ( ) got some rendering performance issues in fzf-lua pickers still
+
+** (-) cmdline QoL
+   - ( ) completion (probably handled by extmarks)
 *** ( ) search
   - ( ) keep search open after <CR>
   - ( ) show number of search results and current search result index
-*** ( ) substitute
+*** (-) substitute
   - (-) jump between search and replace term
   - ( ) toggle flags with keymaps
 
 
-* Done
-  - (x) kill nvim-gui when underlying neovim instance dies
-  - (x) implement cmdline
-  - (x) make sure there's no gaps between rows such that visual selection etc. doesnt have weird gaps with different colors inbetween
-  - (x) apply highlighting with css classes instead of style attribute
-  - (x) completion
-  - (x) handle multiple grids for splits etc.
-  - (x) calculate left offset for floating windows etc. in go 
-  - (x) horizontal! cursor movement is slow af to re-render
+** (-) Done
+   - (x) kill nvim-gui when underlying neovim instance dies
+   - (x) implement cmdline
+   - (x) make sure there's no gaps between rows such that visual selection etc. doesnt have weird gaps with different colors inbetween
+   - (x) apply highlighting with css classes instead of style attribute
+   - (x) completion
+   - (x) handle multiple grids for splits etc.
+   - (x) calculate left offset for floating windows etc. in go 
+   - (x) horizontal! cursor movement is slow af to re-render
+   - (x) continuous scrolling with down arrow is lagging
+   - (x) display line numbers in svelte
+   - (x) get cursor from autocmd or something again
+    - (x) bug with floating window: not sure what this is called. when you are in a function that's longer than the viewport
+          then you get the first line of the function as context. this is apparently coded as a floating window
+          and its not rendered well -> it's nvim-treesitter-context

@@ -1,10 +1,9 @@
 package neovim
 
 import (
+	"regexp"
+	"strconv"
 	"strings"
-
-	"github.com/akiyosi/goneovim/util"
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type ContentRow struct {
@@ -15,31 +14,95 @@ type ContentRow struct {
 func (s *Screen) optimizeGrid(grid *Grid) []ContentRow {
 	contentRows := make([]ContentRow, grid.Height)
 	for row := 0; row < grid.Height; row++ {
+		rowCells, lineNumber := s.trimGutter(grid.Cells[row])
+		if lineNumber < 1 {
+			rowCells = grid.Cells[row]
+			lineNumber = row
+		}
 		if grid.DirtyRows[row] {
-			contentRows[row].Tokens = s.optimizeRow(grid, row)
-			contentRows[row].Index = row
-			grid.OptimizedRows[row] = contentRows[row].Tokens
+			tokens := s.optimizeRow(rowCells, row, grid.Cursor)
+			contentRows[row].Tokens = tokens
+			contentRows[row].Index = lineNumber
+			grid.OptimizedRows[row] = tokens
 			grid.DirtyRows[row] = false
 		} else {
 			contentRows[row].Tokens = grid.OptimizedRows[row]
+			contentRows[row].Index = lineNumber
 		}
 	}
 	return contentRows
 }
 
-func (s *Screen) optimizeRow(grid *Grid, row int) []*Cell {
+func (s *Screen) optimizeFloatingGrid(grid *Grid) []ContentRow {
+	contentRows := make([]ContentRow, grid.Height)
+	for row := 0; row < grid.Height; row++ {
+		rowCells := grid.Cells[row]
+		if grid.DirtyRows[row] {
+			// Pass the current row number to optimizeRow
+			tokens := s.optimizeRow(rowCells, row, grid.Cursor)
+			contentRows[row].Tokens = tokens
+			contentRows[row].Index = row
+			grid.OptimizedRows[row] = tokens
+			grid.DirtyRows[row] = false
+		} else {
+			contentRows[row].Tokens = grid.OptimizedRows[row]
+			contentRows[row].Index = row
+		}
+	}
+	return contentRows
+}
+
+// Extract line number from gutter and return the remaining cells
+func (s *Screen) trimGutter(row []*Cell) ([]*Cell, int) {
+	// Extract line number from gutter (first 6 characters)
+	lineNumber := -1
+	gutterWidth := 6
+	if len(row) >= gutterWidth {
+		gutterText := ""
+		for i := 0; i < gutterWidth && i < len(row); i++ {
+			gutterText += row[i].Char
+		}
+
+		// Use regex to extract the line number
+		// This pattern looks for one or more digits in the gutter text
+		re := regexp.MustCompile(`\d+`)
+		matches := re.FindAllString(gutterText, -1)
+		if len(matches) > 0 {
+			// Use the first match if there are multiple numbers
+			if parsedNum, err := strconv.Atoi(matches[0]); err == nil {
+				lineNumber = parsedNum
+			}
+		}
+	}
+
+	// Return the row without the gutter
+	if len(row) <= gutterWidth {
+		return []*Cell{}, lineNumber
+	}
+
+	return row[gutterWidth:], lineNumber
+}
+
+// Now optimizeRow works with just a single row and cursor position
+// Added currentRow parameter to correctly check cursor position
+func (s *Screen) optimizeRow(rowCells []*Cell, currentRow int, cursor struct {
+	Row int
+	Col int
+}) []*Cell {
 	optimizedRow := make([]*Cell, 0)
-	if row >= len(grid.Cells) {
+
+	if len(rowCells) == 0 {
 		return optimizedRow
 	}
 
-	currentRow := grid.Cells[row]
-	cursor := grid.Cursor
 	var currentToken *Cell
 	lastHl := 0
+	gutterWidth := 6 // The width of the gutter we trimmed
 
-	for col, cell := range currentRow {
-		isCursor := cursor.Row == row && cursor.Col == col
+	for col := 0; col < len(rowCells); col++ {
+		cell := rowCells[col]
+		// Only show cursor if we're on the cursor's row and column (adjusted for gutter)
+		isCursor := cursor.Row == currentRow && cursor.Col == col+gutterWidth
 
 		if isCursor {
 			if currentToken != nil {
@@ -88,45 +151,5 @@ func sanitize(s string) string {
 	s = strings.Replace(s, "\t", `&nbsp;`, -1)
 	s = strings.Replace(s, "<", `&lt;`, -1)
 	s = strings.Replace(s, ">", `&gt;`, -1)
-
 	return s
-}
-
-func (s *Screen) handleCmdlineShow(args []interface{}) {
-	arg := args[0].([]interface{})
-
-	content := ""
-	contentChunks := arg[0].([]interface{})
-	for _, e := range contentChunks {
-		a := e.([]interface{})
-
-		if len(a) < 2 {
-			// content += a[0].(string)
-			content += strings.Replace(a[0].(string), "\t", " ", -1)
-		} else {
-			if len(contentChunks) == 1 {
-				// content += a[1].(string)
-				content += strings.Replace(a[1].(string), "\t", " ", -1)
-			} else {
-				content +=
-					sanitize(a[1].(string))
-			}
-		}
-	}
-	// content := arg[0].([]interface{})[0].([]interface{})[1].(string)
-
-	pos := util.ReflectToInt(arg[1])
-	firstc := arg[2].(string)
-	prompt := arg[3].(string)
-	indent := util.ReflectToInt(arg[4])
-	// level := util.ReflectToInt(arg[5])
-	// fmt.Println("cmdline show", content, pos, firstc, prompt, indent, level)
-
-	Runtime.EventsEmit(s.ctx, "cmdline_show", map[string]interface{}{
-		"content": content,
-		"pos":     pos,
-		"firstc":  firstc,
-		"prompt":  prompt,
-		"indent":  indent,
-	})
 }

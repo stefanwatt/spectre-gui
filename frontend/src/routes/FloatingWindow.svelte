@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { marked } from 'marked';
-	import Grid from './Grid.svelte';
+	import FloatingGrid from './FloatingGrid.svelte';
 	import { calculatePosition } from './window.service';
 
 	interface Position {
@@ -35,8 +34,8 @@
 
 <div
 	id={'win-' + win.id}
-	class="absolute overflow-hidden whitespace-pre rounded-md border border-surface0 bg-base-100 p-2 text-text drop-shadow-md"
+	class="absolute overflow-hidden whitespace-pre rounded-md border border-surface0 bg-base-100 p-2 text-text drop-shadow-md filetype-{win.filetype}"
 	style="top: {position.top}; left: {position.left}; z-index: {win.zIndex || 100};"
 >
-	<Grid {content} {decode} />
+	<FloatingGrid {content} {decode} />
 </div>

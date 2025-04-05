@@ -27,6 +27,6 @@
 	<span 
 		class="w-24 flex items-center justify-center rounded-md bg-blue px-2 text-xl font-bold uppercase text-mantle"
 	>
-		{cursor.row+1}:{cursor.col+1}
+		{cursor.row}:{cursor.col+1}
 	</span>
 </div>

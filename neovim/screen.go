@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/akiyosi/goneovim/util"
 	"github.com/neovim/go-client/nvim"
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -501,16 +502,8 @@ func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
 
 	s.ActiveGrid = gridId
 	s.ActiveWindow = s.GridToWindow[gridId]
-
-	utils.Log("gridCursorGoto updated active Window to ", s.ActiveWindow)
-
-	UpdateCursor(s.ctx, CursorMoveEvent{
-		Row:            uint64(row),
-		Col:            uint64(col),
-		TopLine:        uint64(s.botLine),
-		BottomLine:     uint64(s.topLine),
-		ActiveWindowId: s.ActiveWindow,
-	})
+	s.UpdateCursor()
+	utils.Log(fmt.Sprintf("gridCursorGoto row=%d col=%d activeWindowId=%d", row, col, s.ActiveWindow))
 	if row >= 0 && row < grid.Height {
 		grid.DirtyRows[row] = true
 	}
@@ -690,6 +683,45 @@ func (s *Screen) winClose(args []interface{}) {
 		}
 	}
 	s.windowsMu.RUnlock()
+}
+
+func (s *Screen) handleCmdlineShow(args []interface{}) {
+	arg := args[0].([]interface{})
+
+	content := ""
+	contentChunks := arg[0].([]interface{})
+	for _, e := range contentChunks {
+		a := e.([]interface{})
+
+		if len(a) < 2 {
+			// content += a[0].(string)
+			content += strings.Replace(a[0].(string), "\t", " ", -1)
+		} else {
+			if len(contentChunks) == 1 {
+				// content += a[1].(string)
+				content += strings.Replace(a[1].(string), "\t", " ", -1)
+			} else {
+				content +=
+					sanitize(a[1].(string))
+			}
+		}
+	}
+	// content := arg[0].([]interface{})[0].([]interface{})[1].(string)
+
+	pos := util.ReflectToInt(arg[1])
+	firstc := arg[2].(string)
+	prompt := arg[3].(string)
+	indent := util.ReflectToInt(arg[4])
+	// level := util.ReflectToInt(arg[5])
+	// fmt.Println("cmdline show", content, pos, firstc, prompt, indent, level)
+
+	Runtime.EventsEmit(s.ctx, "cmdline_show", map[string]interface{}{
+		"content": content,
+		"pos":     pos,
+		"firstc":  firstc,
+		"prompt":  prompt,
+		"indent":  indent,
+	})
 }
 
 func (s *Screen) winPos(args []interface{}) {
