@@ -1,6 +1,9 @@
 package neovim
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Grid struct {
 	ID     int
@@ -29,23 +32,6 @@ func (g *Grid) toString() string {
 	return result
 }
 
-func (g *Grid) toHex() []ContentRow {
-	newContentRows := make([]ContentRow, len(g.Cells))
-	for i, row := range g.Cells {
-		newContentRows[i].Tokens = make([]*Cell, len(row))
-		for j, cell := range row {
-			newCell := &Cell{}
-			var hexChar string
-			for _, r := range cell.Char {
-				hexChar += fmt.Sprintf("%x", r)
-			}
-			newCell.Char = hexChar
-			newCell.Highlight = cell.Highlight
-			newContentRows[i].Tokens[j] = newCell
-		}
-	}
-	return newContentRows
-}
 
 func toHexCells(cells [][]*Cell) [][]Cell {
 	newCells := make([][]Cell, len(cells))
@@ -66,15 +52,24 @@ func toHexCells(cells [][]*Cell) [][]Cell {
 }
 
 type Cell struct {
-	Char      string `json:"text"`
-	Highlight int    `json:"highlight"`
+	Char      string
+	Highlight int
 	Dirty     bool
-	Classes   string `json:"classes"`
+	Classes   map[string]bool
+}
+
+func (c *Cell) ClassesToString() string {
+	var builder strings.Builder
+	for class, _ := range c.Classes {
+		builder.WriteString(class)
+		builder.WriteString(" ")
+	}
+	return strings.TrimRight(builder.String(), " ")
 }
 
 func (c *Cell) Equals(other *Cell) bool {
 	if c == nil || other == nil {
 		return c == other
 	}
-	return c.Char == other.Char && c.Classes == other.Classes && c.Highlight == other.Highlight
+	return c.Char == other.Char && c.ClassesToString() == other.ClassesToString() && c.Highlight == other.Highlight
 }

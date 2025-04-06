@@ -21,6 +21,9 @@ var (
 	cursorState  CursorState
 	currentMode  string
 	NvimInstance *nvim.Nvim
+	colorClasses map[string]string
+	idClasses    map[int][]string
+	effectiveHlIds map[string]int = make(map[string]int)
 )
 
 var screen *Screen
@@ -36,6 +39,10 @@ func CalculateGridSize(windowWidth, windowHeight int) (rows, cols int) {
 }
 
 func StartListening(ctx context.Context) {
+	var err error
+	go loadDatabase()
+	go processHlAttrQueue()
+	waitForHlAttrDefine()
 	width, height := Runtime.WindowGetSize(ctx)
 	rows, cols := CalculateGridSize(width, height)
 	utils.Log(fmt.Sprintf("StartListening initializing screen with width=%d height=%d rows=%d cols=%d", width, height, rows, cols))
@@ -51,7 +58,6 @@ func StartListening(ctx context.Context) {
 	nvimCtx, nvimCancel := context.WithCancel(ctx)
 	nvimExitChan := make(chan struct{})
 
-	var err error
 	var nvimArgs nvim.ChildProcessOption
 	if len(os.Args) > 1 {
 		filepath := os.Args[1]
@@ -74,7 +80,7 @@ func StartListening(ctx context.Context) {
 	}
 	// err = NvimInstance.SetOption("relativenumber", false)
 
-	Runtime.EventsOn(ctx, "get-highlights", screen.sendInitialHighlights)
+	Runtime.EventsOn(ctx, "get-highlights", updateHighlightCSS)
 	Runtime.EventsOn(ctx, "substitute-jump", HandleSubstituteJump)
 
 	// Run a goroutine to handle Neovim serving and exit

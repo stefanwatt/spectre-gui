@@ -4,8 +4,8 @@
 	import StatusLine from './StatusLine.svelte';
 	import { highlights, generateHighlightCSS, updateHighlightStyles } from '$lib/highlights';
 	import CmdLine from './CmdLine.svelte';
-	import Grid from './Grid.svelte';
 	import FloatingWindowContainer from './FloatingWindowContainer.svelte';
+	import NvimWindow from './NvimWindow.svelte';
 
 	let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
 	let layout = $state<App.NvimLayout>();
@@ -15,11 +15,6 @@
 
 	let cmdline = $state<App.CmdLine>({
 		visible: false
-	});
-
-	$effect(() => {
-		const css = generateHighlightCSS($highlights);
-		updateHighlightStyles(css);
 	});
 
 	async function sendKey(e: KeyboardEvent): Promise<void> {
@@ -74,15 +69,6 @@
 			// 	content = updatedContent;
 			// }
 		});
-
-		runtime.EventsOn('highlight_defined', (highlightUpdates: App.NvimHighlight[]) => {
-			const updatedHighlights = { ...$highlights };
-			highlightUpdates.forEach((highlight) => {
-				updatedHighlights[highlight.id] = highlight;
-			});
-			highlights.set(updatedHighlights);
-		});
-
 		runtime.EventsOn(
 			'cursor-changed',
 			(e: { row: number; col: number; activeWindowId: number }) => {
@@ -147,7 +133,7 @@
 						class="nvim-window relative border border-solid border-transparent bg-base-100"
 						style="grid-column-start: {win.colStart}; grid-column-end:{win.colEnd}; grid-row-start: {win.rowStart}; grid-row-end:{win.rowEnd};"
 					>
-						<Grid content={nvimWindows[win.id]} {cursor} />
+						<NvimWindow {nvimWindows} {win} {cursor} />
 						<FloatingWindowContainer {floatingWindows} {nvimWindows} anchorWindow={win.id} />
 					</div>
 				{/each}

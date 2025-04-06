@@ -75,7 +75,7 @@ func trimPerimeter(contentRows []ContentRow) []ContentRow {
 	for i := range contentRows {
 		if len(contentRows[i].Tokens) < 3 {
 			// If a row has fewer than 3 cells, make it empty
-			contentRows[i].Tokens = []*Cell{}
+			contentRows[i].Tokens = []*Token{}
 		} else {
 			// Remove first and last cell of the row
 			contentRows[i].Tokens = contentRows[i].Tokens[1 : len(contentRows[i].Tokens)-1]

@@ -3,7 +3,10 @@ package main
 import (
 	"embed"
 	"fmt"
+	"net/http"
+	"nvim-gui/utils"
 	"os"
+	"strings"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/wailsapp/wails/v2"
@@ -16,7 +19,7 @@ import (
 var assets embed.FS
 
 type Options struct {
-	File       string `short:"f" long:"filename" description:"file to open" required:"false"`
+	File string `short:"f" long:"filename" description:"file to open" required:"false"`
 }
 
 func deleteIfExists(path string) error {
@@ -29,6 +32,32 @@ func deleteIfExists(path string) error {
 	return err
 }
 
+type FileLoader struct {
+	http.Handler
+}
+
+func NewFileLoader() *FileLoader {
+	return &FileLoader{}
+}
+
+func (h *FileLoader) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	var err error
+	requestedFilename := strings.TrimPrefix(req.URL.Path, "/")
+	utils.Log("Requesting file:", requestedFilename)
+	if requestedFilename == "nvim-hl.css" {
+		requestedFilename = "/home/stefan/.config/nvim-gui/nvim-hl.css"
+	}
+	fileData, err := os.ReadFile(requestedFilename)
+	if err != nil {
+		utils.Log("couldnt get file: " + requestedFilename + "\nerror:" + err.Error())
+		res.WriteHeader(http.StatusBadRequest)
+		res.Write([]byte(fmt.Sprintf("Could not load file %s", requestedFilename)))
+	} else {
+		utils.Log("got file: "+requestedFilename+"\ncontent:\n", string(fileData))
+	}
+
+	res.Write(fileData)
+}
 
 func main() {
 	app := NewApp()
@@ -52,7 +81,8 @@ func main() {
 		Width:              1024,
 		Height:             768,
 		AssetServer: &assetserver.Options{
-			Assets: assets,
+			Assets:  assets,
+			Handler: NewFileLoader(),
 		},
 		BackgroundColour: &options.RGBA{R: 39, G: 42, B: 56, A: 1},
 		OnStartup:        app.startup,

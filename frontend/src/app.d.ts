@@ -71,6 +71,7 @@ declare global {
       reverse: boolean;
     }
     type VimMode = "normal" | "insert" | "visual" | "cmdline_normal" | "cmdline_insert"
+
     interface GridProps {
       content?: App.NvimRow[]
       decode?: (input: string) => string

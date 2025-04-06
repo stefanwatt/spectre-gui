@@ -1,33 +1,97 @@
-* (-) Todo
+* ( ) Todo
 **  ( ) general 
 
     - ( ) implement Markdown
     - ( ) visual selection has some bugs with the beginning of the row not having the correct background color
     - ( ) refactor screen.go -> probably has too much logic
-    - ( ) we need a mechanism for writing the dynamic css to disk.
-          it's annoying to have to wait for the colors to load and also just unnecessary.
-          there's 7000 lines of css. this has to be optimized somehow. im sure theres a ton of redundant classes
     - ( ) pickers: add stuff from spectre-gui back in 
     - ( ) handle extmarks
     - ( ) :Lazy is somehow not emitted as a floating window
     - ( ) theres a bug where the current line number gets stuck in relative number mode when scrolling a lot with arrows
     - ( ) keyed each block for rows fails when theres multiple grid rows for the same buffer line (e.g. todo.norg)
-    - ( ) dont trim line gutter from floating window
     - ( ) why does it just freeze up???? seems to have a conncetion with dev tools
     - ( ) we cannot always rely on line numbers being present and some windows like start menu shouldnt have them
     - ( ) got some rendering performance issues in fzf-lua pickers still
+    - ( ) line numbers are a little offset
+** ( ) css
 
-** (-) cmdline QoL
+     we need a mechanism for writing the dynamic css to disk.
+     it's annoying to have to wait for the colors to load and also just unnecessary.
+   there's 7000 lines of css. this has to be optimized somehow. im sure theres a ton of redundant classes.
+   Cell.Classes should be a set/map, not a string, maybe even create a new struct for rendering
+   that way we can keep Cell as it is and even make Char of type rune
+
+   we need a map\<int,\[\]string\> that maps from hl id to classes
+   if multiple hl ids map to the same classes then we should only keep one around
+   that means we need another map \<int,int\> that maps from hl id to effective hl id
+   that way we can actually just compare effective hl id on cells (with one char) for tokenization
+   and we dont need to duplicate the longer strings on every consecutive cell with the same hl id
+
+   actually probably go full atomic classes
+   that means we just need to create classes for every bg and fg color
+   for bold,italic,underline etc we can just use tailwind classes (maybe need to make sure they are not purged)
+
+   how do we determine the atomic classes for a given hl id?
+   - for bold/italic etc. it's easy
+   - for colors we need to create them dynamically
+
+   keep two files that are loaded on startup
+   one file contains a map from effective hl id to classes
+   the other file contains a map from color to class
+   hlAttrDefine has to wait for these files to be loaded before adding new css -> keep stuff in a "queue" until then
+   hlAttrDefine should always check if this highlight is already covered by existing classes
+   that mean we need a reverse map\<color,classname\> 
+   check if the map has an entry for the fg/bg color
+   if not create one, otherwise use existing class
+   just prefix key of that map with fg/bg so we dont need two maps
+   new classes can simply be named with a short unique id that is just incremented
+   hl attr define needs to look up the effective hl id first 
+
+   hl definition/maintenance:
+   ~ on startup load maps from files 
+   ~ determine colors class id counter with number of entries
+   ~ hlAttrDefine: map from hl id to effective hl id
+   ~ check if theres an entry for this hl id to get classes
+   ~~ if yes -> return ; we have either already dynamically added this or it's already in the css file
+   ~~ if no
+   ~~~ determine classes for font stuff etc.
+   ~~~ look up color classes 
+   ~~~~ if one already exists -> great we can use that
+   ~~~~ if not then increment the id counter and write new entry to colors file
+   ~~~ add entry in id classes file
+   ~ add css dynamically with existing process
+   ~ in a cron job type thing write new css to a css file that is loaded on startup
+
+   Should check how big that css file gets. Potentially there's value in splitting it up by filetype or something
+
+   Rendering:
+   ~ gridLine: map and assign effective hl id
+   ~ optimizeGrid: tokenize based on effective hl id
+   ~ map effective hl id to classes and assign them to the token
+
+   --------
+  this kinda works now.
+  - (x) set up pipeline
+  - (x) create and fill maps
+  - (x) generate color classes
+  - (x) get css from asset server
+  theres some weird stuff happening tho
+  we still need:
+  - ( ) create a mechanism to check what css has already been written to disk
+  - ( ) fix bug: highlighting in the active window looks ok, but in some cases it seems like fg and bg color is swapped
+  - ( ) fix bug: in the non active window its all kinda fucked up. no idea wtf is happening there
+
+** ( ) cmdline QoL
    - ( ) completion (probably handled by extmarks)
 *** ( ) search
   - ( ) keep search open after <CR>
   - ( ) show number of search results and current search result index
-*** (-) substitute
+*** ( ) substitute
   - (-) jump between search and replace term
   - ( ) toggle flags with keymaps
 
 
-** (-) Done
+** ( ) Done
    - (x) kill nvim-gui when underlying neovim instance dies
    - (x) implement cmdline
    - (x) make sure there's no gaps between rows such that visual selection etc. doesnt have weird gaps with different colors inbetween
@@ -39,6 +103,7 @@
    - (x) continuous scrolling with down arrow is lagging
    - (x) display line numbers in svelte
    - (x) get cursor from autocmd or something again
-    - (x) bug with floating window: not sure what this is called. when you are in a function that's longer than the viewport
+   - (x) bug with floating window: not sure what this is called. when you are in a function that's longer than the viewport
           then you get the first line of the function as context. this is apparently coded as a floating window
           and its not rendered well -> it's nvim-treesitter-context
+   - (x) dont trim line gutter from floating window

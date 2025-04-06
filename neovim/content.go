@@ -1,14 +1,49 @@
 package neovim
 
 import (
+	"fmt"
+	"nvim-gui/utils"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
+type Token struct {
+	Text      string `json:"text"`
+	Classes   string `json:"classes"`
+	highlight int
+}
+
 type ContentRow struct {
-	Index  int     `json:"index"`
-	Tokens []*Cell `json:"tokens"`
+	Index  int      `json:"index"`
+	Tokens []*Token `json:"tokens"`
+}
+
+func fromCell(cell *Cell) *Token {
+	return &Token{
+		Text:      cell.Char,
+		Classes:   cell.ClassesToString(),
+		highlight: cell.Highlight,
+	}
+}
+
+func (t *Token) toCell() *Cell {
+	classes := make(map[string]bool)
+	for _, class := range strings.Split(t.Classes, " ") {
+		classes[class] = true
+	}
+	return &Cell{
+		Char:      t.Text,
+		Classes:   classes,
+		Dirty:     false,
+		Highlight: t.highlight, // check if we really need this
+	}
+}
+
+func MapTokens(cells []*Cell) []*Token {
+	return utils.MapArray(cells, func(cell *Cell) *Token {
+		return fromCell(cell)
+	})
 }
 
 func (s *Screen) optimizeGrid(grid *Grid) []ContentRow {
@@ -20,13 +55,14 @@ func (s *Screen) optimizeGrid(grid *Grid) []ContentRow {
 			lineNumber = row
 		}
 		if grid.DirtyRows[row] {
-			tokens := s.optimizeRow(rowCells, row, grid.Cursor)
+			cells := s.optimizeRow(rowCells, row, grid.Cursor)
+			tokens := MapTokens(cells)
 			contentRows[row].Tokens = tokens
 			contentRows[row].Index = lineNumber
-			grid.OptimizedRows[row] = tokens
+			grid.OptimizedRows[row] = cells
 			grid.DirtyRows[row] = false
 		} else {
-			contentRows[row].Tokens = grid.OptimizedRows[row]
+			contentRows[row].Tokens = MapTokens(grid.OptimizedRows[row])
 			contentRows[row].Index = lineNumber
 		}
 	}
@@ -39,13 +75,14 @@ func (s *Screen) optimizeFloatingGrid(grid *Grid) []ContentRow {
 		rowCells := grid.Cells[row]
 		if grid.DirtyRows[row] {
 			// Pass the current row number to optimizeRow
-			tokens := s.optimizeRow(rowCells, row, grid.Cursor)
+			cells := s.optimizeRow(rowCells, row, grid.Cursor)
+			tokens := MapTokens(cells)
 			contentRows[row].Tokens = tokens
 			contentRows[row].Index = row
-			grid.OptimizedRows[row] = tokens
+			grid.OptimizedRows[row] = cells
 			grid.DirtyRows[row] = false
 		} else {
-			contentRows[row].Tokens = grid.OptimizedRows[row]
+			contentRows[row].Tokens = MapTokens(grid.OptimizedRows[row])
 			contentRows[row].Index = row
 		}
 	}
@@ -109,10 +146,12 @@ func (s *Screen) optimizeRow(rowCells []*Cell, currentRow int, cursor struct {
 				optimizedRow = append(optimizedRow, currentToken)
 				currentToken = nil
 			}
+			classes := make(map[string]bool)
+			classes["cursor"] = true
 			cursorCell := &Cell{
 				Char:      cell.Char,
 				Highlight: cell.Highlight,
-				Classes:   "cursor",
+				Classes:   classes,
 			}
 			optimizedRow = append(optimizedRow, cursorCell)
 			lastHl = cell.Highlight
@@ -126,6 +165,7 @@ func (s *Screen) optimizeRow(rowCells []*Cell, currentRow int, cursor struct {
 			currentToken = &Cell{
 				Char:      cell.Char,
 				Highlight: cell.Highlight,
+				Classes: cell.Classes,
 			}
 			lastHl = cell.Highlight
 		} else {
@@ -152,4 +192,23 @@ func sanitize(s string) string {
 	s = strings.Replace(s, "<", `&lt;`, -1)
 	s = strings.Replace(s, ">", `&gt;`, -1)
 	return s
+}
+
+func (g *Grid) toHex() []ContentRow {
+	newContentRows := make([]ContentRow, len(g.Cells))
+	for i, row := range g.Cells {
+		newContentRows[i].Tokens = make([]*Token, len(row))
+		for j, cell := range row {
+			newToken := &Token{}
+			var hexChar string
+			for _, r := range cell.Char {
+				hexChar += fmt.Sprintf("%x", r)
+			}
+			newToken.Text = hexChar
+			newToken.highlight = cell.Highlight
+			newToken.Classes = cell.ClassesToString()
+			newContentRows[i].Tokens[j] = newToken
+		}
+	}
+	return newContentRows
 }

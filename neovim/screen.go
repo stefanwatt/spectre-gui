@@ -182,7 +182,7 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 				s.defaultColorsSet(fg, bg, sp)
 			}
 		case "hl_attr_define":
-			s.hlAttrDefine(args)
+			s.hlAttrDefineWrapper(args)
 		case "mode_change":
 			for _, arg := range args {
 				gridArgs := arg.([]interface{})
@@ -339,9 +339,20 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 				if hl == 0 {
 					hl = lastHl
 				}
+				highlight := s.Highlights[hl]
+				// TODO: were doing this in two place now.. should be a universal thing
+				// such that you dont get confused how to construct the hlStr
+				hlStr := strings.Join(highlight.getClasses(), "-")
+				effectiveHlId := effectiveHlIds[hlStr]
+				classes := idClasses[effectiveHlId]
+				classesMap := make(map[string]bool)
+				for _, class := range classes {
+					classesMap[class] = true
+				}
 				newCell := Cell{
 					Char:      char,
 					Highlight: hl,
+					Classes:   classesMap,
 				}
 				grid.Cells[row][currentCol] = &newCell
 				currentCol++
@@ -538,29 +549,14 @@ func (s *Screen) defaultColorsSet(fg int, bg int, sp int) {
 	s.scheduleRender()
 }
 
-func (s *Screen) sendInitialHighlights(optionalData ...interface{}) {
-	highlightUpdates := make([]map[string]interface{}, 0)
-
-	s.highlightsMu.RLock()
-	for id, highlight := range s.Highlights {
-		highlightDef := map[string]interface{}{
-			"id":            id,
-			"fg":            highlight.fgHex(),
-			"bg":            highlight.bgHex(),
-			"bold":          highlight.Bold,
-			"italic":        highlight.Italic,
-			"underline":     highlight.Underline,
-			"undercurl":     highlight.Undercurl,
-			"strikethrough": highlight.Strikethrough,
-			"reverse":       highlight.Reverse,
+func (s *Screen) hlAttrDefineWrapper(args []interface{}) {
+	if isDBLoaded.Load() {
+		s.hlAttrDefine(args)
+	} else {
+		wg.Add(1)
+		hlAttrQueue <- func() {
+			s.hlAttrDefine(args)
 		}
-
-		highlightUpdates = append(highlightUpdates, highlightDef)
-	}
-	s.highlightsMu.RUnlock()
-
-	if len(highlightUpdates) > 0 {
-		Runtime.EventsEmit(s.ctx, "highlight_defined", highlightUpdates)
 	}
 }
 
@@ -615,16 +611,37 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 		s.highlightsMu.Unlock()
 
 		// Create a map with highlight properties to send to frontend
+		fg := highlight.fgHex()
+		bg := highlight.bgHex()
 		highlightDef := map[string]interface{}{
 			"id":            id,
-			"fg":            highlight.fgHex(),
-			"bg":            highlight.bgHex(),
+			"fg":            fg,
+			"bg":            bg,
 			"bold":          highlight.Bold,
 			"italic":        highlight.Italic,
 			"underline":     highlight.Underline,
 			"undercurl":     highlight.Undercurl,
 			"strikethrough": highlight.Strikethrough,
 			"reverse":       highlight.Reverse,
+		}
+
+		assert(colorClasses != nil, "running hlAttrDefine before colorClasses were loaded")
+
+		go func() {
+			addColorClass(fg, "fg")
+			addColorClass(bg, "bg")
+		}()
+
+		hlClasses := highlight.getClasses()
+		hlClassesStr := strings.Join(hlClasses, "-")
+		var effectiveHlId int
+		var existsHlId bool
+		if effectiveHlId, existsHlId = effectiveHlIds[hlClassesStr]; !existsHlId {
+			effectiveHlIds[hlClassesStr] = id
+			effectiveHlId = id
+		}
+		if _, exists := idClasses[effectiveHlId]; !exists {
+			addIdClasses(id, hlClasses)
 		}
 
 		highlightUpdates = append(highlightUpdates, highlightDef)
