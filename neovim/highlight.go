@@ -2,7 +2,6 @@ package neovim
 
 import (
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -20,11 +19,13 @@ type Highlight struct {
 
 // tailwind classes for font stuff
 var (
-	BOLD          = "font-bold"
-	ITALIC        = "italic"
-	UNDERLINE     = "underline"
-	UNDERCURL     = "underline decoration-wavy"
-	STRIKETHROUGH = "line-trough"
+	BOLD           = "font-bold"
+	ITALIC         = "italic"
+	UNDERLINE      = "underline"
+	UNDERCURL      = "underline decoration-wavy"
+	STRIKETHROUGH  = "line-trough"
+	CLASSES_IN_CSS = "/home/stefan/.config/nvim-gui/classes-in-css.txt"
+	CSS_FILE       = "/home/stefan/.config/nvim-gui/nvim-hl.css"
 )
 
 func (h *Highlight) toString() string {
@@ -44,28 +45,31 @@ func (h *Highlight) bgHex() string {
 
 func (h *Highlight) getClasses() []string {
 	var classes []string
-	if h.Foreground != 0 {
-		fgClass, exists := colorClasses[h.fgHex()]
-		// assert(exists, "tried to get classes for fg that wasnt added yet")
+
+	fgHex := h.fgHex()
+	if fgHex != "" { // Check if fgHex is not empty
+		fgClass, exists := fgColorClasses[fgHex]
 		if !exists {
-			err := addColorClass(h.fgHex(), "fg")
-			assert(err == nil, "failed to add color class")
-			fgClass, exists = colorClasses[h.fgHex()]
-			assert(exists, "failed to add color class")
+			err := addForegroundColorClass(fgHex)
+			assert(err == nil, fmt.Sprintf("failed to add fg color class for %s", fgHex))
+			fgClass, exists = fgColorClasses[fgHex]
+			assert(exists, fmt.Sprintf("failed to find fg color class for %s after adding", fgHex))
 		}
 		classes = append(classes, fgClass)
 	}
-	if h.Background != 0 {
-		bgClass, exists := colorClasses[h.bgHex()]
+
+	bgHex := h.bgHex()
+	if bgHex != "" { // Check if bgHex is not empty
+		bgClass, exists := bgColorClasses[bgHex]
 		if !exists {
-			err := addColorClass(h.bgHex(), "bg")
-			assert(err == nil, "failed to add color class")
-			bgClass, exists = colorClasses[h.bgHex()]
-			assert(exists, "failed to add color class")
+			err := addBackgroundColorClass(bgHex)
+			assert(err == nil, fmt.Sprintf("failed to add bg color class for %s", bgHex))
+			bgClass, exists = bgColorClasses[bgHex]
+			assert(exists, fmt.Sprintf("failed to find bg color class for %s after adding", bgHex))
 		}
-		// assert(exists, "tried to get classes for bg that wasnt added yet")
 		classes = append(classes, bgClass)
 	}
+
 	if h.Bold {
 		classes = append(classes, BOLD)
 	}
@@ -90,19 +94,45 @@ func (h *Highlight) getClasses() []string {
 }
 
 func updateHighlightCSS(optionalData ...interface{}) {
-	var builder strings.Builder
-	for color, class := range colorClasses {
-		cssProperty := "color"
-		if strings.HasPrefix(class, "bg") {
-			cssProperty = "background-color"
-		}
-		builder.WriteString(fmt.Sprintf(`
-				.%s {
-					%s: %s;
-				}
-			`, class, cssProperty, color))
+	lines, err := readLinesFromFile(CLASSES_IN_CSS)
+	classesInCss := make(map[string]bool)
+	for _, line := range lines {
+		classesInCss[strings.TrimSpace(line)] = true
+	}
+	if err != nil {
+		panic(err.Error())
 	}
 
-	err := os.WriteFile("/home/stefan/.config/nvim-gui/nvim-hl.css", []byte(builder.String()), os.ModeAppend)
-	assert(err == nil, "could not write css file")
+	var cssBuilder strings.Builder
+	var classesInCssBuilder strings.Builder
+	for color, class := range fgColorClasses {
+		if _, exists := classesInCss[class]; exists {
+			continue
+		}
+		classesInCssBuilder.WriteString(class + "\n")
+		cssBuilder.WriteString(fmt.Sprintf(`
+				.%s {
+					color: %s;
+				}
+			`, class, color))
+	}
+	for color, class := range bgColorClasses {
+		if _, exists := classesInCss[class]; exists {
+			continue
+		}
+		classesInCssBuilder.WriteString(class + "\n")
+		cssBuilder.WriteString(fmt.Sprintf(`
+				.%s {
+					background-color: %s;
+				}
+			`, class, color))
+	}
+	err = appendStringToFile(CSS_FILE, cssBuilder.String())
+	if err != nil {
+		panic("could not write css file:\n" + err.Error())
+	}
+	err = appendStringToFile(CLASSES_IN_CSS, classesInCssBuilder.String())
+	if err != nil {
+		panic("could not write classes-in-css file:\n" + err.Error())
+	}
 }

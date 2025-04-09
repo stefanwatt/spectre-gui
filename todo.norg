@@ -77,9 +77,11 @@
   - (x) get css from asset server
   theres some weird stuff happening tho
   we still need:
-  - ( ) create a mechanism to check what css has already been written to disk
-  - ( ) fix bug: highlighting in the active window looks ok, but in some cases it seems like fg and bg color is swapped
+  - (x) create a mechanism to check what css has already been written to disk
+  - (x) fix bug: highlighting in the active window looks ok, but in some cases it seems like fg and bg color is swapped
   - ( ) fix bug: in the non active window its all kinda fucked up. no idea wtf is happening there
+  - ( ) fix bug: resize removes all highlighting
+  - ( ) cursor messes up highlighting
 
 ** ( ) cmdline QoL
    - ( ) completion (probably handled by extmarks)

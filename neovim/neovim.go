@@ -21,7 +21,8 @@ var (
 	cursorState  CursorState
 	currentMode  string
 	NvimInstance *nvim.Nvim
-	colorClasses map[string]string
+	fgColorClasses map[string]string
+	bgColorClasses map[string]string
 	idClasses    map[int][]string
 	effectiveHlIds map[string]int = make(map[string]int)
 )

@@ -12,20 +12,24 @@ import (
 )
 
 var (
-	COLOR_CLASSES_FILE = "/home/stefan/.config/nvim-gui/color-to-class.txt"
-	ID_CLASSES_FILE    = "/home/stefan/.config/nvim-gui/id-to-classes.txt"
-	ENTRY_SEPARATOR    = "|"
-	CLASS_SEPARATOR    = ","
-	HEX_COLOR_REGEX    = regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
-	dbReady            = make(chan struct{})
-	hlAttrQueue        = make(chan func())
-	wg                 sync.WaitGroup
-	isDBLoaded         atomic.Bool
-	currentColorId     = 1
-	colorClassesMu     sync.Mutex
-	idClassesMu        sync.Mutex
-	colorFileOpMu      sync.Mutex
-	idFileOpMu         sync.Mutex
+	FG_COLOR_CLASSES_FILE = "/home/stefan/.config/nvim-gui/fg-color-to-class.txt"
+	BG_COLOR_CLASSES_FILE = "/home/stefan/.config/nvim-gui/bg-color-to-class.txt"
+	ID_CLASSES_FILE       = "/home/stefan/.config/nvim-gui/id-to-classes.txt"
+	ENTRY_SEPARATOR       = "|"
+	CLASS_SEPARATOR       = ","
+	HEX_COLOR_REGEX       = regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
+	dbReady               = make(chan struct{})
+	hlAttrQueue           = make(chan func())
+	wg                    sync.WaitGroup
+	isDBLoaded            atomic.Bool
+	currentFgColorId      = 1
+	currentBgColorId      = 1
+	fgColorClassesMu      sync.Mutex
+	bgColorClassesMu      sync.Mutex
+	idClassesMu           sync.Mutex
+	fgColorFileOpMu       sync.Mutex
+	bgColorFileOpMu       sync.Mutex
+	idFileOpMu            sync.Mutex
 )
 
 func createFileIfNotExist(filename string) error {
@@ -47,7 +51,11 @@ func createFileIfNotExist(filename string) error {
 func loadDatabase() {
 	utils.Log("loading db...")
 	var err error
-	colorClasses, err = getColorClasses()
+	fgColorClasses, err = getForegroundColorClasses()
+	if err != nil {
+		panic(err.Error())
+	}
+	bgColorClasses, err = getBackgroundColorClasses()
 	if err != nil {
 		panic(err.Error())
 	}
@@ -77,41 +85,90 @@ func isValidHexColor(color string) bool {
 	return HEX_COLOR_REGEX.MatchString(color)
 }
 
-func addColorClass(color string, colorTypePrefix string) error {
+func addBackgroundColorClass(color string) error {
 	if strings.TrimSpace(color) == "" {
 		return nil
 	}
 	assert(isValidHexColor(color), fmt.Sprintf("invalid hex color=%slen(color)=%d", color, len(color)))
 
-	colorFileOpMu.Lock()
-	defer colorFileOpMu.Unlock()
+	bgColorFileOpMu.Lock()
+	defer bgColorFileOpMu.Unlock()
 
-	colorClassesMu.Lock()
-	_, exists := colorClasses[color]
-	colorClassesMu.Unlock()
-	class := fmt.Sprintf("%s-%d", colorTypePrefix, currentColorId)
+	bgColorClassesMu.Lock()
+	_, exists := bgColorClasses[color]
+	bgColorClassesMu.Unlock()
+
 	if exists {
 		return nil
 	}
-	utils.Log(fmt.Sprintf("adding class for color %s in db file", color))
-	currentColorId++
+
+	class := fmt.Sprintf("bg-%d", currentBgColorId)
+	utils.Log(fmt.Sprintf("adding class %s for color key %s in db file", class, color))
+	currentBgColorId++
 
 	value := fmt.Sprintf("%s%s%s\n", color, ENTRY_SEPARATOR, class)
 
-	err := appendStringToFile(COLOR_CLASSES_FILE, value)
+	err := appendStringToFile(BG_COLOR_CLASSES_FILE, value)
 	if err == nil {
-		colorClassesMu.Lock()
-		colorClasses[color] = class
-		colorClassesMu.Unlock()
+		bgColorClassesMu.Lock()
+		bgColorClasses[color] = class
+		bgColorClassesMu.Unlock()
 	}
 	return err
 }
 
-func getColorClasses() (map[string]string, error) {
-	lines, err := readLinesFromFile(COLOR_CLASSES_FILE)
+func addForegroundColorClass(color string) error {
+	if strings.TrimSpace(color) == "" {
+		return nil
+	}
+	assert(isValidHexColor(color), fmt.Sprintf("invalid hex color=%slen(color)=%d", color, len(color)))
+
+	fgColorFileOpMu.Lock()
+	defer fgColorFileOpMu.Unlock()
+
+	fgColorClassesMu.Lock()
+	_, exists := fgColorClasses[color]
+	fgColorClassesMu.Unlock()
+
+	if exists {
+		return nil
+	}
+
+	class := fmt.Sprintf("fg-%d", currentFgColorId)
+	utils.Log(fmt.Sprintf("adding class %s for color key %s in db file", class, color))
+	currentFgColorId++
+
+	value := fmt.Sprintf("%s%s%s\n", color, ENTRY_SEPARATOR, class)
+
+	err := appendStringToFile(FG_COLOR_CLASSES_FILE, value)
+	if err == nil {
+		fgColorClassesMu.Lock()
+		fgColorClasses[color] = class
+		fgColorClassesMu.Unlock()
+	}
+	return err
+}
+
+func getForegroundColorClasses() (map[string]string, error) {
+	lines, err := readLinesFromFile(FG_COLOR_CLASSES_FILE)
 	if err != nil {
 		return nil, err
 	}
+	currentFgColorId = len(lines) + 1
+	return getColorClasses(lines)
+}
+
+func getBackgroundColorClasses() (map[string]string, error) {
+	lines, err := readLinesFromFile(BG_COLOR_CLASSES_FILE)
+	if err != nil {
+		return nil, err
+	}
+
+	currentBgColorId = len(lines) + 1
+	return getColorClasses(lines)
+}
+
+func getColorClasses(lines []string) (map[string]string, error) {
 	colorClasses := make(map[string]string)
 	if len(lines) == 0 || (len(lines) == 1 && strings.TrimSpace(lines[0]) == "") {
 		return colorClasses, nil
@@ -122,9 +179,11 @@ func getColorClasses() (map[string]string, error) {
 		}
 		parts := strings.Split(line, ENTRY_SEPARATOR)
 		assert(len(parts) == 2, fmt.Sprintf("malformed color classes entry len(parts)=%d\nline:%s", len(parts), line))
-		colorClasses[parts[0]] = parts[1]
-		currentColorId++
+		key := parts[0]
+		class := parts[1]
+		colorClasses[key] = class
 	}
+	utils.Log(fmt.Sprintf("Loaded %d color classes. Next color ID: %d", len(colorClasses), currentFgColorId))
 	return colorClasses, nil
 }
 

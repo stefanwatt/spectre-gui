@@ -339,19 +339,43 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 				if hl == 0 {
 					hl = lastHl
 				}
+
+				// Ensure hl is valid
+				if _, exists := s.Highlights[hl]; !exists {
+					utils.Log(fmt.Sprintf("Warning: Highlight ID %d not found in gridLine, defaulting to 0", hl))
+					hl = 0 // Default to 0 if the highlight ID doesn't exist
+				}
+
+				// Get the effective ID based on the original hl ID
 				highlight := s.Highlights[hl]
-				// TODO: were doing this in two place now.. should be a universal thing
-				// such that you dont get confused how to construct the hlStr
 				hlStr := strings.Join(highlight.getClasses(), "-")
-				effectiveHlId := effectiveHlIds[hlStr]
-				classes := idClasses[effectiveHlId]
+				effectiveHlId, exists := effectiveHlIds[hlStr]
+				if !exists {
+					// This should ideally not happen if hlAttrDefine processed correctly
+					utils.Log(fmt.Sprintf("Warning: Effective highlight ID not found for hl=%d, hlStr='%s'. Using hl as effective ID.", hl, hlStr))
+					effectiveHlId = hl
+					// Ensure classes are available for the fallback effective ID
+					if _, hasClasses := idClasses[effectiveHlId]; !hasClasses {
+						classes := highlight.getClasses()
+						addIdClasses(effectiveHlId, classes)
+					}
+				}
+
+				// Retrieve pre-calculated classes using the effective ID
+				classes, exists := idClasses[effectiveHlId]
+				if !exists {
+					// Fallback or error if classes are still missing (should be rare)
+					utils.Log(fmt.Sprintf("Error: Classes not found for effectiveHlId=%d (original hl=%d). Using default.", effectiveHlId, hl))
+					classes = idClasses[0] // Use default classes
+				}
+
 				classesMap := make(map[string]bool)
 				for _, class := range classes {
 					classesMap[class] = true
 				}
 				newCell := Cell{
 					Char:      char,
-					Highlight: hl,
+					Highlight: hl, // Store original hl for potential debugging
 					Classes:   classesMap,
 				}
 				grid.Cells[row][currentCol] = &newCell
@@ -625,11 +649,11 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 			"reverse":       highlight.Reverse,
 		}
 
-		assert(colorClasses != nil, "running hlAttrDefine before colorClasses were loaded")
+		assert(fgColorClasses != nil, "running hlAttrDefine before colorClasses were loaded")
 
 		go func() {
-			addColorClass(fg, "fg")
-			addColorClass(bg, "bg")
+			addForegroundColorClass(fg)
+			addBackgroundColorClass(bg)
 		}()
 
 		hlClasses := highlight.getClasses()
@@ -641,7 +665,7 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 			effectiveHlId = id
 		}
 		if _, exists := idClasses[effectiveHlId]; !exists {
-			addIdClasses(id, hlClasses)
+			addIdClasses(effectiveHlId, hlClasses)
 		}
 
 		highlightUpdates = append(highlightUpdates, highlightDef)
