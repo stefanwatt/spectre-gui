@@ -48,6 +48,8 @@ declare global {
       rowStart: number;
       rowEnd: number;
       filetype: string;
+      lineNumbers:boolean;
+      relativeLineNumbers:boolean;
     }
 
     interface CmdLine {
@@ -76,6 +78,8 @@ declare global {
       content?: App.NvimRow[]
       decode?: (input: string) => string
       cursor?: { row: number, col: number }
+      lineNumbers:boolean;
+      relativeLineNumbers:boolean;
     }
 
     interface CursorMoveEvent {

@@ -7,7 +7,7 @@
 		cursor: { row: number; col: number };
 	}
 	let { win, nvimWindows, cursor }: NvimWindowProps = $props();
-  //TODO: this should not even happen
+	//TODO: this should not even happen
 	function filterDuplicateIndices() {
 		const seenIndices = new Set();
 		const rows = [];
@@ -15,7 +15,7 @@
 		for (let i = 0; i < nvimWindows[win.id].length; i++) {
 			const row = nvimWindows[win.id][i];
 			if (!seenIndices.has(row.index)) {
-        seenIndices.add(row.index)
+				seenIndices.add(row.index);
 				rows.push(row);
 			}
 		}
@@ -27,4 +27,9 @@
 	});
 </script>
 
-<Grid {content} {cursor} />
+<Grid
+	{content}
+	{cursor}
+	lineNumbers={win.lineNumbers}
+	relativeLineNumbers={true}
+/>

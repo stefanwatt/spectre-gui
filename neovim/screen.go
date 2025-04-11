@@ -14,7 +14,6 @@ import (
 	"github.com/neovim/go-client/nvim"
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
-
 type Screen struct {
 	margins       []int
 	Height        int //in number of cells
@@ -41,6 +40,7 @@ type Screen struct {
 	layout        *GridLayout
 }
 
+ 
 func NewScreen(ctx context.Context, cols int, rows int) *Screen {
 	content := make([][]*Cell, rows)
 	for i := range content {
@@ -348,34 +348,46 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 
 				// Get the effective ID based on the original hl ID
 				highlight := s.Highlights[hl]
-				hlStr := strings.Join(highlight.getClasses(), "-")
-				effectiveHlId, exists := effectiveHlIds[hlStr]
-				if !exists {
-					// This should ideally not happen if hlAttrDefine processed correctly
-					utils.Log(fmt.Sprintf("Warning: Effective highlight ID not found for hl=%d, hlStr='%s'. Using hl as effective ID.", hl, hlStr))
-					effectiveHlId = hl
-					// Ensure classes are available for the fallback effective ID
-					if _, hasClasses := idClasses[effectiveHlId]; !hasClasses {
-						classes := highlight.getClasses()
-						addIdClasses(effectiveHlId, classes)
+				hlStr := mapClassesString(highlight.getClasses())
+				effectiveHlIdsMu.Lock()
+				effectiveHlId, existsHlId := effectiveHlIds[hlStr]
+				effectiveHlIdsMu.Unlock()
+				if !existsHlId {
+					// Just log the issue and use the original highlight ID without modifying maps
+					utils.Log(fmt.Sprintf("Warning: Effective highlight ID not found for hl=%d, hlStr='%s'. Using computed classes.", hl, hlStr))
+					// Use the computed classes directly
+					classesMap := make(map[string]bool)
+					for _, class := range highlight.getClasses() {
+						classesMap[class] = true
 					}
+					newCell := Cell{
+						Char:      char,
+						Highlight: hl,
+						Classes:   classesMap,
+					}
+					grid.Cells[row][currentCol] = &newCell
+					currentCol++
+					continue // Skip the rest of the loop for this cell
 				}
 
 				// Retrieve pre-calculated classes using the effective ID
 				classes, exists := idClasses[effectiveHlId]
 				if !exists {
-					// Fallback or error if classes are still missing (should be rare)
+					// Log error and use default classes
 					utils.Log(fmt.Sprintf("Error: Classes not found for effectiveHlId=%d (original hl=%d). Using default.", effectiveHlId, hl))
 					classes = idClasses[0] // Use default classes
 				}
 
 				classesMap := make(map[string]bool)
 				for _, class := range classes {
+					if class == "fg-4" || class == "fg-15" {
+						utils.Log(fmt.Sprintf("gridLine found weird turquoise fg color char=%s highlight.fgHex=%s", char, highlight.fgHex()))
+					}
 					classesMap[class] = true
 				}
 				newCell := Cell{
 					Char:      char,
-					Highlight: hl, // Store original hl for potential debugging
+					Highlight: hl,
 					Classes:   classesMap,
 				}
 				grid.Cells[row][currentCol] = &newCell
@@ -492,6 +504,7 @@ func (s *Screen) gridResize(gridId int, width int, height int) {
 				newCells[i][j] = &Cell{
 					Char:      grid.Cells[i][j].Char,
 					Highlight: grid.Cells[i][j].Highlight,
+					Classes:   grid.Cells[i][j].Classes,
 				}
 			} else {
 				newCells[i][j] = &Cell{
@@ -532,6 +545,7 @@ func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
 		return
 	}
 
+	previousRow := grid.Cursor.Row
 	grid.Cursor.Row = row
 	grid.Cursor.Col = col
 
@@ -541,6 +555,9 @@ func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
 	utils.Log(fmt.Sprintf("gridCursorGoto row=%d col=%d activeWindowId=%d", row, col, s.ActiveWindow))
 	if row >= 0 && row < grid.Height {
 		grid.DirtyRows[row] = true
+	}
+	if previousRow != row {
+		grid.DirtyRows[previousRow] = true
 	}
 }
 
@@ -657,17 +674,16 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 		}()
 
 		hlClasses := highlight.getClasses()
-		hlClassesStr := strings.Join(hlClasses, "-")
+		hlClassesStr := mapClassesString(hlClasses)
 		var effectiveHlId int
 		var existsHlId bool
+		effectiveHlIdsMu.Lock()
 		if effectiveHlId, existsHlId = effectiveHlIds[hlClassesStr]; !existsHlId {
 			effectiveHlIds[hlClassesStr] = id
 			effectiveHlId = id
 		}
-		if _, exists := idClasses[effectiveHlId]; !exists {
-			addIdClasses(effectiveHlId, hlClasses)
-		}
-
+		effectiveHlIdsMu.Unlock()
+		addIdClasses(effectiveHlId, hlClasses)
 		highlightUpdates = append(highlightUpdates, highlightDef)
 	}
 
@@ -701,6 +717,23 @@ func (s *Screen) winHide(args []interface{}) {
 	Runtime.EventsEmit(s.ctx, "hide-window", winId)
 	s.updateLayout()
 }
+
+func (s *Screen) closeTrek(windowIds []int) {
+	s.windowsMu.Lock()
+	for _, winId := range windowIds {
+		_, exists := s.Windows[winId]
+		if exists {
+			delete(s.Windows, winId)
+		}
+		for grid, gridWinId := range s.GridToWindow {
+			if gridWinId == winId {
+				delete(s.GridToWindow, grid)
+			}
+		}
+	}
+	s.windowsMu.Unlock()
+}
+
 func (s *Screen) winClose(args []interface{}) {
 	if len(args) < 1 {
 		return
@@ -798,6 +831,16 @@ func (s *Screen) winPos(args []interface{}) {
 	window.StartRow = row
 	window.StartCol = col
 	window.Hidden = false
+
+	var result bool
+	err := NvimInstance.WindowOption(nwindow, "number", &result)
+	if err == nil {
+		window.lineNumbers = result
+	}
+	err = NvimInstance.WindowOption(nwindow, "relativenumber", &result)
+	if err == nil {
+		window.relativeLineNumbers = result
+	}
 	utils.Log(fmt.Sprintf("winPos id=%d gridId=%d StartRow=%d StartCol=%d Width=%d Height=%d", winId, gridId, row, col, width, height))
 	s.windowsMu.RUnlock()
 

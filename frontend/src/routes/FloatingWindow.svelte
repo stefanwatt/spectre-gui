@@ -34,8 +34,14 @@
 
 <div
 	id={'win-' + win.id}
-	class="absolute overflow-hidden whitespace-pre rounded-md border border-surface0 bg-base-100 p-2 text-text drop-shadow-md filetype-{win.filetype}"
+	class="floating-win absolute overflow-hidden whitespace-pre rounded-md border border-surface0 bg-base-100 text-text drop-shadow-md filetype-{win.filetype}"
 	style="top: {position.top}; left: {position.left}; z-index: {win.zIndex || 100};"
 >
 	<FloatingGrid {content} {decode} />
 </div>
+
+<style>
+	.floating-win {
+		font-size: 19px;
+	}
+</style>

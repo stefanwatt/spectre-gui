@@ -1,9 +1,8 @@
 <script lang="ts">
-	let { content, decode, cursor }: App.GridProps = $props();
-	let relativeNumber = $state(true);
+	let { content, decode, cursor, lineNumbers, relativeLineNumbers }: App.GridProps = $props();
 
 	function computeRelativeLineNumbers() {
-		if (!content || !cursor || !relativeNumber || cursor.row === undefined) return [];
+		if (!content || !cursor || !relativeLineNumbers || cursor.row === undefined) return [];
 
 		const numbers = {};
 		for (const row of content) {
@@ -14,30 +13,32 @@
 
 		return numbers;
 	}
-	let relativeLineNumbers: { [key: number]: number } = $derived(computeRelativeLineNumbers());
+	let relativeLineNumbersList: { [key: number]: number } = $derived(computeRelativeLineNumbers());
 </script>
 
 {#each content || [] as row (row.index)}
 	<div id="row-{row.index}" class="flex overflow-hidden whitespace-pre leading-none">
-		{#if cursor && cursor.row === row.index}
-			<span
-				class:!pr-[2ch]={relativeNumber}
-				class="w-[6ch] text-text cursor-row-{cursor.row} pr-2 text-right"
-			>
-				{cursor.row}
-			</span>
-		{:else}
-			<span
-				class:!text-text={cursor?.row === row.index}
-				class:!pr-[1ch]={relativeNumber && cursor?.row === row.index}
-				class="w-[6ch] pr-2 text-right text-surface1"
-			>
-				{#if relativeNumber}
-					{relativeLineNumbers[row.index]}
-				{:else}
-					{row.index}
-				{/if}
-			</span>
+		{#if lineNumbers}
+			{#if cursor && cursor.row === row.index}
+				<span
+					class:!pr-[2ch]={relativeLineNumbers}
+					class="w-[6ch] text-text cursor-row-{cursor.row} pr-2 text-right"
+				>
+					{cursor.row}
+				</span>
+			{:else}
+				<span
+					class:!text-text={cursor?.row === row.index}
+					class:!pr-[1ch]={relativeLineNumbers && cursor?.row === row.index}
+					class="w-[6ch] pr-2 text-right text-surface1"
+				>
+					{#if relativeLineNumbers}
+						{relativeLineNumbersList[row.index]}
+					{:else}
+						{row.index}
+					{/if}
+				</span>
+			{/if}
 		{/if}
 		{#each row.tokens as token}
 			{#if token?.text}

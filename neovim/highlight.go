@@ -28,6 +28,10 @@ var (
 	CSS_FILE       = "/home/stefan/.config/nvim-gui/nvim-hl.css"
 )
 
+func mapClassesString(classes []string) string {
+	return strings.Join(classes, "-")
+}
+
 func (h *Highlight) toString() string {
 	return fmt.Sprintf("fg: %d, bg: %d", h.Foreground, h.Background)
 }

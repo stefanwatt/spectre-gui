@@ -2,7 +2,6 @@
 	import { SendKey } from '$lib/wailsjs/go/main/App';
 	import { onDestroy, onMount } from 'svelte';
 	import StatusLine from './StatusLine.svelte';
-	import { highlights, generateHighlightCSS, updateHighlightStyles } from '$lib/highlights';
 	import CmdLine from './CmdLine.svelte';
 	import FloatingWindowContainer from './FloatingWindowContainer.svelte';
 	import NvimWindow from './NvimWindow.svelte';
@@ -38,7 +37,7 @@
 		window.addEventListener('resize', function () {
 			runtime.EventsEmit('resize');
 		});
-		runtime.EventsOn('cmdline_show', (data) => {
+			runtime.EventsOn('cmdline_show', (data) => {
 			cmdline.visible = true;
 			cmdline.content = data.content;
 			cmdline.pos = data.pos;
@@ -117,6 +116,7 @@
 
 <div class="victor-mono flex h-screen flex-col overflow-hidden">
 	<div
+		class:mode-i={mode === 'insert'}
 		class:mode-n={mode === 'normal'}
 		class:mode-v={mode === 'visual'}
 		class="relative flex-grow overflow-hidden whitespace-pre"

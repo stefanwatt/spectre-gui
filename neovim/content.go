@@ -27,6 +27,14 @@ func fromCell(cell *Cell) *Token {
 	}
 }
 
+func fromFloatingCell(cell *Cell) *Token {
+	return &Token{
+		Text:      cell.Char,
+		Classes:   "",
+		highlight: cell.Highlight,
+	}
+}
+
 func (t *Token) toCell() *Cell {
 	classes := make(map[string]bool)
 	for _, class := range strings.Split(t.Classes, " ") {
@@ -43,6 +51,12 @@ func (t *Token) toCell() *Cell {
 func MapTokens(cells []*Cell) []*Token {
 	return utils.MapArray(cells, func(cell *Cell) *Token {
 		return fromCell(cell)
+	})
+}
+
+func MapFloatingTokens(cells []*Cell) []*Token {
+	return utils.MapArray(cells, func(cell *Cell) *Token {
+		return fromFloatingCell(cell)
 	})
 }
 
@@ -76,13 +90,13 @@ func (s *Screen) optimizeFloatingGrid(grid *Grid) []ContentRow {
 		if grid.DirtyRows[row] {
 			// Pass the current row number to optimizeRow
 			cells := s.optimizeRow(rowCells, row, grid.Cursor)
-			tokens := MapTokens(cells)
+			tokens := MapFloatingTokens(cells)
 			contentRows[row].Tokens = tokens
 			contentRows[row].Index = row
 			grid.OptimizedRows[row] = cells
 			grid.DirtyRows[row] = false
 		} else {
-			contentRows[row].Tokens = MapTokens(grid.OptimizedRows[row])
+			contentRows[row].Tokens = MapFloatingTokens(grid.OptimizedRows[row])
 			contentRows[row].Index = row
 		}
 	}
@@ -147,6 +161,9 @@ func (s *Screen) optimizeRow(rowCells []*Cell, currentRow int, cursor struct {
 				currentToken = nil
 			}
 			classes := make(map[string]bool)
+			for class, _ := range cell.Classes {
+				classes[class] = true
+			}
 			classes["cursor"] = true
 			cursorCell := &Cell{
 				Char:      cell.Char,
@@ -165,7 +182,7 @@ func (s *Screen) optimizeRow(rowCells []*Cell, currentRow int, cursor struct {
 			currentToken = &Cell{
 				Char:      cell.Char,
 				Highlight: cell.Highlight,
-				Classes: cell.Classes,
+				Classes:   cell.Classes,
 			}
 			lastHl = cell.Highlight
 		} else {

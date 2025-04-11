@@ -19,7 +19,9 @@ var (
 	CLASS_SEPARATOR       = ","
 	HEX_COLOR_REGEX       = regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
 	dbReady               = make(chan struct{})
+	dbReadyClosed         = false
 	hlAttrQueue           = make(chan func())
+	hlAttrQueueClosed     = false
 	wg                    sync.WaitGroup
 	isDBLoaded            atomic.Bool
 	currentFgColorId      = 1
@@ -63,7 +65,11 @@ func loadDatabase() {
 	if err != nil {
 		panic(err.Error())
 	}
-	close(dbReady)
+	if !dbReadyClosed {
+		close(dbReady)
+		dbReadyClosed = true
+	}
+
 	isDBLoaded.Store(true)
 }
 func processHlAttrQueue() {
@@ -77,7 +83,11 @@ func processHlAttrQueue() {
 }
 
 func waitForHlAttrDefine() {
+	if hlAttrQueueClosed {
+		return
+	}
 	close(hlAttrQueue)
+	hlAttrQueueClosed = true
 	wg.Wait()
 }
 
@@ -225,6 +235,9 @@ func getIdClasses() (map[int][]string, error) {
 		id, err := strconv.Atoi(strings.TrimSpace(parts[0]))
 		assert(err == nil, "malformed id: not an int: "+parts[0])
 		idClasses[id] = classes
+		effectiveHlIdsMu.Lock()
+		effectiveHlIds[mapClassesString(classes)] = id
+		effectiveHlIdsMu.Unlock()
 	}
 	return idClasses, nil
 }

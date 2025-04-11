@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind base;
 
+.mode-i .cursor {
+  box-shadow: -1px 0 0 0 #eebebe inset;
+}
+
+.mode-n .cursor {
+  color: #272a38 !important;
+  background-color: #eebebe !important;
+}
+
+.mode-v .cursor {
+  color: #272a38 !important;
+  background-color: #eebebe !important;
+}
 
 .cmdline-container {
   border: 1px solid;

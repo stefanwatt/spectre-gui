@@ -12,33 +12,37 @@ import (
 
 // Window represents a Neovim window, which can be a regular window or a floating window
 type Window struct {
-	ID          int // Window ID
-	Dirty       bool
-	Grid        *Grid
-	Type        string // "normal" or "floating"
-	Anchor      string // Anchor position for floating windows
-	AnchorGrid  int    // Grid ID this window is anchored to
-	StartRow    int    // Row position
-	StartCol    int    // Column position
-	Width       int    // Window width
-	Height      int    // Window height
-	Focusable   bool   // Whether the window can be focused
-	ZIndex      int    // Z-index for floating windows
-	IsPopupmenu bool   // Whether this is a completion menu
-	Hidden      bool
-	Filetype    *string
+	ID                  int // Window ID
+	Dirty               bool
+	Grid                *Grid
+	Type                string // "normal" or "floating"
+	Anchor              string // Anchor position for floating windows
+	AnchorGrid          int    // Grid ID this window is anchored to
+	StartRow            int    // Row position
+	StartCol            int    // Column position
+	Width               int    // Window width
+	Height              int    // Window height
+	Focusable           bool   // Whether the window can be focused
+	ZIndex              int    // Z-index for floating windows
+	IsPopupmenu         bool   // Whether this is a completion menu
+	Hidden              bool
+	Filetype            *string
+	lineNumbers         bool
+	relativeLineNumbers bool
 }
 
 type WindowAPI struct {
-	ID       int     `json:"id"`
-	Type     string  `json:"type"`
-	Width    float64 `json:"width"`  // in percent of screen
-	Height   float64 `json:"height"` // in percent of screen
-	ColStart int     `json:"colStart"`
-	ColEnd   int     `json:"colEnd"`
-	RowStart int     `json:"rowStart"`
-	RowEnd   int     `json:"rowEnd"`
-	Filetype string  `json:"filetype"`
+	ID                  int     `json:"id"`
+	Type                string  `json:"type"`
+	Width               float64 `json:"width"`  // in percent of screen
+	Height              float64 `json:"height"` // in percent of screen
+	ColStart            int     `json:"colStart"`
+	ColEnd              int     `json:"colEnd"`
+	RowStart            int     `json:"rowStart"`
+	RowEnd              int     `json:"rowEnd"`
+	Filetype            string  `json:"filetype"`
+	LineNumbers         bool    `json:"lineNumbers"`
+	RelativeLineNumbers bool    `json:"relativeLineNumbers"`
 }
 
 // Equal compares two WindowAPI structs and returns true if they are equal.
@@ -105,10 +109,10 @@ func extractWindowId(window nvim.Window) (int, error) {
 }
 
 func getWindow(winId int) (*nvim.Window, error) {
-	if winId < 1{
-		return nil, errors.New(fmt.Sprintf("invalid winId %d",winId))
+	if winId < 1 {
+		return nil, errors.New(fmt.Sprintf("invalid winId %d", winId))
 	}
-	utils.Log(fmt.Sprintf("GetWindow winId=%d",winId))
+	utils.Log(fmt.Sprintf("GetWindow winId=%d", winId))
 	nvimWindows, err := NvimInstance.Windows()
 	if err != nil {
 		return nil, err

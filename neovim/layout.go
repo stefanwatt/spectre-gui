@@ -93,15 +93,17 @@ func (s *Screen) CalculateGridLayout() {
 		height := window.Height
 
 		w := &WindowAPI{
-			ID:       winId,
-			Type:     window.Type,
-			Width:    utils.CalculatePercentage(width, s.Width),
-			Height:   utils.CalculatePercentage(height, s.Height),
-			ColStart: colStart,
-			ColEnd:   colEnd,
-			RowStart: rowStart,
-			RowEnd:   rowEnd,
-			Filetype: "",
+			ID:                  winId,
+			Type:                window.Type,
+			Width:               utils.CalculatePercentage(width, s.Width),
+			Height:              utils.CalculatePercentage(height, s.Height),
+			ColStart:            colStart,
+			ColEnd:              colEnd,
+			RowStart:            rowStart,
+			RowEnd:              rowEnd,
+			Filetype:            "",
+			LineNumbers:         window.lineNumbers,
+			RelativeLineNumbers: window.relativeLineNumbers,
 		}
 		if window.Filetype != nil {
 			w.Filetype = *window.Filetype

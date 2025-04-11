@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	"nvim-gui/utils"
 
@@ -18,13 +19,14 @@ type CursorState struct {
 }
 
 var (
-	cursorState  CursorState
-	currentMode  string
-	NvimInstance *nvim.Nvim
-	fgColorClasses map[string]string
-	bgColorClasses map[string]string
-	idClasses    map[int][]string
-	effectiveHlIds map[string]int = make(map[string]int)
+	cursorState      CursorState
+	currentMode      string
+	NvimInstance     *nvim.Nvim
+	fgColorClasses   map[string]string
+	bgColorClasses   map[string]string
+	idClasses        map[int][]string
+	effectiveHlIds   map[string]int = make(map[string]int)
+	effectiveHlIdsMu sync.Mutex
 )
 
 var screen *Screen
@@ -72,6 +74,9 @@ func StartListening(ctx context.Context) {
 		nvimArgs,
 		nvim.ChildProcessContext(nvimCtx),
 	)
+	NvimInstance.SetVar("nvim_gui", true)
+	utils.Log(fmt.Sprintf("setting up channel g var %d", NvimInstance.ChannelID()))
+	NvimInstance.SetVar("nvim_gui_channel", NvimInstance.ChannelID())
 
 	if err != nil {
 		log.Println(err)
@@ -79,7 +84,6 @@ func StartListening(ctx context.Context) {
 		Runtime.Quit(ctx)
 		return
 	}
-	// err = NvimInstance.SetOption("relativenumber", false)
 
 	Runtime.EventsOn(ctx, "get-highlights", updateHighlightCSS)
 	Runtime.EventsOn(ctx, "substitute-jump", HandleSubstituteJump)
@@ -98,7 +102,7 @@ func StartListening(ctx context.Context) {
 			"ext_cmdline":    true,
 			"ext_popupmenu":  true,
 			"ext_tabline":    true,
-			"ext_messages":   true,
+			// "ext_messages":   true,
 		}
 
 		err = NvimInstance.AttachUI(cols, rows, opts)
@@ -110,6 +114,15 @@ func StartListening(ctx context.Context) {
 
 		NvimInstance.RegisterHandler("redraw", func(updates ...[]interface{}) {
 			screen.handleRedraw(updates)
+		})
+
+		NvimInstance.RegisterHandler("TrekClosed", func(_ *nvim.Nvim, windowArgs []uint64) {
+			utils.Log("TrekClosed args=", windowArgs)
+			assert(len(windowArgs) == 3, "incorrect length windowIds")
+			windowIds := utils.MapArray(windowArgs, func(arg uint64) int {
+				return utils.ReflectToInt(arg)
+			})
+			screen.closeTrek(windowIds)
 		})
 
 		if err := NvimInstance.Serve(); err != nil {

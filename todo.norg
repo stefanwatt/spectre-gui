@@ -1,6 +1,10 @@
 * ( ) Todo
 **  ( ) general 
 
+    - ( ) we cannot always rely on line numbers being present
+    - ( ) line numbers are a little offset
+    - ( ) for stuff like relative line numbers, cursor line etc. we will probably disable it and just reimplement in svelte
+          -> we should read the config value and toggle these features accordingly
     - ( ) implement Markdown
     - ( ) visual selection has some bugs with the beginning of the row not having the correct background color
     - ( ) refactor screen.go -> probably has too much logic
@@ -10,9 +14,13 @@
     - ( ) theres a bug where the current line number gets stuck in relative number mode when scrolling a lot with arrows
     - ( ) keyed each block for rows fails when theres multiple grid rows for the same buffer line (e.g. todo.norg)
     - ( ) why does it just freeze up???? seems to have a conncetion with dev tools
-    - ( ) we cannot always rely on line numbers being present and some windows like start menu shouldnt have them
-    - ( ) got some rendering performance issues in fzf-lua pickers still
-    - ( ) line numbers are a little offset
+    - ( ) still got some rendering performance issues in fzf-lua pickers 
+          -> it seems to be much better when we just never apply any css classes
+    - ( ) the fix for closing residual windows when there's already a window that has 100% width doesnt work when in a split
+    - ( ) cursor should only be displayed in active window
+    - ( ) insert mode cursor is very messed up when typing
+    - ( ) completion menu is not correctly positioned when at the bottom of the viewport so its above not below the cursor
+    - ( ) display more info in statusline: git branch, filename, file dirty
 ** ( ) css
 
      we need a mechanism for writing the dynamic css to disk.
@@ -79,9 +87,11 @@
   we still need:
   - (x) create a mechanism to check what css has already been written to disk
   - (x) fix bug: highlighting in the active window looks ok, but in some cases it seems like fg and bg color is swapped
-  - ( ) fix bug: in the non active window its all kinda fucked up. no idea wtf is happening there
-  - ( ) fix bug: resize removes all highlighting
-  - ( ) cursor messes up highlighting
+  - (x) fix bug: resize removes all highlighting
+  - ( ) fix bug: sometimes an incorrect highlight group is applied
+        can be triggered by cursorline for example
+        deleting id-to-classes will temporarily fix it
+        -> pretty sure that something is going wrong with writing to that file or the corresponding map
 
 ** ( ) cmdline QoL
    - ( ) completion (probably handled by extmarks)
@@ -109,3 +119,5 @@
           then you get the first line of the function as context. this is apparently coded as a floating window
           and its not rendered well -> it's nvim-treesitter-context
    - (x) dont trim line gutter from floating window
+   - (x) dont display line numbers in Alpha startmenu etc.
+    - (x) insert mode cursor
