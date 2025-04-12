@@ -1,10 +1,25 @@
-<script lang="ts">
+<script>
+	import {
+		search_term,
+		dir as _dir,
+		include,
+		exclude,
+		case_sensitive,
+		regex,
+		match_whole_word
+	} from '$lib/store.js';
 	import CaseSensitive from '$lib/icons/CaseSensitive.svelte';
 	import Regex from '$lib/icons/Regex.svelte';
 	import MatchWholeWord from '$lib/icons/MatchWholeWord.svelte';
+	import { onMount } from 'svelte';
 	import DebouncedInput from './DebouncedInput.svelte';
 
-	let { state }: { state: App.LiveGrepOpts } = $props();
+	let dir = '';
+	onMount(() => {
+		setTimeout(() => {
+			dir = $_dir;
+		});
+	});
 </script>
 
 <div class="flex">
@@ -12,43 +27,39 @@
 		<label class="input input-bordered mr-1 flex w-full items-center bg-mantle">
 			<DebouncedInput
 				autofocus={true}
-				withLabel={true}
-				value={state.searchTerm}
-				updateValue={(updatedValue)=>{state.searchTerm=updatedValue}}
+				with_label={true}
+				value={$search_term}
 				placeholder={'Search...'}
+				store={search_term}
 			/>
-			{#if state.caseSensitive}
+			{#if $case_sensitive}
 				<CaseSensitive></CaseSensitive>
 			{/if}
-			{#if state.regex}
+			{#if $regex}
 				<Regex></Regex>
 			{/if}
-			{#if state.matchWholeWord}
+			{#if $match_whole_word}
 				<MatchWholeWord></MatchWholeWord>
 			{/if}
 		</label>
 	</div>
 	<div class="w-1/2 pl-1">
-		<DebouncedInput
-			value={state.dir}
-			placeholder={'eg. /home/user/Projects'}
-			updateValue={(updatedValue)=>{state.dir=updatedValue}}
-		/>
+		<DebouncedInput value={dir} placeholder={'eg. /home/user/Projects'} store={_dir} />
 	</div>
 </div>
 <div class="flex flex-wrap py-2 sm:grid sm:grid-cols-[1fr,1fr] sm:gap-1">
 	<div class="w-1/2 pr-1 pt-2 sm:w-auto sm:pr-0 sm:pt-0">
 		<DebouncedInput
-			value={state.exclude}
+			value={$exclude}
 			placeholder={'eg *service.go,src/**/exclude'}
-			updateValue={(updatedValue)=>{state.exclude=updatedValue}}
+			store={include}
 		/>
 	</div>
 	<div class="w-1/2 pl-1 pt-2 sm:w-auto sm:pt-0">
 		<DebouncedInput
-			value={state.include}
+			value={$include}
 			placeholder={'eg *service.go,src/**/include'}
-			updateValue={(updatedValue)=>{state.include=updatedValue}}
+			store={include}
 		/>
 	</div>
 </div>

@@ -2,21 +2,33 @@ package neovim
 
 import (
 	"fmt"
-	"log"
 	"nvim-gui/utils"
+	"os"
 )
 
-func OpenFileAt(path string, row int, col int, servername string) error {
+func FileExists(filePath string) bool {
+	_, err := os.Stat(filePath)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return false
+}
+func OpenFileAt(path string, row int, col int) error {
 	utils.Log("[NEOVIM] Opening file at", path, row, col)
+
+	assert(FileExists(path),"tried to open file that doesnt exist: "+path)
 	err := NvimInstance.Command(fmt.Sprintf("e %s", path))
 	if err != nil {
-		log.Println("Error opening file:", err)
+		utils.Log("Error opening file:", err)
 		return err
 	}
 
 	err = NvimInstance.Command(fmt.Sprintf("call cursor(%d, %d)", row, col))
 	if err != nil {
-		log.Println("Error setting cursor:", err)
+		utils.Log("Error setting cursor:", err)
 		return err
 	}
 	return nil

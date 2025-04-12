@@ -1,29 +1,31 @@
-<script>
+<script lang="ts">
 	import { debounce } from '$lib/utils.service.js';
+	import type { KeyboardEventHandler } from 'svelte/elements';
 
-	export let autofocus = false;
-	export let with_label = false;
-	/** @type {string}*/
-	export let placeholder = '';
-	/** @type {string}*/
-	export let value;
-	/** @type {import("svelte/store").Writable<string>}*/
-	export let store;
-
-	/**
-	 * @param {KeyboardEvent & { target: HTMLInputElement }} e
-	 */
-	async function debounced_update(e) {
-		$store = await debounce(e.target.value);
+	interface DebouncedInputProps {
+		value: string;
+		placeholder: string;
+		withLabel?: boolean;
+		autofocus?: boolean;
+		updateValue: (updatedValue:string)=>void
 	}
+	let { value, placeholder, withLabel, autofocus,updateValue }: DebouncedInputProps = $props();
+
+	const debouncedUpdate: KeyboardEventHandler<HTMLInputElement> = function (e) {
+		if (!e?.target) return;
+		const target: HTMLInputElement = e.target as HTMLInputElement;
+		debounce(target.value).then((updatedValue) => {
+			updateValue(updatedValue)
+		});
+	};
 </script>
 
 <input
-	class:input={!with_label}
-	class:input-bordered={!with_label}
-	class:w-full={!with_label}
+	class:input={!withLabel}
+	class:input-bordered={!withLabel}
+	class:w-full={!withLabel}
 	class="grow"
-	on:keyup={debounced_update}
+	onkeyup={debouncedUpdate}
 	{value}
 	type="text"
 	{placeholder}

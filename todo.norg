@@ -1,4 +1,8 @@
 * ( ) Todo
+** refactoring
+   - stop defining million event handlers in +page.svelte
+   - hotkey solution
+   - add more binding structs so that i dont need to do everything in api.go
 **  ( ) general 
 
     - ( ) we cannot always rely on line numbers being present
@@ -16,10 +20,11 @@
     - ( ) why does it just freeze up???? seems to have a conncetion with dev tools
     - ( ) still got some rendering performance issues in fzf-lua pickers 
           -> it seems to be much better when we just never apply any css classes
-    - ( ) the fix for closing residual windows when there's already a window that has 100% width doesnt work when in a split
     - ( ) cursor should only be displayed in active window
-    - ( ) insert mode cursor is very messed up when typing
-    - ( ) completion menu is not correctly positioned when at the bottom of the viewport so its above not below the cursor
+    - (-) completion menu is not correctly positioned when at the bottom of the viewport so its above not below the cursor
+          -> partially fixed. at least its not overlaying the text that you're typing anymore,
+          but position calculation is still kinda off
+          -> we could know if it opened to the bottom/top based on comparing the anchor row with the cursor row
     - ( ) display more info in statusline: git branch, filename, file dirty
 ** ( ) css
 
@@ -121,3 +126,7 @@
    - (x) dont trim line gutter from floating window
    - (x) dont display line numbers in Alpha startmenu etc.
     - (x) insert mode cursor
+    - (x) insert mode cursor is very messed up when typing
+    - (x) the fix for closing residual windows when there's already a window that has 100% width doesnt work when in a split
+          -> i guess this was actually only a problem for trek.nvim
+          -> my suspicion is that it's that the last window of the tab being closed also closes the tab and then we dont get a winclose event

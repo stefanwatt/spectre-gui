@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"nvim-gui/neovim"
+	"nvim-gui/picker"
 	"nvim-gui/utils"
 )
 
@@ -12,10 +13,13 @@ var ctx context.Context
 type App struct {
 	ctx  context.Context
 	File string
+	liveGrepPicker *picker.LiveGrepPicker
 }
 
 func NewApp() *App {
-	return &App{}
+	return &App{
+		liveGrepPicker: picker.NewLiveGrepPicker(),
+	}
 }
 
 func (a *App) mounted(ctx context.Context) {

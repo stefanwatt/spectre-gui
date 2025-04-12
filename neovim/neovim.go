@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime/debug"
 	"sync"
 
 	"nvim-gui/utils"
@@ -38,6 +39,7 @@ func CalculateGridSize(windowWidth, windowHeight int) (rows, cols int) {
 	availableHeight := windowHeight - statusLineHeight
 	cols = windowWidth / cellWidth
 	rows = availableHeight / cellHeight
+	utils.Log(fmt.Sprintf("CalculateGridSize rows=%d cols=%d windowHeight=%d windowWidth=%d", rows, cols, windowHeight, windowWidth))
 	return rows, cols
 }
 
@@ -116,6 +118,10 @@ func StartListening(ctx context.Context) {
 			screen.handleRedraw(updates)
 		})
 
+		NvimInstance.RegisterHandler("live-grep", func(_ *nvim.Nvim, data interface{}) {
+			Runtime.EventsEmit(screen.ctx, "show_live_grep")
+		})
+
 		NvimInstance.RegisterHandler("TrekClosed", func(_ *nvim.Nvim, windowArgs []uint64) {
 			utils.Log("TrekClosed args=", windowArgs)
 			assert(len(windowArgs) == 3, "incorrect length windowIds")
@@ -126,7 +132,7 @@ func StartListening(ctx context.Context) {
 		})
 
 		if err := NvimInstance.Serve(); err != nil {
-			utils.Log(fmt.Sprintf("Neovim process terminated: %v", err))
+			utils.Log(fmt.Sprintf("Neovim process terminated: %v\n%s", err, debug.Stack()))
 		}
 
 		// Neovim has exited, signal to quit the app

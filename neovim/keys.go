@@ -45,7 +45,7 @@ var ignored_keys = []string{
 	"Control",
 }
 
-func SendKey(key string, alt bool, shift bool, ctrl bool) error {
+func SendKey(key string, ctrl bool, alt bool, shift bool) error {
 	_, err := utils.Find(ignored_keys, func(ignored_key string) bool {
 		return key == ignored_key
 	})

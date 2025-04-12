@@ -36,7 +36,7 @@ func getBufferFiletype(winId int) (*string, error) {
 	}
 	if filetype == "" {
 		var treesitterContext bool
-		NvimInstance.WindowVar(*foundWindow, "treesitter_context", treesitterContext)
+		NvimInstance.WindowVar(*foundWindow, "treesitter_context", &treesitterContext)
 		filetype = "treesitter_context"
 	}
 	return &filetype, nil

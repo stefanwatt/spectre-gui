@@ -3,7 +3,7 @@
 @tailwind base;
 
 .mode-i .cursor {
-  box-shadow: -1px 0 0 0 #eebebe inset;
+  box-shadow: -2px 0 0 0 #eebebe;
 }
 
 .mode-n .cursor {

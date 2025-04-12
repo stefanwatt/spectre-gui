@@ -48,8 +48,8 @@ declare global {
       rowStart: number;
       rowEnd: number;
       filetype: string;
-      lineNumbers:boolean;
-      relativeLineNumbers:boolean;
+      lineNumbers: boolean;
+      relativeLineNumbers: boolean;
     }
 
     interface CmdLine {
@@ -60,7 +60,47 @@ declare global {
       indent?: number;
       pos?: number;
     }
+    interface Toast {
+      level: NotificationLevel;
+      text: string;
+    }
 
+    interface LiveGrepOpts {
+      searchTerm: string;
+      dir: string;
+      include: string;
+      exclude: string;
+      caseSensitive: boolean;
+      regex: boolean;
+      matchWholeWord: boolean;
+      totalResults: number;
+    }
+    interface RipgrepResult {
+      Path: string;
+      Matches: RipgrepMatch[]
+    }
+
+    interface RipgrepMatch {
+      Id: string;
+      FileName: string;
+      AbsolutePath: string;
+      MatchedLine: string;
+      TextBeforeMatch: string;
+      TextAfterMatch: string;
+      MatchedText: string;
+      ReplacementText: string;
+      Row: number;
+      Col: number;
+      Html: string;
+    }
+
+    interface SearchResult {
+      GroupedMatches: RipgrepResult[]
+      PageIndex: number
+      TotalPages: number
+      TotalResults: number
+      TotalFiles: number
+    }
     interface NvimHighlight {
       id: number;
       fg: string;
@@ -78,8 +118,8 @@ declare global {
       content?: App.NvimRow[]
       decode?: (input: string) => string
       cursor?: { row: number, col: number }
-      lineNumbers:boolean;
-      relativeLineNumbers:boolean;
+      lineNumbers: boolean;
+      relativeLineNumbers: boolean;
     }
 
     interface CursorMoveEvent {

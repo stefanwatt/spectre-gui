@@ -1,30 +1,35 @@
-<script>
-	import { GetReplacementText } from '$lib/wailsjs/go/main/App';
-	import { selected_match, regex, search_term, replace_term } from './store';
-	/** @type {App.RipgrepMatch}*/
-	export let match;
-	/** @param {App.RipgrepMatch} match*/
-	function replace_match(match) {
-		console.log('replace_match', match);
+<script lang="ts">
+	import { GetReplacementText, OpenFile } from '$lib/wailsjs/go/main/App';
+
+	let {
+		match,
+		selectedMatch,
+		replaceTerm,
+		searchTerm,
+		regex
+	}: {
+		match: App.RipgrepMatch;
+		selectedMatch: App.RipgrepMatch | null;
+		replaceTerm: string;
+		searchTerm: string;
+		regex: boolean;
+	} = $props();
+
+	async function openFile(match: App.RipgrepMatch) {
+		const runtime = await import('$lib/wailsjs/runtime/runtime');
+		if (runtime) {
+			OpenFile(match.AbsolutePath, match.Row, match.Col);
+		}
 	}
-	/** @type {HTMLButtonElement}*/
-	let button;
-	$: {
-		update_replace_term($replace_term, button);
-	}
-	replace_term.subscribe((value) => {
-		update_replace_term(value, button);
+	let button: HTMLButtonElement;
+
+	$effect(() => {
+		updateReplaceTerm(replaceTerm, button);
 	});
-	/** @param {string} value
-	 @param {HTMLButtonElement} button*/
-	async function update_replace_term(value, button) {
+
+	async function updateReplaceTerm(value: string, button: HTMLButtonElement) {
 		if (!value || !button) return;
-		const replacement_text = await GetReplacementText(
-			match.MatchedLine,
-			$search_term,
-			value,
-			$regex
-		);
+		const replacement_text = await GetReplacementText(match.MatchedLine, searchTerm, value, regex);
 		const replacement_elem = button.querySelector('.spectre-replacement');
 		if (!replacement_elem) {
 			const match_elem = button.querySelector('.spectre-matched');
@@ -43,10 +48,10 @@
 
 <button
 	bind:this={button}
-	on:click={() => {
-		replace_match(match);
+	onclick={() => {
+		openFile(match);
 	}}
-	class:bg-surface1={$selected_match === match}
+	class:bg-surface1={selectedMatch === match}
 	class="m-1 flex w-full cursor-pointer snap-start justify-start rounded-sm p-1"
 >
 	{@html match.Html}

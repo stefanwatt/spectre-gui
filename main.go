@@ -13,6 +13,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/logger"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/linux"
 )
 
 //go:embed all:frontend/build
@@ -52,8 +53,6 @@ func (h *FileLoader) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		utils.Log("couldnt get file: " + requestedFilename + "\nerror:" + err.Error())
 		res.WriteHeader(http.StatusBadRequest)
 		res.Write([]byte(fmt.Sprintf("Could not load file %s", requestedFilename)))
-	} else {
-		utils.Log("got file: "+requestedFilename+"\ncontent:\n", string(fileData))
 	}
 
 	res.Write(fileData)
@@ -83,6 +82,9 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets:  assets,
 			Handler: NewFileLoader(),
+		},
+		Linux: &linux.Options{
+			WebviewGpuPolicy: linux.WebviewGpuPolicyAlways,
 		},
 		BackgroundColour: &options.RGBA{R: 39, G: 42, B: 56, A: 1},
 		OnStartup:        app.startup,
