@@ -7,15 +7,17 @@
 		placeholder: string;
 		withLabel?: boolean;
 		autofocus?: boolean;
-		updateValue: (updatedValue:string)=>void
+		debounceMs?: number;
+		updateValue: (updatedValue: string) => void;
 	}
-	let { value, placeholder, withLabel, autofocus,updateValue }: DebouncedInputProps = $props();
+	let { value, placeholder, withLabel, autofocus, updateValue, debounceMs }: DebouncedInputProps =
+		$props();
 
 	const debouncedUpdate: KeyboardEventHandler<HTMLInputElement> = function (e) {
 		if (!e?.target) return;
 		const target: HTMLInputElement = e.target as HTMLInputElement;
-		debounce(target.value).then((updatedValue) => {
-			updateValue(updatedValue)
+		debounce(target.value, debounceMs).then((updatedValue) => {
+			updateValue(updatedValue);
 		});
 	};
 </script>

@@ -2,7 +2,7 @@
 	import CaseSensitive from '$lib/icons/CaseSensitive.svelte';
 	import Regex from '$lib/icons/Regex.svelte';
 	import MatchWholeWord from '$lib/icons/MatchWholeWord.svelte';
-	import DebouncedInput from './DebouncedInput.svelte';
+	import DebouncedInput from '$lib/form/DebouncedInput.svelte';
 
 	let { state }: { state: App.LiveGrepOpts } = $props();
 </script>

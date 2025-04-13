@@ -12,7 +12,13 @@
     - ( ) implement Markdown
     - ( ) visual selection has some bugs with the beginning of the row not having the correct background color
     - ( ) refactor screen.go -> probably has too much logic
-    - ( ) pickers: add stuff from spectre-gui back in 
+    - (-) pickers: add stuff from spectre-gui back in 
+    -- (x) livegrep 
+    -- (x) find-files
+    -- ( ) project wide find and replace
+    -- ( ) file preview
+    -- ( ) quickfixlist
+    -- ( ) find references
     - ( ) handle extmarks
     - ( ) :Lazy is somehow not emitted as a floating window
     - ( ) theres a bug where the current line number gets stuck in relative number mode when scrolling a lot with arrows

@@ -134,7 +134,7 @@ declare global {
     }
 
     type Writable<T> = _Writable<T>
-    type KeymapMode = 'cmdline' | 'live-grep' | 'normal'
+    type KeymapMode = 'cmdline' | 'live-grep' | 'normal' | 'find-files'
     interface Keymap {
       mods: Modifier[];
       mode: KeymapMode

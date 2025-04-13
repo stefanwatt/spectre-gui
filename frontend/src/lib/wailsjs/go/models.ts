@@ -1,5 +1,25 @@
 export namespace picker {
 	
+	export class FindFilesResult {
+	    filename: string;
+	    relativePath: string;
+	    absolutePath: string;
+	    icon: string;
+	    iconColor: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FindFilesResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.filename = source["filename"];
+	        this.relativePath = source["relativePath"];
+	        this.absolutePath = source["absolutePath"];
+	        this.icon = source["icon"];
+	        this.iconColor = source["iconColor"];
+	    }
+	}
 	export class LiveGrepPickerState {
 	    searchTerm: string;
 	    dir: string;

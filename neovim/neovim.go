@@ -120,6 +120,10 @@ func StartListening(ctx context.Context) {
 		NvimInstance.RegisterHandler("live-grep", func(_ *nvim.Nvim, data interface{}) {
 			Runtime.EventsEmit(screen.ctx, "show_live_grep")
 		})
+				
+		NvimInstance.RegisterHandler("find-files", func(_ *nvim.Nvim, data interface{}) {
+			Runtime.EventsEmit(screen.ctx, "show-find-files")
+		})
 
 		NvimInstance.RegisterHandler("TrekClosed", func(_ *nvim.Nvim, windowArgs []uint64) {
 			utils.Log("TrekClosed args=", windowArgs)

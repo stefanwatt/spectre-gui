@@ -9,13 +9,16 @@
 	import {init,startListening} from '$lib/runtime-events-service'
 	import {handleKeypress, registerKeymap} from '$lib/keymaps/keymap-service'
 	import {keymaps as liveGrepKeymaps} from '$lib/keymaps/live-grep'
+	import {keymaps as findFilesKeymaps} from '$lib/keymaps/find-files'
 	import {keymaps as cmdlineKeymaps} from '$lib/keymaps/cmdline'
+	import FindFiles from '$lib/picker/FindFiles.svelte';
 
 	onMount(async () => {
 		await init()
 		startListening()
 		const allKeymaps: App.Keymap[] =[
 			...liveGrepKeymaps,
+			...findFilesKeymaps,
 			...cmdlineKeymaps
 		]
 		allKeymaps.forEach(keymap => {
@@ -74,13 +77,18 @@
 	</div>
 </div>
 {#if pickers.liveGrep}
-	<div class="live-grep bg-darker rounded-md p-2">
+	<div class="picker bg-darker rounded-md p-2">
 		<LiveGrep />
+	</div>
+{/if}
+{#if pickers.findFiles}
+	<div class="picker bg-darker rounded-md p-2 victor-mono">
+		<FindFiles />
 	</div>
 {/if}
 
 <style>
-	.live-grep {
+	.picker {
 		height: 90vh;
 		width: 90vw;
 		position: absolute;

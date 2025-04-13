@@ -6,7 +6,7 @@ export let layout = $state<App.NvimLayout>({
   windows: []
 });
 export let nvimWindows = $state<App.NvimWindowMap>({});
-export let pickers = $state({ liveGrep: false });
+export let pickers = $state({ liveGrep: false, findFiles: false });
 export let cmdline = $state<App.CmdLine>({
   visible: false
 });
@@ -14,10 +14,11 @@ let keymapMode: App.KeymapMode = $derived(
   (() => {
     if (cmdline.visible) return 'cmdline';
     if (pickers.liveGrep) return 'live-grep';
+    if (pickers.findFiles) return 'find-files';
     return 'normal';
   })()
 );
-export function getKeymapMode():App.KeymapMode{
+export function getKeymapMode(): App.KeymapMode {
   return keymapMode
 }
 

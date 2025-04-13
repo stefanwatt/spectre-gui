@@ -6,6 +6,7 @@ import (
 	"nvim-gui/picker"
 	ext "nvim-gui/picker/external-tools"
 	"nvim-gui/utils"
+	"strings"
 
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -49,10 +50,10 @@ func (a *App) OpenFile(path string, row int, col int) {
 	Runtime.EventsEmit(a.ctx, "hide-live-rep")
 }
 
-func (a *App) SubstituteJump(){
-	neovim.HandleSubstituteJump()	
+func (a *App) SubstituteJump() {
+	neovim.HandleSubstituteJump()
 }
-	
+
 func (a *App) LiveGrep(
 	search_term string,
 	dir string,
@@ -73,6 +74,25 @@ func (a *App) LiveGrep(
 		a.ctx,
 	)
 }
+
+func (a *App) FindFiles(query string) []*picker.FindFilesResult {
+	if strings.TrimSpace(query) == "" {
+		return []*picker.FindFilesResult{}
+	}
+	//TODO: suboptimal to call getcwd on every request
+	cwd := neovim.GetCwd()
+	dir := utils.GetGitRepoRoot(cwd)
+	results, err := picker.FindFiles(dir, query)
+	if err != nil {
+		utils.Log("FindFiles error getting results:\n", err.Error())
+		return []*picker.FindFilesResult{}
+	}
+	for _, result := range results {
+		result.AbsolutePath = dir + "/" + result.RelativePath
+	}
+	return results
+}
+
 func (a *App) GetReplacementText(matchedLine string, searchTerm string, replacementText string, useRegex bool) string {
 	replacementText, err := ext.GetReplacementText(matchedLine, searchTerm, replacementText, useRegex)
 	if err != nil {

@@ -22,7 +22,7 @@ export function handleKeypress(event: KeyboardEvent) {
     keymap.action(event)
     earlyReturn = true
   })
-  if (earlyReturn || keymapMode === 'live-grep') return
+  if (earlyReturn || keymapMode === 'find-files' || keymapMode === 'live-grep') return
   event.preventDefault();
   SendKey(event.key, event.ctrlKey, event.altKey, event.shiftKey, keymapMode);
 }

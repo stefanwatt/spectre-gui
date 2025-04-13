@@ -47,6 +47,17 @@ export function startListening() {
     OpenFile(selectedMatch.AbsolutePath, selectedMatch.Row, selectedMatch.Col);
   });
 
+  runtime.EventsOn('show-find-files', () => {
+    console.log('show-find-files');
+    pickers.findFiles = true;
+  });
+
+  runtime.EventsOn('hide-find-files', () => {
+    console.log('hide-find-files');
+    pickers.findFiles = false;
+  });
+
+
   runtime.EventsOn('show_live_grep', () => {
     console.log('show live grep');
     pickers.liveGrep = true;
