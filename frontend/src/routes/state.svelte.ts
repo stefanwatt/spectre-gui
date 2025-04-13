@@ -1,0 +1,25 @@
+export let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
+export let layout = $state<App.NvimLayout>({
+  cols: "1fr",
+  rows: "1fr",
+  activeWindowId: 0,
+  windows: []
+});
+export let nvimWindows = $state<App.NvimWindowMap>({});
+export let pickers = $state({ liveGrep: false });
+export let cmdline = $state<App.CmdLine>({
+  visible: false
+});
+let keymapMode: App.KeymapMode = $derived(
+  (() => {
+    if (cmdline.visible) return 'cmdline';
+    if (pickers.liveGrep) return 'live-grep';
+    return 'normal';
+  })()
+);
+export function getKeymapMode():App.KeymapMode{
+  return keymapMode
+}
+
+export let floatingWindows = $state<App.FloatingWindow[]>([]);
+export let mode = $state<App.VimMode>('normal');

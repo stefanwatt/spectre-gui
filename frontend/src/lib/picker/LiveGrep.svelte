@@ -1,11 +1,16 @@
 <script lang="ts">
 	import Results from '$lib/picker/results/Results.svelte';
-	import { state as resultsState, search } from '$lib/picker/results/results.service.svelte';
+	import {
+		state as resultsState,
+		search
+	} from '$lib/picker/results/results.service.svelte';
 	import { onMount } from 'svelte';
 	import { GetLiveGrepOpts } from '$lib/wailsjs/go/main/App';
 	import SearchForm from '$lib/form/Search.svelte';
 
 	let state = $state<App.LiveGrepOpts>();
+
+
 	$effect(() => {
 		if (!state) return;
 		search(

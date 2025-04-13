@@ -15,3 +15,5 @@ export function LiveGrep(arg1:string,arg2:string,arg3:string,arg4:string,arg5:bo
 export function OpenFile(arg1:string,arg2:number,arg3:number):Promise<void>;
 
 export function SendKey(arg1:string,arg2:boolean,arg3:boolean,arg4:boolean,arg5:string):Promise<void>;
+
+export function SubstituteJump():Promise<void>;

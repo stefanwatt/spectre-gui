@@ -49,6 +49,10 @@ func (a *App) OpenFile(path string, row int, col int) {
 	Runtime.EventsEmit(a.ctx, "hide-live-rep")
 }
 
+func (a *App) SubstituteJump(){
+	neovim.HandleSubstituteJump()	
+}
+	
 func (a *App) LiveGrep(
 	search_term string,
 	dir string,

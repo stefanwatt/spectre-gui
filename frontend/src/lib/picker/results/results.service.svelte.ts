@@ -68,7 +68,7 @@ export function search(
   }
 }
 
-export function get_next_match(selected_match: App.RipgrepMatch, results: App.RipgrepResult[]): App.RipgrepMatch {
+export function getNextMatch(selected_match: App.RipgrepMatch, results: App.RipgrepResult[]): App.RipgrepMatch {
   console.log("get_next_match", selected_match, results)
   if (!results?.length) return selected_match
   const matches = new Map()
@@ -98,7 +98,7 @@ export function get_prev_match(selected_match: App.RipgrepMatch, results: App.Ri
 }
 
 
-export function cursor_to_next_match() {
+export function cursorToNextMatch() {
   console.log("cursor_to_next_match")
   let current_match = state.selectedMatch
   if (!current_match) {
@@ -107,13 +107,13 @@ export function cursor_to_next_match() {
     state.selectedMatch = current_match
     console.log("selected match:", current_match)
   }
-  const next_match = get_next_match(current_match, state.results)
+  const next_match = getNextMatch(current_match, state.results)
   if (!next_match) return
   state.selectedMatch = next_match
   console.log("selected match:", next_match)
 }
 
-export function cursor_to_prev_match() {
+export function cursorToPrevMatch() {
   console.log("cursor_to_prev_match")
   let current_match = state.selectedMatch
   if (!current_match) {
