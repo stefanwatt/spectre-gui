@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { parseSubstituteCommand } from './cmdline/substitute';
-	import Substitute from './cmdline/Substitute.svelte';
-	import Command from './cmdline/Command.svelte';
-	import Search from './cmdline/Search.svelte';
+	import { parseSubstituteCommand } from './substitute';
+	import Substitute from './Substitute.svelte';
+	import Command from './Command.svelte';
+	import Search from './Search.svelte';
 
 	let { firstc, prompt, indent, content, pos, visible }: App.CmdLine = $props();
 	let searchIconSize = '16';

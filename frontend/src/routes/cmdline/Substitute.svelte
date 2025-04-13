@@ -1,5 +1,5 @@
 <script lang="ts">
-	import TextWithCursor from '../TextWithCursor.svelte';
+	import TextWithCursor from './TextWithCursor.svelte';
 	import SearchIcon from '$lib/icons/Search.svelte';
 	import MagicIcon from '$lib/icons/Magic.svelte';
 	import GlobalIcon from '$lib/icons/Global.svelte';

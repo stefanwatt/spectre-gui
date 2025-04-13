@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import StatusLine from './StatusLine.svelte';
-	import CmdLine from './CmdLine.svelte';
-	import FloatingWindowContainer from './FloatingWindowContainer.svelte';
-	import NvimWindow from './NvimWindow.svelte';
+	import CmdLine from './cmdline/CmdLine.svelte';
+	import FloatingWindowContainer from './floating-windows/FloatingWindowContainer.svelte';
+	import NvimWindow from './windows/NvimWindow.svelte';
 	import LiveGrep from '$lib/picker/LiveGrep.svelte';
-	import { cmdline,pickers, nvimWindows, layout, cursor, mode, floatingWindows } from './state.svelte';
-	import {init,startListening} from './runtime-events-service'
-	import {handleKeypress, registerKeymap} from './keymap-service'
+	import { cmdline,pickers, nvimWindows, layout, cursor, mode, floatingWindows } from '$lib/state.svelte';
+	import {init,startListening} from '$lib/runtime-events-service'
+	import {handleKeypress, registerKeymap} from '$lib/keymaps/keymap-service'
 	import {keymaps as liveGrepKeymaps} from '$lib/keymaps/live-grep'
 	import {keymaps as cmdlineKeymaps} from '$lib/keymaps/cmdline'
 
@@ -22,6 +22,7 @@
 			registerKeymap(keymap)
 		});
     window.addEventListener("keydown",handleKeypress);
+	})
 
 	onDestroy(() => {
 		window.removeEventListener('keydown', handleKeypress);

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import SearchIcon from '$lib/icons/Search.svelte';
-	import TextWithCursor from '../TextWithCursor.svelte';
+	import TextWithCursor from './TextWithCursor.svelte';
 	import ArrowUpIcon from '$lib/icons/ArrowUp.svelte';
 	import ArrowDownIcon from '$lib/icons/ArrowDown.svelte';
 	let totalResults = 17;

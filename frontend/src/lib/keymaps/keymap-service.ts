@@ -1,5 +1,5 @@
 import { SendKey } from '$lib/wailsjs/go/main/App';
-import { getKeymapMode } from "./state.svelte"
+import { getKeymapMode } from "$lib/state.svelte"
 
 let activeKeymaps = new Map<string, App.Keymap>()
 
@@ -17,11 +17,12 @@ export function handleKeypress(event: KeyboardEvent) {
   let earlyReturn = false
   const keymapMode = getKeymapMode()
   activeKeymaps.forEach((keymap) => {
-    if (keymap.mode !== keymapMode || event.key !== keymap.key || modsPressed(keymap.mods, event)) { return }
+    if (keymap.mode !== keymapMode || event.key !== keymap.key || !modsPressed(keymap.mods, event)) { return }
+    event.preventDefault()
     keymap.action(event)
     earlyReturn = true
   })
-  if (earlyReturn) return
+  if (earlyReturn || keymapMode === 'live-grep') return
   event.preventDefault();
   SendKey(event.key, event.ctrlKey, event.altKey, event.shiftKey, keymapMode);
 }
@@ -33,6 +34,7 @@ function keymapToString(key: string, mods: App.Modifier[]) {
 
 
 function modsPressed(mods: App.Modifier[], event: KeyboardEvent): boolean {
+  if (!mods.length) return true
   return mods.every(mod => {
     switch (mod) {
       case 'c':

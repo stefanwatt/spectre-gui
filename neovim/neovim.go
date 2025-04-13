@@ -88,7 +88,6 @@ func StartListening(ctx context.Context) {
 	}
 
 	Runtime.EventsOn(ctx, "get-highlights", updateHighlightCSS)
-	Runtime.EventsOn(ctx, "substitute-jump", HandleSubstituteJump)
 
 	// Run a goroutine to handle Neovim serving and exit
 	go func() {

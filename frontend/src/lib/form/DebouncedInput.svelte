@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { debounce } from '$lib/utils.service.js';
+	import { debounce } from '$lib/utils.service';
 	import type { KeyboardEventHandler } from 'svelte/elements';
 
 	interface DebouncedInputProps {

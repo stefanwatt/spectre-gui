@@ -1,6 +1,6 @@
 <script lang="ts">
 	import FloatingGrid from './FloatingGrid.svelte';
-	import { calculatePosition } from './window.service';
+	import { calculatePosition } from '../windows/window.service';
 
 	interface Position {
 		top: string;

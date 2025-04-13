@@ -1,6 +1,6 @@
 <script lang="ts">
 	import CommandIcon from '$lib/icons/Command.svelte';
-	import TextWithCursor from '../TextWithCursor.svelte';
+	import TextWithCursor from './TextWithCursor.svelte';
 
 	let { prompt, indent, content, pos }: App.CmdLine = $props();
 </script>

@@ -1,18 +1,16 @@
 import { OpenFile } from '$lib/wailsjs/go/main/App';
 import * as runtime from '$lib/wailsjs/runtime/runtime';
-import { nvimWindows, layout, cursor, pickers, cmdline } from "./state.svelte"
+import { nvimWindows, layout, cursor, pickers, cmdline } from "$lib/state.svelte"
 import {
   state as resultsState
 } from '$lib/picker/results/results.service.svelte';
-import { sendKey } from './keymap-service';
+import { handleKeypress } from '$lib/keymaps/keymap-service';
 
 export async function init() {
   runtime.EventsEmit('get-highlights');
 }
 export function startListening() {
-
-  window.addEventListener('keydown', sendKey);
-
+  window.addEventListener('keydown', handleKeypress);
   window.addEventListener('resize', function () {
     runtime.EventsEmit('resize');
   });
