@@ -17,7 +17,7 @@
     -- (x) find-files
     -- ( ) project wide find and replace
     -- ( ) file preview
-    -- ( ) quickfixlist
+    -- (x) quickfixlist
     -- ( ) find references
     - ( ) handle extmarks
     - ( ) :Lazy is somehow not emitted as a floating window

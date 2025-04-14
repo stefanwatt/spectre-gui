@@ -1,3 +1,26 @@
+export namespace neovim {
+	
+	export class QuickfixEntry {
+	    filepath: string;
+	    row: number;
+	    col: number;
+	    text: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new QuickfixEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.filepath = source["filepath"];
+	        this.row = source["row"];
+	        this.col = source["col"];
+	        this.text = source["text"];
+	    }
+	}
+
+}
+
 export namespace picker {
 	
 	export class FindFilesResult {

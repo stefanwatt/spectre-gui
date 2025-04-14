@@ -22,9 +22,6 @@
 		return rows;
 	}
 	let content = $derived(filterDuplicateIndices());
-	$inspect(content).with((_, values) => {
-		console.log('nvimWindow content:', values);
-	});
 </script>
 
 <Grid

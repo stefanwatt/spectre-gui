@@ -21,6 +21,7 @@ let keymapMode: App.KeymapMode = $derived(
 export function getKeymapMode(): App.KeymapMode {
   return keymapMode
 }
-
-export let floatingWindows = $state<App.FloatingWindow[]>([]);
-export let mode = $state<App.VimMode>('normal');
+export let additionalState: { floatingWindows: App.FloatingWindow[], mode: App.VimMode } = $state({
+  floatingWindows: [],
+  mode: 'normal'
+})

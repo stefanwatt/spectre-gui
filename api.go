@@ -75,6 +75,10 @@ func (a *App) LiveGrep(
 	)
 }
 
+func (a *App) CreateQuickfixList(entries []*neovim.QuickfixEntry) {
+	neovim.SetQuickfixList(entries)
+}
+
 func (a *App) FindFiles(query string) []*picker.FindFilesResult {
 	if strings.TrimSpace(query) == "" {
 		return []*picker.FindFilesResult{}

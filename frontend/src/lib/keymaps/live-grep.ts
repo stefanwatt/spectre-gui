@@ -4,7 +4,7 @@ import {
   cursorToPrevMatch,
   state as resultsState
 } from '$lib/picker/results/results.service.svelte';
-import { SendKey, OpenFile } from '$lib/wailsjs/go/main/App';
+import { SendKey, OpenFile, CreateQuickfixList } from '$lib/wailsjs/go/main/App';
 
 function sendKey(e: KeyboardEvent) {
   e.preventDefault()
@@ -44,6 +44,26 @@ export const keymaps: App.Keymap[] = [
     mode: 'live-grep',
     mods: [],
     action: cursorToPrevMatch
+  },
+
+  {
+    key: 'q',
+    mode: 'live-grep',
+    mods: ['c'],
+    action: async () => {
+      const entries = resultsState.results
+        .flatMap(result => result.Matches)
+        .map(match => {
+          return {
+            filepath: match.AbsolutePath,
+            row: match.Row,
+            col: match.Col,
+            text: match.MatchedLine
+          }
+        })
+      await CreateQuickfixList(entries)
+      pickers.liveGrep=false
+    }
   },
   {
     key: 'ArrowLeft',

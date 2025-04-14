@@ -111,7 +111,6 @@ func (s *Screen) CalculateGridLayout() {
 
 		windowAPIs = append(windowAPIs, w)
 	}
-	s.clearResidualWindows(windows, floatingWindows)
 	sort.SliceStable(windowAPIs, func(i, j int) bool { return windowAPIs[i].ID < windowAPIs[j].ID })
 
 	windowAPIsChanged := false
@@ -132,24 +131,6 @@ func (s *Screen) CalculateGridLayout() {
 	s.layout.Cols = colsStr
 	s.layout.Rows = rowsStr
 	s.layout.Windows = windowAPIs
-}
-
-// NOTE: i have no idea why this is necessary, but for some reason
-// i dont receive a close event for some windows that are closed
-// this happens with trek.nvim and also fzf.lua
-func (s *Screen) clearResidualWindows(windows []*Window, floatingWindows []*Window) {
-	fullWidthWin, error := utils.Find(windows, func(w *Window) bool {
-		return w.Width == s.Width
-	})
-	if error == nil {
-		s.windowsMu.Lock()
-		clear(s.Windows)
-		s.Windows[fullWidthWin.ID] = fullWidthWin
-		for _, win := range floatingWindows {
-			s.Windows[win.ID] = win
-		}
-		s.windowsMu.Unlock()
-	}
 }
 
 // calculateFractions constructs CSS grid-template string

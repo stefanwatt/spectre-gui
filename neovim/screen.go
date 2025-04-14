@@ -14,6 +14,7 @@ import (
 	"github.com/neovim/go-client/nvim"
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
 type Screen struct {
 	margins       []int
 	Height        int //in number of cells
@@ -40,7 +41,6 @@ type Screen struct {
 	layout        *GridLayout
 }
 
- 
 func NewScreen(ctx context.Context, cols int, rows int) *Screen {
 	content := make([][]*Cell, rows)
 	for i := range content {
@@ -551,6 +551,12 @@ func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
 
 	s.ActiveGrid = gridId
 	s.ActiveWindow = s.GridToWindow[gridId]
+	window := s.Windows[s.ActiveWindow]
+	//TODO: probably a cleaner way to handle this, but theres an offset issue. idk why
+	if window != nil && window.Filetype != nil &&
+		*window.Filetype == "qf" {
+		grid.Cursor.Col += 6
+	}
 	s.UpdateCursor()
 	utils.Log(fmt.Sprintf("gridCursorGoto row=%d col=%d activeWindowId=%d", row, col, s.ActiveWindow))
 	if row >= 0 && row < grid.Height {

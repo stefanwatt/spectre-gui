@@ -1,6 +1,6 @@
 import { OpenFile } from '$lib/wailsjs/go/main/App';
 import * as runtime from '$lib/wailsjs/runtime/runtime';
-import { nvimWindows, layout, cursor, pickers, cmdline } from "$lib/state.svelte"
+import { nvimWindows, layout, cursor, pickers, cmdline, additionalState } from "$lib/state.svelte"
 import {
   state as resultsState
 } from '$lib/picker/results/results.service.svelte';
@@ -26,7 +26,6 @@ export function startListening() {
   runtime.EventsOn(
     'live-grep-prev-page',
     (updatedResults: App.SearchResult, updatedPageIndex: number) => {
-      console.log('prev page', updatedResults, updatedPageIndex);
       resultsState.results = updatedResults.GroupedMatches;
       resultsState.pageIndex = updatedPageIndex;
     }
@@ -35,7 +34,6 @@ export function startListening() {
   runtime.EventsOn(
     'live-grep-next-page',
     (updatedResults: App.SearchResult, updatedPageIndex: number) => {
-      console.log('next page', updatedResults, updatedPageIndex);
       resultsState.results = updatedResults.GroupedMatches;
       resultsState.pageIndex = updatedPageIndex;
     }
@@ -48,23 +46,19 @@ export function startListening() {
   });
 
   runtime.EventsOn('show-find-files', () => {
-    console.log('show-find-files');
     pickers.findFiles = true;
   });
 
   runtime.EventsOn('hide-find-files', () => {
-    console.log('hide-find-files');
     pickers.findFiles = false;
   });
 
 
   runtime.EventsOn('show_live_grep', () => {
-    console.log('show live grep');
     pickers.liveGrep = true;
   });
 
   runtime.EventsOn('hide-live-rep', () => {
-    console.log('hide-live-grep');
     pickers.liveGrep = false;
   });
 
@@ -77,6 +71,7 @@ export function startListening() {
   });
 
   runtime.EventsOn('layout-updated', (updatedLayout: App.NvimLayout) => {
+    console.log('layout updates',updatedLayout)
     layout.cols = updatedLayout.cols;
     layout.rows = updatedLayout.cols;
     layout.activeWindowId = updatedLayout?.activeWindowId;
@@ -84,7 +79,7 @@ export function startListening() {
   });
 
   runtime.EventsOn('content-updated', (winId: number, updatedContent: App.NvimRow[]) => {
-    console.log(`content-updated for winId=${winId}`, updatedContent);
+    console.log("content-updated for winId="+winId,updatedContent)
     nvimWindows[winId] = updatedContent;
   });
 
@@ -99,20 +94,15 @@ export function startListening() {
   );
 
   runtime.EventsOn('mode-changed', (new_mode: App.VimMode) => {
-    //TODO: mode should be on windows not free floating
-    // mode = new_mode;
+    additionalState.mode = new_mode;
   });
 
   runtime.EventsOn('floating_windows', (windows: App.FloatingWindow[]) => {
-    //TODO:
-    // console.log('floating windows', windows);
-    // floatingWindows = windows;
+    additionalState.floatingWindows = windows;
   });
 
   runtime.EventsOn('floating_window_closed', (winId: number) => {
-    //TODO:
-    // console.log(`floating_window_closed id: ${winId}`);
-    // floatingWindows = floatingWindows.filter((win) => win.id !== winId);
+    additionalState.floatingWindows = additionalState.floatingWindows.filter((win) => win.id !== winId);
   });
 
   runtime.EventsOn('hide-window', (winId: number) => {
