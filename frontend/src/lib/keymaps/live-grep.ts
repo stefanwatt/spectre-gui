@@ -4,7 +4,7 @@ import {
   cursorToPrevMatch,
   state as resultsState
 } from '$lib/picker/results/results.service.svelte';
-import { SendKey,OpenFile } from '$lib/wailsjs/go/main/App';
+import { SendKey, OpenFile } from '$lib/wailsjs/go/main/App';
 
 function sendKey(e: KeyboardEvent) {
   e.preventDefault()

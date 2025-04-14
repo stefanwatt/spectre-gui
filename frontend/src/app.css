@@ -27,6 +27,14 @@
   user-select: none;
 }
 
+.text-dark {
+  color: #1b1e29;
+}
+
+.text-darker {
+  color: #161821;
+}
+
 .bg-dark {
   background-color: #1b1e29;
 }

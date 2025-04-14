@@ -4,7 +4,7 @@ import { getKeymapMode } from "$lib/state.svelte"
 let activeKeymaps = new Map<string, App.Keymap>()
 
 export function registerKeymap(keymap: App.Keymap) {
-  const keymapString = keymapToString(keymap.key, keymap.mods)
+  const keymapString = keymapToString(keymap)
   if (activeKeymaps.has(keymapString)) {
     const handler = activeKeymaps.get(keymapString)!.action
     window.removeEventListener("keydown", handler)
@@ -14,22 +14,30 @@ export function registerKeymap(keymap: App.Keymap) {
 }
 
 export function handleKeypress(event: KeyboardEvent) {
-  let earlyReturn = false
   const keymapMode = getKeymapMode()
-  activeKeymaps.forEach((keymap) => {
-    if (keymap.mode !== keymapMode || event.key !== keymap.key || !modsPressed(keymap.mods, event)) { return }
+  const keymapString = eventToKeymapString(event)
+  if (activeKeymaps.has(keymapString)) {
     event.preventDefault()
-    keymap.action(event)
-    earlyReturn = true
-  })
-  if (earlyReturn || keymapMode === 'find-files' || keymapMode === 'live-grep') return
+    activeKeymaps.get(keymapString)!.action(event)
+    return
+  }
+  if (keymapMode === 'find-files' || keymapMode === 'live-grep') return
   event.preventDefault();
   SendKey(event.key, event.ctrlKey, event.altKey, event.shiftKey, keymapMode);
 }
 
-function keymapToString(key: string, mods: App.Modifier[]) {
-  if (!mods?.length) return key
-  return mods.join("-") + "-" + key
+function eventToKeymapString(event: KeyboardEvent) {
+  const mods = []
+  if (event.altKey) mods.push('a')
+  if (event.ctrlKey) mods.push('c')
+  if (event.shiftKey) mods.push('s')
+  if (!mods.length) return event.key + "-" + getKeymapMode()
+  return mods.sort().join("-") + "-" + event.key + "-" + getKeymapMode()
+}
+
+function keymapToString(keymap: App.Keymap) {
+  if (!keymap.mods?.length) return keymap.key + "-" + keymap.mode
+  return keymap.mods.sort().join("-") + "-" + keymap.key + "-" + keymap.mode
 }
 
 
