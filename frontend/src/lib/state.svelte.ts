@@ -6,7 +6,11 @@ export let layout = $state<App.NvimLayout>({
   windows: []
 });
 export let nvimWindows = $state<App.NvimWindowMap>({});
-export let pickers = $state({ liveGrep: false, findFiles: false });
+export let pickers: App.Pickers = $state({
+  liveGrep: false,
+  findFiles: false,
+  findReferences: false,
+});
 export let cmdline = $state<App.CmdLine>({
   visible: false
 });
@@ -15,13 +19,21 @@ let keymapMode: App.KeymapMode = $derived(
     if (cmdline.visible) return 'cmdline';
     if (pickers.liveGrep) return 'live-grep';
     if (pickers.findFiles) return 'find-files';
+    if (pickers.findReferences) return 'find-references';
     return 'normal';
   })()
 );
 export function getKeymapMode(): App.KeymapMode {
   return keymapMode
 }
-export let additionalState: { floatingWindows: App.FloatingWindow[], mode: App.VimMode } = $state({
+
+interface NestedState {
+  floatingWindows: App.FloatingWindow[];
+  mode: App.VimMode;
+  pickerResults: App.PickerResult[]
+}
+export let nestedState: NestedState = $state({
   floatingWindows: [],
-  mode: 'normal'
+  mode: 'normal',
+  pickerResults: []
 })

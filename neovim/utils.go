@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+
 func GetFileIcon(filename string) (string, string) {
 	extension := strings.TrimLeft(filepath.Ext(filename), ".")
 	var iconRes = struct {

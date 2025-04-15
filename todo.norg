@@ -5,7 +5,10 @@
    - add more binding structs so that i dont need to do everything in api.go
 **  ( ) general 
 
+    - ( ) random crashes.. no clue what triggers em. dont happen very often 
+    - ( ) filepath change doesnt update in statusline because it's only recomputed when the layout changes
     - ( ) bug: dt) does not work
+    - ( ) line numbers sometimes dont show up immediately, but will be there after triggering a redraw
     - ( ) we cannot always rely on line numbers being present
     - ( ) line numbers are a little offset
     - ( ) for stuff like relative line numbers, cursor line etc. we will probably disable it and just reimplement in svelte
@@ -19,7 +22,7 @@
     -- ( ) project wide find and replace
     -- ( ) file preview
     -- (x) quickfixlist
-    -- ( ) find references
+    -- (x) find references
     -- ( ) find symbol
     -- find help file
     - ( ) handle extmarks

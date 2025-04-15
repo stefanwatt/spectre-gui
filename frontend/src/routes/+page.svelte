@@ -5,20 +5,14 @@
 	import FloatingWindowContainer from './floating-windows/FloatingWindowContainer.svelte';
 	import NvimWindow from './windows/NvimWindow.svelte';
 	import LiveGrep from '$lib/picker/LiveGrep.svelte';
-	import {
-		cmdline,
-		pickers,
-		nvimWindows,
-		layout,
-		cursor,
-		additionalState
-	} from '$lib/state.svelte';
+	import { cmdline, pickers, nvimWindows, layout, cursor, nestedState } from '$lib/state.svelte';
 	import { init, startListening } from '$lib/runtime-events-service';
 	import { handleKeypress, registerKeymap } from '$lib/keymaps/keymap-service';
 	import { keymaps as liveGrepKeymaps } from '$lib/keymaps/live-grep';
 	import { keymaps as findFilesKeymaps } from '$lib/keymaps/find-files';
 	import { keymaps as cmdlineKeymaps } from '$lib/keymaps/cmdline';
 	import FindFiles from '$lib/picker/FindFiles.svelte';
+	import FindReferences from '$lib/picker/FindReferences.svelte';
 
 	onMount(async () => {
 		await init();
@@ -33,7 +27,7 @@
 	onDestroy(() => {
 		window.removeEventListener('keydown', handleKeypress);
 	});
-	let floatingWindows = $derived(additionalState.floatingWindows);
+	let floatingWindows = $derived(nestedState.floatingWindows);
 	let activeWindow = $derived(layout.windows.find((win) => win.id == layout.activeWindowId));
 </script>
 
@@ -87,6 +81,11 @@
 {#if pickers.findFiles}
 	<div class="picker bg-darker victor-mono rounded-md p-2">
 		<FindFiles />
+	</div>
+{/if}
+{#if pickers.findReferences}
+	<div class="picker bg-darker victor-mono rounded-md p-2">
+		<FindReferences />
 	</div>
 {/if}
 

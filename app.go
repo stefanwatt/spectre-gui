@@ -11,15 +11,16 @@ import (
 var ctx context.Context
 
 type App struct {
-	ctx  context.Context
-	File string
-	liveGrepPicker *picker.LiveGrepPicker
+	ctx              context.Context
+	File             string
+	liveGrepPicker   *picker.LiveGrepPicker
 	referencesPicker *picker.LspReferencesPicker
 }
 
 func NewApp() *App {
 	return &App{
-		liveGrepPicker: picker.NewLiveGrepPicker(),
+		liveGrepPicker:   picker.NewLiveGrepPicker(),
+		referencesPicker: picker.NewReferencesPicker(),
 	}
 }
 

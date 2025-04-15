@@ -41,12 +41,38 @@ func (a *App) SendKey(key string, ctrl bool, alt bool, shift bool, keymapMode st
 	}
 }
 
-func (a *App) FindReferences(query string) {
-	// if neovim.CursorState.Col = a.referencesPicker.Col
-	// 		&& neovim.CursorState.Row = a.referencesPicker.Row
-	//
-	references := neovim.GetReferencesUnderCursor()
-	picker.FindReferences(references,query)
+func (a *App) FindReferences(query string) []*picker.PickerResult {
+	activeWindow := neovim.NvimScreen.GetActiveWindow()
+	hasCursor := activeWindow != nil &&
+		activeWindow.Cursor != nil
+	hasBuffer := activeWindow!= nil && activeWindow.Buffer != nil
+	var results []*picker.PickerResult
+	if hasCursor &&
+		activeWindow.Cursor.Col == a.referencesPicker.Col &&
+		activeWindow.Cursor.Row == a.referencesPicker.Row &&
+		hasBuffer &&
+		activeWindow.Buffer.Filepath == a.referencesPicker.Filepath {
+		_results, err := a.referencesPicker.FindReferences(a.referencesPicker.References, query)
+		if err != nil {
+			panic("error getting references\n"+err.Error())
+		}
+		results = _results
+	} else {
+		references := neovim.GetReferencesUnderCursor()
+		_results, err := a.referencesPicker.FindReferences(references, query)
+		if err != nil {
+			panic("error getting references\n"+err.Error())
+		}
+		results = _results
+	}
+	if hasCursor {
+		a.referencesPicker.Col = activeWindow.Cursor.Col
+		a.referencesPicker.Row = activeWindow.Cursor.Row
+	}
+	if hasBuffer {
+		a.referencesPicker.Filepath = activeWindow.Buffer.Filepath
+	}
+	return results
 }
 
 func (a *App) OpenFile(path string, row int, col int) {

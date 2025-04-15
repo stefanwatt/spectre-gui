@@ -21,7 +21,7 @@ export function handleKeypress(event: KeyboardEvent) {
     activeKeymaps.get(keymapString)!.action(event)
     return
   }
-  if (keymapMode === 'find-files' || keymapMode === 'live-grep') return
+  if (keymapMode === 'find-references' || keymapMode === 'find-files' || keymapMode === 'live-grep') return
   event.preventDefault();
   SendKey(event.key, event.ctrlKey, event.altKey, event.shiftKey, keymapMode);
 }

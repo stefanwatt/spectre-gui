@@ -4,25 +4,42 @@ import (
 	"bytes"
 	"fmt"
 	"nvim-gui/neovim"
+	"nvim-gui/utils"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 )
 
-type LspReferencesPicker struct{
-		Col int
-		Row int
-		References []*neovim.LspReferenceItem
+type LspReferencesPicker struct {
+	Col        int
+	Row        int
+	Filepath   string
+	References []*neovim.LspReferenceItem
 }
 
-func FindReferences(references []*neovim.LspReferenceItem, query string) ([]*PickerResult, error) {
+func NewReferencesPicker() *LspReferencesPicker {
+	return &LspReferencesPicker{
+		Col:        1,
+		Row:        1,
+		Filepath:   "",
+		References: []*neovim.LspReferenceItem{},
+	}
+}
+
+func (refPicker *LspReferencesPicker) FindReferences(references []*neovim.LspReferenceItem, query string) ([]*PickerResult, error) {
+	refPicker.References = references
+	if len(references) == 0 {
+		return []*PickerResult{},nil
+	}
 	var referenceLines []string
 	for _, ref := range references {
 		line := fmt.Sprintf("%s:%d:%d:%s", ref.AbsolutePath, ref.StartRow, ref.StartCol, ref.Text)
 		referenceLines = append(referenceLines, line)
 	}
 	input := strings.Join(referenceLines, "\n")
+	utils.Log("FindReferences references:", references)
+	utils.Log("FindReferences input:", input)
 	fzf := exec.Command("fzf", "--filter="+query, "--delimiter=:", "--with-nth=1,2,3,4")
 	fzf.Stdin = strings.NewReader(input)
 	var out bytes.Buffer

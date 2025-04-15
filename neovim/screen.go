@@ -106,8 +106,8 @@ func handleEvent(update interface{}) (event string, ok bool) {
 }
 
 func (s *Screen) Resize(width int, height int) {
-	screen.Width = width
-	screen.Height = height
+	NvimScreen.Width = width
+	NvimScreen.Height = height
 	NvimInstance.TryResizeUI(width, height)
 }
 
@@ -1042,4 +1042,8 @@ func (s *Screen) EmitFloatingWindows() {
 	if len(floatingWindows) > 0 {
 		Runtime.EventsEmit(s.ctx, "floating_windows", floatingWindows)
 	}
+}
+
+func (s *Screen) GetActiveWindow() *Window{
+	return s.Windows[s.ActiveWindow]
 }

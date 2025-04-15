@@ -1,6 +1,6 @@
 import { OpenFile } from '$lib/wailsjs/go/main/App';
 import * as runtime from '$lib/wailsjs/runtime/runtime';
-import { nvimWindows, layout, cursor, pickers, cmdline, additionalState } from "$lib/state.svelte"
+import { nvimWindows, layout, cursor, pickers, cmdline, nestedState } from "$lib/state.svelte"
 import {
   state as resultsState
 } from '$lib/picker/results/results.service.svelte';
@@ -47,6 +47,9 @@ export function startListening() {
 
   runtime.EventsOn('show-find-files', () => {
     pickers.findFiles = true;
+  });
+  runtime.EventsOn('show-find-references', () => {
+    pickers.findReferences = true;
   });
 
   runtime.EventsOn('hide-find-files', () => {
@@ -100,11 +103,11 @@ export function startListening() {
   });
 
   runtime.EventsOn('floating_windows', (windows: App.FloatingWindow[]) => {
-    additionalState.floatingWindows = windows;
+    nestedState.floatingWindows = windows;
   });
 
   runtime.EventsOn('floating_window_closed', (winId: number) => {
-    additionalState.floatingWindows = additionalState.floatingWindows.filter((win) => win.id !== winId);
+    nestedState.floatingWindows = nestedState.floatingWindows.filter((win) => win.id !== winId);
   });
 
   runtime.EventsOn('hide-window', (winId: number) => {

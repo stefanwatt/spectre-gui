@@ -30,7 +30,7 @@ var (
 	effectiveHlIdsMu sync.Mutex
 )
 
-var screen *Screen
+var NvimScreen *Screen
 
 func CalculateGridSize(windowWidth, windowHeight int) (rows, cols int) {
 	cellWidth := 12
@@ -43,7 +43,7 @@ func CalculateGridSize(windowWidth, windowHeight int) (rows, cols int) {
 	return rows, cols
 }
 
-func StartListening(ctx context.Context) {
+func StartListening(ctx context.Context){
 	var err error
 	go loadDatabase()
 	go processHlAttrQueue()
@@ -51,13 +51,13 @@ func StartListening(ctx context.Context) {
 	width, height := Runtime.WindowGetSize(ctx)
 	rows, cols := CalculateGridSize(width, height)
 	utils.Log(fmt.Sprintf("StartListening initializing screen with width=%d height=%d rows=%d cols=%d", width, height, rows, cols))
-	screen = NewScreen(ctx, cols, rows)
+	NvimScreen = NewScreen(ctx, cols, rows)
 
 	// Set up resize handler
 	Runtime.EventsOn(ctx, "resize", func(optionalData ...interface{}) {
 		width, height := Runtime.WindowGetSize(ctx)
 		rows, cols := CalculateGridSize(width, height)
-		screen.Resize(cols, rows)
+		NvimScreen.Resize(cols, rows)
 	})
 
 	nvimCtx, nvimCancel := context.WithCancel(ctx)
@@ -84,7 +84,7 @@ func StartListening(ctx context.Context) {
 		log.Println(err)
 		nvimCancel()
 		Runtime.Quit(ctx)
-		return
+		return 
 	}
 
 	Runtime.EventsOn(ctx, "get-highlights", updateHighlightCSS)
@@ -114,15 +114,19 @@ func StartListening(ctx context.Context) {
 		}
 
 		NvimInstance.RegisterHandler("redraw", func(updates ...[]interface{}) {
-			screen.handleRedraw(updates)
+			NvimScreen.handleRedraw(updates)
 		})
 
 		NvimInstance.RegisterHandler("live-grep", func(_ *nvim.Nvim, data interface{}) {
-			Runtime.EventsEmit(screen.ctx, "show_live_grep")
+			Runtime.EventsEmit(NvimScreen.ctx, "show_live_grep")
 		})
 				
 		NvimInstance.RegisterHandler("find-files", func(_ *nvim.Nvim, data interface{}) {
-			Runtime.EventsEmit(screen.ctx, "show-find-files")
+			Runtime.EventsEmit(NvimScreen.ctx, "show-find-files")
+		})
+				
+		NvimInstance.RegisterHandler("find-references", func(_ *nvim.Nvim, data interface{}) {
+			Runtime.EventsEmit(NvimScreen.ctx, "show-find-references")
 		})
 
 		NvimInstance.RegisterHandler("TrekClosed", func(_ *nvim.Nvim, windowArgs []uint64) {
@@ -131,7 +135,7 @@ func StartListening(ctx context.Context) {
 			windowIds := utils.MapArray(windowArgs, func(arg uint64) int {
 				return utils.ReflectToInt(arg)
 			})
-			screen.closeTrek(windowIds)
+			NvimScreen.closeTrek(windowIds)
 		})
 
 		if err := NvimInstance.Serve(); err != nil {

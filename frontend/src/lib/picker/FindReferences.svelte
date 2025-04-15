@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { FindFiles} from '$lib/wailsjs/go/main/App';
+	import { FindReferences } from '$lib/wailsjs/go/main/App';
 	import Picker from './Picker.svelte';
 	import { nestedState } from '$lib/state.svelte';
 
 	$effect(() => {});
 
 	function onQueryChanged(query: string) {
-		FindFiles(query).then((updatedResults) => {
+		FindReferences(query).then((updatedResults) => {
 			nestedState.pickerResults = updatedResults;
 		});
 	}
 </script>
 
-<Picker {onQueryChanged} mode={'find-files'} pickerPropName={'findFiles'} title={'Find Files'} />
+<Picker {onQueryChanged} mode={'find-references'} pickerPropName={'findReferences'} title={'Find References'} />
