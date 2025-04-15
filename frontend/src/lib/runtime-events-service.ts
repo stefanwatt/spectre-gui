@@ -71,7 +71,7 @@ export function startListening() {
   });
 
   runtime.EventsOn('layout-updated', (updatedLayout: App.NvimLayout) => {
-    console.log('layout updates',updatedLayout)
+    console.log('layout updates', updatedLayout)
     layout.cols = updatedLayout.cols;
     layout.rows = updatedLayout.cols;
     layout.activeWindowId = updatedLayout?.activeWindowId;
@@ -79,7 +79,7 @@ export function startListening() {
   });
 
   runtime.EventsOn('content-updated', (winId: number, updatedContent: App.NvimRow[]) => {
-    console.log("content-updated for winId="+winId,updatedContent)
+    console.log("content-updated for winId=" + winId, updatedContent)
     nvimWindows[winId] = updatedContent;
   });
 
@@ -94,7 +94,9 @@ export function startListening() {
   );
 
   runtime.EventsOn('mode-changed', (new_mode: App.VimMode) => {
-    additionalState.mode = new_mode;
+    const activeWindow = layout.windows.find((win) => win.id == layout.activeWindowId)
+    if (!activeWindow) return
+    activeWindow.mode = new_mode
   });
 
   runtime.EventsOn('floating_windows', (windows: App.FloatingWindow[]) => {

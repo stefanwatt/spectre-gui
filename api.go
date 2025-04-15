@@ -41,6 +41,14 @@ func (a *App) SendKey(key string, ctrl bool, alt bool, shift bool, keymapMode st
 	}
 }
 
+func (a *App) FindReferences(query string) {
+	// if neovim.CursorState.Col = a.referencesPicker.Col
+	// 		&& neovim.CursorState.Row = a.referencesPicker.Row
+	//
+	references := neovim.GetReferencesUnderCursor()
+	picker.FindReferences(references,query)
+}
+
 func (a *App) OpenFile(path string, row int, col int) {
 	utils.Log(fmt.Sprintf("open neovim file path=%s row=%d col=%d", path, row, col))
 	err := neovim.OpenFileAt(path, row, col)
@@ -79,9 +87,9 @@ func (a *App) CreateQuickfixList(entries []*neovim.QuickfixEntry) {
 	neovim.SetQuickfixList(entries)
 }
 
-func (a *App) FindFiles(query string) []*picker.FindFilesResult {
+func (a *App) FindFiles(query string) []*picker.PickerResult {
 	if strings.TrimSpace(query) == "" {
-		return []*picker.FindFilesResult{}
+		return []*picker.PickerResult{}
 	}
 	//TODO: suboptimal to call getcwd on every request
 	cwd := neovim.GetCwd()
@@ -89,7 +97,7 @@ func (a *App) FindFiles(query string) []*picker.FindFilesResult {
 	results, err := picker.FindFiles(dir, query)
 	if err != nil {
 		utils.Log("FindFiles error getting results:\n", err.Error())
-		return []*picker.FindFilesResult{}
+		return []*picker.PickerResult{}
 	}
 	for _, result := range results {
 		result.AbsolutePath = dir + "/" + result.RelativePath

@@ -9,15 +9,8 @@ import (
 	"strings"
 )
 
-type FindFilesResult struct {
-	Filename     string `json:"filename"`
-	RelativePath string `json:"relativePath"`
-	AbsolutePath string `json:"absolutePath"`
-	Icon         string `json:"icon"`
-	IconColor    string `json:"iconColor"`
-}
 
-func FindFiles(dir, query string) ([]*FindFilesResult, error) {
+func FindFiles(dir, query string) ([]*PickerResult, error) {
 	git := exec.Command("git", "-C", dir, "ls-files")
 	fzf := exec.Command("fzf", "--filter="+query)
 
@@ -26,29 +19,29 @@ func FindFiles(dir, query string) ([]*FindFilesResult, error) {
 
 	gitOut, err := git.StdoutPipe()
 	if err != nil {
-		return []*FindFilesResult{}, err
+		return []*PickerResult{}, err
 	}
 	fzf.Stdin = gitOut
 
 	if err := git.Start(); err != nil {
-		return []*FindFilesResult{}, err
+		return []*PickerResult{}, err
 	}
 	if err := fzf.Start(); err != nil {
-		return []*FindFilesResult{}, err
+		return []*PickerResult{}, err
 	}
 	if err := git.Wait(); err != nil {
-		return []*FindFilesResult{}, err
+		return []*PickerResult{}, err
 	}
 	if err := fzf.Wait(); err != nil {
-		return []*FindFilesResult{}, err
+		return []*PickerResult{}, err
 	}
 
 	lines := strings.Split(out.String(), "\n")
 	lines = lines[:len(lines)-1]
-	results := utils.MapArray(lines, func(line string) *FindFilesResult {
+	results := utils.MapArray(lines, func(line string) *PickerResult {
 		filename := filepath.Base(line)
 		icon, iconColor := neovim.GetFileIcon(filename)
-		return &FindFilesResult{
+		return &PickerResult{
 			Filename:     filename,
 			RelativePath: line,
 			Icon:         icon,

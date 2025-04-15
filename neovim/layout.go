@@ -26,11 +26,6 @@ func NewGridLayout() *GridLayout {
 	}
 }
 
-func (gl *GridLayout) equals(*GridLayout) {
-
-}
-
-// CalculateGridLayout determines the grid structure and window positions
 func (s *Screen) CalculateGridLayout() {
 	// Step 1: Collect all unique row and column positions
 	rowPositions := make(map[int]bool)
@@ -102,11 +97,15 @@ func (s *Screen) CalculateGridLayout() {
 			RowStart:            rowStart,
 			RowEnd:              rowEnd,
 			Filetype:            "",
+			Filepath:            "",
 			LineNumbers:         window.lineNumbers,
 			RelativeLineNumbers: window.relativeLineNumbers,
+			Mode:                window.Mode,
 		}
-		if window.Filetype != nil {
-			w.Filetype = *window.Filetype
+		if window.Buffer != nil {
+			buf := *window.Buffer
+			w.Filetype = buf.Filetype
+			w.Filepath = buf.Filepath
 		}
 
 		windowAPIs = append(windowAPIs, w)

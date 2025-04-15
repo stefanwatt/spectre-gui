@@ -1,51 +1,10 @@
 package neovim
 
-import (
-	"errors"
-
-	"github.com/neovim/go-client/nvim"
-)
-
-func getBufferFiletype(winId int) (*string, error) {
-	windows, error := NvimInstance.Windows()
-	if error != nil {
-		return nil, error
-	}
-
-	var foundWindow *nvim.Window
-	for _, window := range windows {
-		currentWinId, _ := extractWindowId(window)
-		if currentWinId == winId {
-			foundWindow = &window
-		}
-	}
-	if foundWindow == nil {
-		return nil, errors.New("couldnt find window")
-	}
-	buffer, error := NvimInstance.WindowBuffer(*foundWindow)
-
-	if error != nil {
-		return nil, error
-	}
-
-	var filetype string
-	error = NvimInstance.BufferOption(buffer, "filetype", &filetype)
-
-	if error != nil {
-		return nil, error
-	}
-	if filetype == "" {
-		var treesitterContext bool
-		NvimInstance.WindowVar(*foundWindow, "treesitter_context", &treesitterContext)
-		filetype = "treesitter_context"
-	}
-	return &filetype, nil
-}
 
 func isHex(window *Window) bool {
 	ft := ""
-	if window.Filetype != nil {
-		ft = *window.Filetype
+	if window.Buffer != nil {
+		ft = (*window.Buffer).Filetype
 	}
 	return !(ft == "fzflua_backdrop")
 }

@@ -23,26 +23,6 @@ export namespace neovim {
 
 export namespace picker {
 	
-	export class FindFilesResult {
-	    filename: string;
-	    relativePath: string;
-	    absolutePath: string;
-	    icon: string;
-	    iconColor: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new FindFilesResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.filename = source["filename"];
-	        this.relativePath = source["relativePath"];
-	        this.absolutePath = source["absolutePath"];
-	        this.icon = source["icon"];
-	        this.iconColor = source["iconColor"];
-	    }
-	}
 	export class LiveGrepPickerState {
 	    searchTerm: string;
 	    dir: string;
@@ -69,6 +49,32 @@ export namespace picker {
 	        this.matchWholeWord = source["matchWholeWord"];
 	        this.totalResults = source["totalResults"];
 	        this.totalFiles = source["totalFiles"];
+	    }
+	}
+	export class PickerResult {
+	    filename: string;
+	    relativePath: string;
+	    absolutePath: string;
+	    icon: string;
+	    iconColor: string;
+	    text: string;
+	    row: number;
+	    col: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PickerResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.filename = source["filename"];
+	        this.relativePath = source["relativePath"];
+	        this.absolutePath = source["absolutePath"];
+	        this.icon = source["icon"];
+	        this.iconColor = source["iconColor"];
+	        this.text = source["text"];
+	        this.row = source["row"];
+	        this.col = source["col"];
 	    }
 	}
 

@@ -553,8 +553,9 @@ func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
 	s.ActiveWindow = s.GridToWindow[gridId]
 	window := s.Windows[s.ActiveWindow]
 	//TODO: probably a cleaner way to handle this, but theres an offset issue. idk why
-	if window != nil && window.Filetype != nil &&
-		*window.Filetype == "qf" {
+	if window != nil &&
+		window.Buffer != nil &&
+		window.Buffer.Filetype == "qf" {
 		grid.Cursor.Col += 6
 	}
 	s.UpdateCursor()
@@ -827,9 +828,9 @@ func (s *Screen) winPos(args []interface{}) {
 		utils.Log(fmt.Sprintf("winPos spawned with id=%d got %d windows now", winId, len(s.Windows)))
 	}
 	if winId != 0 {
-		filetype, error := getBufferFiletype(winId)
-		if error == nil && filetype != nil {
-			window.Filetype = filetype
+		buffer, error := getWindowBuffer(winId)
+		if error == nil && buffer != nil {
+			window.Buffer = buffer
 		}
 	}
 	window.Width = width
@@ -915,10 +916,9 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	}
 
 	if winId != 0 {
-		filetype, error := getBufferFiletype(winId)
-		if error == nil && filetype != nil {
-			utils.Log(fmt.Sprintf("winFloatPos window with id=%d has filetype=%s", winId, *filetype))
-			window.Filetype = filetype
+		buffer, error := getWindowBuffer(winId)
+		if error == nil && buffer != nil {
+			window.Buffer = buffer
 		} else {
 			utils.Log(fmt.Sprintf("winFloatPos could not get the filetype for window with id=%d error:%s", winId, error.Error()))
 		}
@@ -972,9 +972,6 @@ func (s *Screen) render() {
 
 		grid := window.Grid
 		if window.IsFloating() {
-			if window.Filetype != nil {
-				utils.Log(fmt.Sprintf("render content-updated winId=%d filetype=%s", winId, *window.Filetype))
-			}
 			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.renderFloatingWindow(window))
 		} else {
 			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid))
@@ -1033,8 +1030,8 @@ func (s *Screen) EmitFloatingWindows() {
 			"focusable":    window.Focusable,
 			"isPopup":      window.IsPopupmenu,
 		}
-		if window.Filetype != nil {
-			windowInfo["filetype"] = &window.Filetype
+		if window.Buffer != nil {
+			windowInfo["filetype"] = &window.Buffer.Filetype
 		}
 		//NOTE: need hex encoding for some nerdfont stuff (e.g. completion window)
 		windowInfo["isHex"] = isHex(window)

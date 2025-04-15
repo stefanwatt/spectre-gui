@@ -26,9 +26,11 @@ type Window struct {
 	ZIndex              int    // Z-index for floating windows
 	IsPopupmenu         bool   // Whether this is a completion menu
 	Hidden              bool
-	Filetype            *string
 	lineNumbers         bool
 	relativeLineNumbers bool
+	Buffer              *Buffer
+	Cursor              *Cursor
+	Mode                string
 }
 
 type WindowAPI struct {
@@ -40,9 +42,11 @@ type WindowAPI struct {
 	ColEnd              int     `json:"colEnd"`
 	RowStart            int     `json:"rowStart"`
 	RowEnd              int     `json:"rowEnd"`
-	Filetype            string  `json:"filetype"`
 	LineNumbers         bool    `json:"lineNumbers"`
 	RelativeLineNumbers bool    `json:"relativeLineNumbers"`
+	Filetype            string  `json:"filetype"`
+	Filepath            string  `json:"filepath"`
+	Mode                string  `json:"mode"`
 }
 
 // Equal compares two WindowAPI structs and returns true if they are equal.
@@ -77,31 +81,13 @@ func NewWindow(id int, grid *Grid) *Window {
 		Focusable:   true,
 		ZIndex:      0,
 		IsPopupmenu: false,
+		Cursor:      &Cursor{Row: 1, Col: 1},
+		Mode:        "normal",
 	}
 }
 
-// IsFloating returns true if this is a floating window
 func (w *Window) IsFloating() bool {
 	return w.Type == "floating"
-}
-
-// IsCompletionWindow tries to determine if this window is a completion menu
-// based on its characteristics
-func (w *Window) IsCompletionWindow() bool {
-	if w.IsPopupmenu {
-		return true
-	}
-
-	// Heuristics to identify completion windows:
-	// - Must be floating
-	// - Must have dimensions larger than 1x1
-	// - Usually has a high z-index
-	if w.IsFloating() && w.Width > 1 && w.Height > 1 {
-		// Additional heuristics could be added here
-		return true
-	}
-
-	return false
 }
 
 func extractWindowId(window nvim.Window) (int, error) {

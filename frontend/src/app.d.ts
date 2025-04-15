@@ -49,10 +49,12 @@ declare global {
       colEnd: number;
       rowStart: number;
       rowEnd: number;
-      filetype: string;
       lineNumbers: boolean;
       relativeLineNumbers: boolean;
       floatingWindows: FloatingWindow[];
+      filetype: string;
+      filepath: string;
+      mode: VimMode;
     }
 
     interface CmdLine {
@@ -409,6 +411,7 @@ declare global {
 
     type KeyboardEventKey = NamedKey | AlphanumericKey;
   }
+}
 
 
   export { };

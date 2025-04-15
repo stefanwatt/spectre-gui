@@ -34,7 +34,7 @@
 		window.removeEventListener('keydown', handleKeypress);
 	});
 	let floatingWindows = $derived(additionalState.floatingWindows);
-	let mode = $derived(additionalState.mode);
+	let activeWindow = $derived(layout.windows.find((win) => win.id == layout.activeWindowId));
 </script>
 
 {#if cmdline.visible}
@@ -51,12 +51,7 @@
 {/if}
 
 <div class="victor-mono flex h-screen flex-col overflow-hidden">
-	<div
-		class:mode-i={mode === 'insert'}
-		class:mode-n={mode === 'normal'}
-		class:mode-v={mode === 'visual'}
-		class="relative flex-grow overflow-hidden whitespace-pre"
-	>
+	<div class="relative flex-grow overflow-hidden whitespace-pre">
 		{#if layout}
 			<div
 				style="grid-template-columns: {layout.cols}; grid-template-rows: {layout.rows};"
@@ -65,6 +60,9 @@
 				{#each layout.windows as win (win.id)}
 					<div
 						id="win-{win.id}"
+						class:mode-i={win.mode === 'insert'}
+						class:mode-n={win.mode === 'normal'}
+						class:mode-v={win.mode === 'visual'}
 						class:active-window={layout.activeWindowId === win.id}
 						class="nvim-window relative border border-solid border-transparent bg-base-100"
 						style="grid-column-start: {win.colStart}; grid-column-end:{win.colEnd}; grid-row-start: {win.rowStart}; grid-row-end:{win.rowEnd};"
@@ -78,7 +76,7 @@
 		<FloatingWindowContainer {floatingWindows} {nvimWindows} anchorWindow={0} />
 	</div>
 	<div class="h-10">
-		<StatusLine {cursor} {mode}></StatusLine>
+		<StatusLine filepath={activeWindow?.filepath} {cursor} mode={activeWindow?.mode}></StatusLine>
 	</div>
 </div>
 {#if pickers.liveGrep}

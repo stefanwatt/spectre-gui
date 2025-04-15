@@ -7,6 +7,11 @@ import (
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
+type Cursor struct {
+	Row int
+	Col int
+}
+
 type CursorMoveEvent struct {
 	Row            uint64 `msgpack:"row" json:"row"`
 	Col            uint64 `msgpack:"col" json:"col"`
@@ -35,7 +40,7 @@ func (s *Screen) UpdateCursor() {
 			Runtime.EventsEmit(s.ctx, "cursor-changed", cursorMoveEvent)
 		}
 	} else {
-		utils.Log(fmt.Sprintf("UpdateCursor could not get nvimWindow\nerror:%s",err.Error()))
+		utils.Log(fmt.Sprintf("UpdateCursor could not get nvimWindow\nerror:%s", err.Error()))
 	}
 
 }

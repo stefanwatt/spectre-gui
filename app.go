@@ -14,6 +14,7 @@ type App struct {
 	ctx  context.Context
 	File string
 	liveGrepPicker *picker.LiveGrepPicker
+	referencesPicker *picker.LspReferencesPicker
 }
 
 func NewApp() *App {

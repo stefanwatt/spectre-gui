@@ -2,16 +2,16 @@
 @tailwind components;
 @tailwind base;
 
-.mode-i .cursor {
+.active-window.mode-i .cursor {
   box-shadow: -2px 0 0 0 #eebebe;
 }
 
-.mode-n .cursor {
+.active-window.mode-n .cursor {
   color: #272a38 !important;
   background-color: #eebebe !important;
 }
 
-.mode-v .cursor {
+.active-window.mode-v .cursor {
   color: #272a38 !important;
   background-color: #eebebe !important;
 }
