@@ -2,6 +2,7 @@ import { SendKey } from '$lib/wailsjs/go/main/App';
 import { getKeymapMode } from "$lib/state.svelte"
 
 let activeKeymaps = new Map<string, App.Keymap>()
+const pickerModes: App.KeymapMode[] = ['find-references', 'find-files', 'live-grep', 'find-buffer-symbols']
 
 export function registerKeymap(keymap: App.Keymap) {
   const keymapString = keymapToString(keymap)
@@ -21,7 +22,7 @@ export function handleKeypress(event: KeyboardEvent) {
     activeKeymaps.get(keymapString)!.action(event)
     return
   }
-  if (keymapMode === 'find-references' || keymapMode === 'find-files' || keymapMode === 'live-grep') return
+  if (pickerModes.includes(keymapMode)) return
   event.preventDefault();
   SendKey(event.key, event.ctrlKey, event.altKey, event.shiftKey, keymapMode);
 }

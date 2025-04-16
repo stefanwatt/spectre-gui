@@ -15,12 +15,14 @@ type App struct {
 	File             string
 	liveGrepPicker   *picker.LiveGrepPicker
 	referencesPicker *picker.LspReferencesPicker
+	symbolsPicker    *picker.LspSymbolsPicker
 }
 
 func NewApp() *App {
 	return &App{
 		liveGrepPicker:   picker.NewLiveGrepPicker(),
 		referencesPicker: picker.NewReferencesPicker(),
+		symbolsPicker:    picker.NewSymbolsPicker(),
 	}
 }
 

@@ -13,6 +13,7 @@
 	import { keymaps as cmdlineKeymaps } from '$lib/keymaps/cmdline';
 	import FindFiles from '$lib/picker/FindFiles.svelte';
 	import FindReferences from '$lib/picker/FindReferences.svelte';
+	import FindBufferSymbols from '$lib/picker/FindBufferSymbols.svelte';
 
 	onMount(async () => {
 		await init();
@@ -88,7 +89,11 @@
 		<FindReferences />
 	</div>
 {/if}
-
+{#if pickers.findBufferSymbols}
+	<div class="picker bg-darker victor-mono rounded-md p-2">
+		<FindBufferSymbols />
+	</div>
+{/if}
 <style>
 	.picker {
 		height: 90vh;

@@ -11,7 +11,6 @@ import (
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-
 func (a *App) SendKey(key string, ctrl bool, alt bool, shift bool, keymapMode string) {
 	utils.Log(fmt.Sprintf("SendKey key=%s ctrl=%t alt=%t shift=%t mode=%s", key, ctrl, alt, shift, keymapMode))
 	switch keymapMode {
@@ -38,11 +37,36 @@ func (a *App) SendKey(key string, ctrl bool, alt bool, shift bool, keymapMode st
 	}
 }
 
+func (a *App) FindBufferSymbols(query string) []*picker.PickerResult {
+	activeWindow := neovim.NvimScreen.GetActiveWindow()
+	hasBuffer := activeWindow != nil && activeWindow.Buffer != nil
+	var results []*picker.PickerResult
+	if hasBuffer &&
+		activeWindow.Buffer.Filepath == a.symbolsPicker.Filepath {
+		_results, err := a.symbolsPicker.FindSymbols(a.symbolsPicker.Symbols, query)
+		if err != nil {
+			panic("error getting references\n" + err.Error())
+		}
+		results = _results
+	} else {
+		symbols := neovim.GetDocumentSymbols()
+		_results, err := a.symbolsPicker.FindSymbols(symbols, query)
+		if err != nil {
+			panic("error getting references\n" + err.Error())
+		}
+		results = _results
+	}
+	if hasBuffer {
+		a.referencesPicker.Filepath = activeWindow.Buffer.Filepath
+	}
+	return results
+}
+
 func (a *App) FindReferences(query string) []*picker.PickerResult {
 	activeWindow := neovim.NvimScreen.GetActiveWindow()
 	hasCursor := activeWindow != nil &&
 		activeWindow.Cursor != nil
-	hasBuffer := activeWindow!= nil && activeWindow.Buffer != nil
+	hasBuffer := activeWindow != nil && activeWindow.Buffer != nil
 	var results []*picker.PickerResult
 	if hasCursor &&
 		activeWindow.Cursor.Col == a.referencesPicker.Col &&
@@ -51,14 +75,14 @@ func (a *App) FindReferences(query string) []*picker.PickerResult {
 		activeWindow.Buffer.Filepath == a.referencesPicker.Filepath {
 		_results, err := a.referencesPicker.FindReferences(a.referencesPicker.References, query)
 		if err != nil {
-			panic("error getting references\n"+err.Error())
+			panic("error getting references\n" + err.Error())
 		}
 		results = _results
 	} else {
 		references := neovim.GetReferencesUnderCursor()
 		_results, err := a.referencesPicker.FindReferences(references, query)
 		if err != nil {
-			panic("error getting references\n"+err.Error())
+			panic("error getting references\n" + err.Error())
 		}
 		results = _results
 	}

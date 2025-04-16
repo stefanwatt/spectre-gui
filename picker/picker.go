@@ -1,7 +1,10 @@
 package picker
 
 import (
+	"bytes"
 	undo "nvim-gui/picker/undo"
+	"os/exec"
+	"strings"
 )
 
 var (
@@ -28,4 +31,16 @@ type PickerResult struct {
 	Text         string `json:"text"`
 	Row          int    `json:"row"`
 	Col          int    `json:"col"`
+}
+
+func filterWithFzf(lines []string, query string) ([]string, error) {
+	input := strings.Join(lines, "\n")
+	fzf := exec.Command("fzf", "--filter="+query, "--delimiter=:", "--with-nth=1,2,3,4")
+	fzf.Stdin = strings.NewReader(input)
+	var out bytes.Buffer
+	fzf.Stdout = &out
+	if err := fzf.Run(); err != nil {
+		return nil, err
+	}
+	return strings.Split(strings.TrimSpace(out.String()), "\n"), nil
 }

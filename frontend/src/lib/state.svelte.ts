@@ -15,11 +15,12 @@ export let cmdline = $state<App.CmdLine>({
   visible: false
 });
 let keymapMode: App.KeymapMode = $derived(
-  (() => {
+  (():App.KeymapMode => {
     if (cmdline.visible) return 'cmdline';
     if (pickers.liveGrep) return 'live-grep';
     if (pickers.findFiles) return 'find-files';
     if (pickers.findReferences) return 'find-references';
+    if (pickers.findBufferSymbols) return 'find-buffer-symbols';
     return 'normal';
   })()
 );

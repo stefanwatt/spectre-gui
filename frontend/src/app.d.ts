@@ -6,10 +6,11 @@ import type { KeymapMode } from "./routes/keymap-service";
 declare global {
 
   namespace App {
-    interface Pickers{
-      liveGrep:boolean
-      findFiles:boolean
-      findReferences:boolean
+    interface Pickers {
+      liveGrep: boolean
+      findBufferSymbols: boolean
+      findFiles: boolean
+      findReferences: boolean
     }
     interface NvimPosition {
       row: number;
@@ -152,7 +153,7 @@ declare global {
     }
 
     type Writable<T> = _Writable<T>
-    type KeymapMode = 'cmdline' | 'live-grep' | 'normal' | 'find-files'| 'find-references'
+    type KeymapMode = 'cmdline' | 'live-grep' | 'normal' | 'find-files' | 'find-references' | 'find-buffer-symbols'
     interface Keymap {
       mods: Modifier[];
       mode: KeymapMode

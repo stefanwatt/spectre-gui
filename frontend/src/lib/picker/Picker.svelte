@@ -98,12 +98,16 @@
 					class="flex h-10 w-10 items-center justify-center rounded-full bg-text px-1 text-3xl"
 					style="color: {result.iconColor};">{result.icon}</span
 				>
-				<span class="ml-4 text-center">{result.filename}</span>
+				{#if result.filename}
+					<span class="ml-4 text-center">{result.filename}</span>
+					<span>:</span>
+				{/if}
 				{#if result.row && result.col}
-					<span>:</span>
-					<span class="ml-1 text-center text-green">{result.row}</span>
-					<span>:</span>
-					<span class="text-center text-blue">{result.col}</span>
+					<span class="ml-4 w-20 flex justify-start">
+						<span class="text-center text-green">{result.row}</span>
+						<span>:</span>
+						<span class="text-center text-blue">{result.col}</span>
+					</span>
 				{/if}
 				{#if result.text}
 					<span class="ml-12 overflow-hidden overflow-ellipsis whitespace-nowrap text-center"

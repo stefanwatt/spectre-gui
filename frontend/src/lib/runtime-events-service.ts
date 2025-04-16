@@ -54,21 +54,17 @@ export function startListening() {
   runtime.EventsOn('show-find-files', () => {
     pickers.findFiles = true;
   });
+
   runtime.EventsOn('show-find-references', () => {
     pickers.findReferences = true;
   });
-
-  runtime.EventsOn('hide-find-files', () => {
-    pickers.findFiles = false;
-  });
-
 
   runtime.EventsOn('show_live_grep', () => {
     pickers.liveGrep = true;
   });
 
-  runtime.EventsOn('hide-live-rep', () => {
-    pickers.liveGrep = false;
+  runtime.EventsOn('show-find-buffer-symbols', () => {
+    pickers.findBufferSymbols = true;
   });
 
   runtime.EventsOn('cmdline_pos', (data) => {

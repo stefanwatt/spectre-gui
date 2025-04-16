@@ -34,23 +34,23 @@ func getWindowBuffer(winId int) (*Buffer, error) {
 		return nil, error
 	}
 
-	var filetype string
-	error = NvimInstance.BufferOption(buffer, "filetype", &filetype)
-
-	if error != nil {
-		return nil, error
-	}
-	if filetype == "" {
-		var treesitterContext bool
-		NvimInstance.WindowVar(*foundWindow, "treesitter_context", &treesitterContext)
-		filetype = "treesitter_context"
-	}
-
+	// var filetype string
+	// error = NvimInstance.BufferOption(buffer, "filetype", &filetype)
+	//
+	// if error != nil {
+	// 	return nil, error
+	// }
+	// if filetype == "" {
+	// 	var treesitterContext bool
+	// 	NvimInstance.WindowVar(*foundWindow, "treesitter_context", &treesitterContext)
+	// 	filetype = "treesitter_context"
+	// }
+	//
 	buffername, err := NvimInstance.BufferName(buffer)
 	assert(err == nil, "error getting bufname")
 	result := Buffer{
-		Filetype: filetype,
-		Filepath: filepath.Base(buffername),
-	}
+		Filetype: "",
+			Filepath: filepath.Base(buffername),
+		}
 	return &result, nil
 }

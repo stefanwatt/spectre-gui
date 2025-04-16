@@ -5,6 +5,15 @@
    - add more binding structs so that i dont need to do everything in api.go
 **  ( ) general 
 
+    - ( ) adding a picker has a lot of manual steps
+    ~ Add RegisterKeymap statement in keymaps.go
+    ~ Add picker on the state.pickers (svelte)
+    ~ Add keymap mode
+    ~ Create new component
+    ~ Add new API method
+    ~ Add new picker component in +page.svelte
+    ~ add keymapMode in app.d.ts
+    ~ add a new entry in keymapMode derived expression
     - ( ) random crashes.. no clue what triggers em. dont happen very often 
     - ( ) filepath change doesnt update in statusline because it's only recomputed when the layout changes
     - ( ) bug: dt) does not work
@@ -23,7 +32,9 @@
     -- ( ) file preview
     -- (x) quickfixlist
     -- (x) find references
-    -- ( ) find symbol
+    -- (-) find symbol
+    --- (x) implement logic
+    --- (-) improve ui
     -- find help file
     - ( ) handle extmarks
     - ( ) :Lazy is somehow not emitted as a floating window

@@ -78,8 +78,8 @@ func StartListening(ctx context.Context) {
 		nvim.ChildProcessContext(nvimCtx),
 	)
 	NvimInstance.SetVar("nvim_gui", true)
-	utils.Log(fmt.Sprintf("setting up channel g var %d", NvimInstance.ChannelID()))
 	NvimInstance.SetVar("nvim_gui_channel", NvimInstance.ChannelID())
+	NvimInstance.SetVar("keymaps", keymaps)
 
 	if err != nil {
 		log.Println(err)
@@ -117,18 +117,8 @@ func StartListening(ctx context.Context) {
 		NvimInstance.RegisterHandler("redraw", func(updates ...[]interface{}) {
 			NvimScreen.handleRedraw(updates)
 		})
-
-		NvimInstance.RegisterHandler("live-grep", func(_ *nvim.Nvim, data interface{}) {
-			Runtime.EventsEmit(NvimScreen.ctx, "show_live_grep")
-		})
-
-		NvimInstance.RegisterHandler("find-files", func(_ *nvim.Nvim, data interface{}) {
-			Runtime.EventsEmit(NvimScreen.ctx, "show-find-files")
-		})
-
-		NvimInstance.RegisterHandler("find-references", func(_ *nvim.Nvim, data interface{}) {
-			Runtime.EventsEmit(NvimScreen.ctx, "show-find-references")
-		})
+				
+		SetupKeymaps()
 
 		NvimInstance.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data []string) {
 			assert(len(data) == 1, "BufEnter: malformed data")

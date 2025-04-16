@@ -5,6 +5,8 @@ import {picker} from '../models';
 
 export function CreateQuickfixList(arg1:Array<neovim.QuickfixEntry>):Promise<void>;
 
+export function FindBufferSymbols(arg1:string):Promise<Array<picker.PickerResult>>;
+
 export function FindFiles(arg1:string):Promise<Array<picker.PickerResult>>;
 
 export function FindReferences(arg1:string):Promise<Array<picker.PickerResult>>;

@@ -6,6 +6,10 @@ export function CreateQuickfixList(arg1) {
   return window['go']['main']['App']['CreateQuickfixList'](arg1);
 }
 
+export function FindBufferSymbols(arg1) {
+  return window['go']['main']['App']['FindBufferSymbols'](arg1);
+}
+
 export function FindFiles(arg1) {
   return window['go']['main']['App']['FindFiles'](arg1);
 }
