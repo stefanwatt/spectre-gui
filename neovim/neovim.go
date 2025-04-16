@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"sync"
 
@@ -43,7 +44,7 @@ func CalculateGridSize(windowWidth, windowHeight int) (rows, cols int) {
 	return rows, cols
 }
 
-func StartListening(ctx context.Context){
+func StartListening(ctx context.Context) {
 	var err error
 	go loadDatabase()
 	go processHlAttrQueue()
@@ -84,7 +85,7 @@ func StartListening(ctx context.Context){
 		log.Println(err)
 		nvimCancel()
 		Runtime.Quit(ctx)
-		return 
+		return
 	}
 
 	Runtime.EventsOn(ctx, "get-highlights", updateHighlightCSS)
@@ -120,13 +121,19 @@ func StartListening(ctx context.Context){
 		NvimInstance.RegisterHandler("live-grep", func(_ *nvim.Nvim, data interface{}) {
 			Runtime.EventsEmit(NvimScreen.ctx, "show_live_grep")
 		})
-				
+
 		NvimInstance.RegisterHandler("find-files", func(_ *nvim.Nvim, data interface{}) {
 			Runtime.EventsEmit(NvimScreen.ctx, "show-find-files")
 		})
-				
+
 		NvimInstance.RegisterHandler("find-references", func(_ *nvim.Nvim, data interface{}) {
 			Runtime.EventsEmit(NvimScreen.ctx, "show-find-references")
+		})
+
+		NvimInstance.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data []string) {
+			assert(len(data) == 1, "BufEnter: malformed data")
+			filepath := filepath.Base(data[0])
+			Runtime.EventsEmit(NvimScreen.ctx, "BufEnter", filepath)
 		})
 
 		NvimInstance.RegisterHandler("TrekClosed", func(_ *nvim.Nvim, windowArgs []uint64) {

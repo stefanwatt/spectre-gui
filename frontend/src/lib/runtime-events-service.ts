@@ -45,6 +45,12 @@ export function startListening() {
     OpenFile(selectedMatch.AbsolutePath, selectedMatch.Row, selectedMatch.Col);
   });
 
+  runtime.EventsOn('BufEnter', (filepath: string) => {
+    const activeWindow = layout.windows.find(win => win.id === layout.activeWindowId)
+    if (!activeWindow) return
+    activeWindow.filepath = filepath
+  });
+
   runtime.EventsOn('show-find-files', () => {
     pickers.findFiles = true;
   });

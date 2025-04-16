@@ -28,7 +28,7 @@
 		window.removeEventListener('keydown', handleKeypress);
 	});
 	let floatingWindows = $derived(nestedState.floatingWindows);
-	let activeWindow = $derived(layout.windows.find((win) => win.id == layout.activeWindowId));
+	let activeWindow = $derived(layout.windows.find((win) => win.id === layout.activeWindowId));
 </script>
 
 {#if cmdline.visible}

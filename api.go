@@ -11,9 +11,6 @@ import (
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-var (
-	page_size = 20
-)
 
 func (a *App) SendKey(key string, ctrl bool, alt bool, shift bool, keymapMode string) {
 	utils.Log(fmt.Sprintf("SendKey key=%s ctrl=%t alt=%t shift=%t mode=%s", key, ctrl, alt, shift, keymapMode))
