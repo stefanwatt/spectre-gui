@@ -342,20 +342,14 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 
 				// Ensure hl is valid
 				if _, exists := s.Highlights[hl]; !exists {
-					utils.Log(fmt.Sprintf("Warning: Highlight ID %d not found in gridLine, defaulting to 0", hl))
 					hl = 0 // Default to 0 if the highlight ID doesn't exist
 				}
-
-				// Get the effective ID based on the original hl ID
 				highlight := s.Highlights[hl]
 				hlStr := mapClassesString(highlight.getClasses())
 				effectiveHlIdsMu.Lock()
 				effectiveHlId, existsHlId := effectiveHlIds[hlStr]
 				effectiveHlIdsMu.Unlock()
 				if !existsHlId {
-					// Just log the issue and use the original highlight ID without modifying maps
-					utils.Log(fmt.Sprintf("Warning: Effective highlight ID not found for hl=%d, hlStr='%s'. Using computed classes.", hl, hlStr))
-					// Use the computed classes directly
 					classesMap := make(map[string]bool)
 					for _, class := range highlight.getClasses() {
 						classesMap[class] = true

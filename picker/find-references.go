@@ -32,8 +32,8 @@ func (refPicker *LspReferencesPicker) FindReferences(references []*neovim.LspRef
 	}
 
 	var referenceLines []string
-	for _, ref := range references {
-		line := fmt.Sprintf("%s:%d:%d:%s", ref.AbsolutePath, ref.StartRow, ref.StartCol, ref.Text)
+	for index, ref := range references {
+		line := fmt.Sprintf("%d:%s:%d:%d:%s", index, ref.AbsolutePath, ref.StartRow, ref.StartCol, ref.Text)
 		referenceLines = append(referenceLines, line)
 	}
 
@@ -50,32 +50,27 @@ func (refPicker *LspReferencesPicker) FindReferences(references []*neovim.LspRef
 		if line == "" {
 			continue
 		}
-		
-		parts := strings.SplitN(line, ":", 4)
-		if len(parts) < 4 {
-			continue
-		}
-		
-		absolutePath := parts[0]
-		row, _ := strconv.Atoi(parts[1])
-		col, _ := strconv.Atoi(parts[2])
-		text := parts[3]
-		
-		filename := filepath.Base(absolutePath)
-		relativePath, _ := filepath.Rel(filepath.Dir(absolutePath), absolutePath)
+
+		parts := strings.SplitN(line, ":", 5)
+		assert(len(parts) == 5, "FindReferences malformed fzf line")
+		index, _ := strconv.Atoi(parts[0])
+		ref := references[index]
+
+		filename := filepath.Base(ref.AbsolutePath)
+		relativePath, _ := filepath.Rel(filepath.Dir(ref.AbsolutePath), ref.AbsolutePath)
 		icon, iconColor := neovim.GetFileIcon(filename)
-		
+
 		results = append(results, &PickerResult{
 			Filename:     filename,
 			RelativePath: relativePath,
-			AbsolutePath: absolutePath,
+			AbsolutePath: ref.AbsolutePath,
 			Icon:         icon,
 			IconColor:    iconColor,
-			Text:         text,
-			Row:          row,
-			Col:          col,
+			Text:         ref.Text,
+			Row:          ref.StartRow,
+			Col:          ref.StartCol,
 		})
 	}
-	
+
 	return results, nil
 }

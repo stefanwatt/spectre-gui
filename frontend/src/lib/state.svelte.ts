@@ -1,6 +1,7 @@
 import LiveGrep from '$lib/picker/LiveGrep.svelte';
 import FindFiles from '$lib/picker/FindFiles.svelte';
 import FindReferences from '$lib/picker/FindReferences.svelte';
+import FindHelp from '$lib/picker/FindHelp.svelte';
 import FindBufferSymbols from '$lib/picker/FindBufferSymbols.svelte';
 import { registerKeymap } from './keymaps/keymap-service';
 
@@ -19,6 +20,7 @@ export let pickers = $state([
   { showEvent: 'show-find-files', component: FindFiles, keymapMode: 'find-files' },
   { showEvent: 'show-find-references', component: FindReferences, keymapMode: 'find-references' },
   { showEvent: 'show-find-buffer-symbols', component: FindBufferSymbols, keymapMode: 'find-buffer-symbols' },
+  { showEvent: 'show-find-help', component: FindHelp, keymapMode: 'find-help' },
 ] as const satisfies App.Picker[])
 pickers.forEach(p => {
   registerKeymap({

@@ -33,6 +33,11 @@ type PickerResult struct {
 	Col          int    `json:"col"`
 }
 
+func assert(assertion bool, message string) {
+	if !assertion {
+		panic(message)
+	}
+}
 func filterWithFzf(lines []string, query string) ([]string, error) {
 	input := strings.Join(lines, "\n")
 	fzf := exec.Command("fzf", "--filter="+query, "--delimiter=:", "--with-nth=1,2,3,4")

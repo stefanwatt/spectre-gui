@@ -1,7 +1,6 @@
 package neovim
 
 import (
-	"fmt"
 	"nvim-gui/utils"
 	"sort"
 	"strconv"
@@ -78,7 +77,6 @@ func (s *Screen) CalculateGridLayout() {
 		// window.StartCol == 0 -> colStart 1
 
 		// window.EndCol == s.Width -> colStart len(colsFractions)+1
-		utils.Log(fmt.Sprintf("CalculateGridLayout calculating position for window with id=%d starcol=%d startrow=%d width=%d height=%d", winId, window.StartCol, window.StartRow, window.Width, window.Height))
 		colStart := findStartIndex(colsFractions, window.StartCol)
 		rowStart := findStartIndex(rowsFractions, window.StartRow)
 		colEnd := findEndIndex(colsFractions, window.StartCol+window.Width, s.Width)
@@ -134,7 +132,6 @@ func (s *Screen) CalculateGridLayout() {
 
 // calculateFractions constructs CSS grid-template string
 func calculateFractions(positions []int, totalSize int) []int {
-	utils.Log(fmt.Sprintf("calculateFractions totalSize=%d positions:", totalSize), positions)
 	if len(positions) <= 1 {
 		return []int{1}
 	}

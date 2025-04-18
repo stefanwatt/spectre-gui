@@ -14,6 +14,10 @@ export function FindFiles(arg1) {
   return window['go']['main']['App']['FindFiles'](arg1);
 }
 
+export function FindHelp(arg1) {
+  return window['go']['main']['App']['FindHelp'](arg1);
+}
+
 export function FindReferences(arg1) {
   return window['go']['main']['App']['FindReferences'](arg1);
 }

@@ -9,6 +9,8 @@ export function FindBufferSymbols(arg1:string):Promise<Array<picker.PickerResult
 
 export function FindFiles(arg1:string):Promise<Array<picker.PickerResult>>;
 
+export function FindHelp(arg1:string):Promise<Array<picker.PickerResult>>;
+
 export function FindReferences(arg1:string):Promise<Array<picker.PickerResult>>;
 
 export function GetLiveGrepOpts():Promise<picker.LiveGrepPickerState>;

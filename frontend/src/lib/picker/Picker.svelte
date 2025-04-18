@@ -10,15 +10,37 @@
 		mode: App.KeymapMode;
 		title: string;
 	}
+	let itemHeight = $state(48);
 	let { onQueryChanged, mode, title }: PickerProps = $props();
 	let pickerState = $state({ query: '' });
-
+	let visibleStartIndex = $state(0);
+	let visibleEndIndex = $state(20);
+	let itemsToRender = 50;
+	$effect(() => {
+		const halfBuffer = Math.floor(itemsToRender / 2);
+		visibleStartIndex = Math.max(0, selectedMatchIndex - halfBuffer);
+		visibleEndIndex = Math.min(
+			nestedState.pickerResults.length - 1,
+			visibleStartIndex + itemsToRender - 1
+		);
+	});
 	$effect(() => {
 		onQueryChanged(pickerState.query);
 	});
 
 	let selectedMatchIndex = $state(0);
+	function updateItemHeight() {
+		const sampleItem = document.querySelector('.flex.snap-end.snap-always');
+		if (sampleItem) {
+			itemHeight = sampleItem.getBoundingClientRect().height;
+		}
+	}
 
+	$effect(() => {
+		if (nestedState.pickerResults.length > 0) {
+			updateItemHeight();
+		}
+	});
 	registerKeymap({
 		key: 'ArrowDown',
 		mode,
@@ -58,6 +80,15 @@
 	let selectedMatch = $derived(nestedState.pickerResults[selectedMatchIndex]);
 	$effect(() => {
 		if (!selectedMatch) return;
+
+		if (selectedMatchIndex < visibleStartIndex || selectedMatchIndex > visibleEndIndex) {
+			const halfBuffer = Math.floor(itemsToRender / 2);
+			visibleStartIndex = Math.max(0, selectedMatchIndex - halfBuffer);
+			visibleEndIndex = Math.min(
+				nestedState.pickerResults.length - 1,
+				visibleStartIndex + itemsToRender - 1
+			);
+		}
 		const selectedMatchElem = document.querySelector('.picker-selected-match');
 		if (!selectedMatchElem) return;
 		if (isInBounds(selectedMatchElem as HTMLElement, scrollContainer)) return;
@@ -77,10 +108,16 @@
 		/>
 	</div>
 	<div bind:this={scrollContainer} class="snap-manatory grow snap-y overflow-y-scroll">
-		{#each nestedState.pickerResults as result, i}
+		{#if visibleStartIndex > 0}
+			<div style="height: {visibleStartIndex * itemHeight}px"></div>
+		{/if}
+
+		<!-- Only render visible items -->
+		{#each nestedState.pickerResults.slice(visibleStartIndex, visibleEndIndex + 1) as result, i}
+			{@const actualIndex = i + visibleStartIndex}
 			<div
-				class:picker-selected-match={i === selectedMatchIndex}
-				class:bg-base={i === selectedMatchIndex}
+				class:picker-selected-match={actualIndex === selectedMatchIndex}
+				class:bg-base={actualIndex === selectedMatchIndex}
 				class="flex snap-end snap-always items-center rounded-md px-1 py-2 text-center"
 			>
 				<span
@@ -104,16 +141,24 @@
 					>
 				{:else}
 					<span
-						class:text-surface1={i !== selectedMatchIndex}
-						class:text-darker={i === selectedMatchIndex}
+						class:text-surface1={actualIndex !== selectedMatchIndex}
+						class:text-darker={actualIndex === selectedMatchIndex}
 						class="ml-2 text-center">{result.relativePath}</span
 					>
 				{/if}
 			</div>
-		{:else}
-			<div class="h-full flex flex-col justify-center">
+		{/each}
+
+		{#if visibleEndIndex < nestedState.pickerResults.length - 1}
+			<div
+				style="height: {(nestedState.pickerResults.length - 1 - visibleEndIndex) * itemHeight}px"
+			></div>
+		{/if}
+
+		{#if nestedState.pickerResults.length === 0}
+			<div class="flex h-full flex-col justify-center">
 				<NoResults></NoResults>
 			</div>
-		{/each}
+		{/if}
 	</div>
 </div>

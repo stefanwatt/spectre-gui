@@ -37,6 +37,13 @@ func (a *App) SendKey(key string, ctrl bool, alt bool, shift bool, keymapMode st
 	}
 }
 
+func (a *App) FindHelp(query string) []*picker.PickerResult {
+	results, err := picker.FindHelp(query)
+	if err != nil {
+		panic("error getting help files")
+	}
+	return results
+}
 func (a *App) FindBufferSymbols(query string) []*picker.PickerResult {
 	activeWindow := neovim.NvimScreen.GetActiveWindow()
 	hasBuffer := activeWindow != nil && activeWindow.Buffer != nil

@@ -16,6 +16,7 @@ type Keymaps struct {
 	GuiFindReferences          string `msgpack:"gui_find_references"`
 	GuiLiveGrep                string `msgpack:"gui_live_grep"`
 	GuiFindBufferSymbols       string `msgpack:"gui_find_buffer_symbols"`
+	GuiFindHelp                string `msgpack:"gui_find_help"`
 	FzfLuaFindFiles            string `msgpack:"fzf_lua_find_files"`
 	FzfLuaFindReferences       string `msgpack:"fzf_lua_find_references"`
 	FzfLuaLiveGrep             string `msgpack:"fzf_lua_live_grep"`
@@ -32,12 +33,13 @@ var keymaps = Keymaps{
 	GuiFindReferences:          "<leader>fr",
 	GuiFindBufferSymbols:       "<leader>fs",
 	GuiLiveGrep:                "<leader>fw",
+	GuiFindHelp:                "<leader>fh",
 	FzfLuaFindFiles:            "<leader>fF",
 	FzfLuaFindReferences:       "<leader>fR",
 	FzfLuaLiveGrep:             "<leader>fW",
 	FzfLuaFindBufferSymbols:    "<leader>fS",
 	FzfLuaFindWorkspaceSymbols: "<leader><leader>fS",
-	FzfLuaFindHelp:             "<leader>fh",
+	FzfLuaFindHelp:             "<leader>fH",
 	FzfLuaFindBuffer:           "<leader>fb",
 	FzfLuaFindProject:          "<leader>fp",
 	FzfLuaFindTodo:             "<leader>ft",
@@ -66,6 +68,10 @@ func SetupKeymaps() {
 
 	RegisterKeymap("find-buffer-symbols", keymaps.GuiFindBufferSymbols, func(_ *nvim.Nvim, data interface{}) {
 		Runtime.EventsEmit(NvimScreen.ctx, "show-find-buffer-symbols")
+	})
+
+	RegisterKeymap("find-help", keymaps.GuiFindHelp, func(_ *nvim.Nvim, data interface{}) {
+		Runtime.EventsEmit(NvimScreen.ctx, "show-find-help")
 	})
 }
 
@@ -106,6 +112,30 @@ var ignored_keys = []string{
 	"Control",
 }
 
+var shiftedChars = map[string]bool{
+	"!":  true, // Shift+1
+	"@":  true, // Shift+2
+	"#":  true, // Shift+3
+	"$":  true, // Shift+4
+	"%":  true, // Shift+5
+	"^":  true, // Shift+6
+	"&":  true, // Shift+7
+	"*":  true, // Shift+8
+	"(":  true, // Shift+9
+	")":  true, // Shift+0
+	"_":  true, // Shift+-
+	"+":  true, // Shift+=
+	"{":  true, // Shift+[
+	"}":  true, // Shift+]
+	"|":  true, // Shift+\
+	":":  true, // Shift+;
+	"\"": true, // Shift+'
+	"<":  true, // Shift+, //TODO: this fucks my indent keymap
+	">":  true, // Shift+.
+	"?":  true, // Shift+/
+	"~":  true, // Shift+`
+}
+
 func SendKey(key string, ctrl bool, alt bool, shift bool) error {
 	_, err := utils.Find(ignored_keys, func(ignored_key string) bool {
 		return key == ignored_key
@@ -122,8 +152,13 @@ func SendKey(key string, ctrl bool, alt bool, shift bool) error {
 		}
 	}
 
+	applyShift := shift
+	if shift && len(key) == 1 && shiftedChars[key] {
+		applyShift = false
+	}
+
 	sequence := ""
-	if ctrl || alt || shift {
+	if ctrl || alt || applyShift {
 		sequence += "<"
 		if ctrl {
 			sequence += "C-"
