@@ -12,4 +12,4 @@
 	}
 </script>
 
-<Picker {onQueryChanged} mode={'find-files'} pickerPropName={'findFiles'} title={'Find Files'} />
+<Picker {onQueryChanged} mode={'find-files'}  title={'Find Files'} />

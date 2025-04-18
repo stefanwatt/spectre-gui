@@ -4,21 +4,16 @@
 	import CmdLine from './cmdline/CmdLine.svelte';
 	import FloatingWindowContainer from './floating-windows/FloatingWindowContainer.svelte';
 	import NvimWindow from './windows/NvimWindow.svelte';
-	import LiveGrep from '$lib/picker/LiveGrep.svelte';
-	import { cmdline, pickers, nvimWindows, layout, cursor, nestedState } from '$lib/state.svelte';
+	import { cmdline, nvimWindows, layout, cursor, nestedState } from '$lib/state.svelte';
 	import { init, startListening } from '$lib/runtime-events-service';
 	import { handleKeypress, registerKeymap } from '$lib/keymaps/keymap-service';
 	import { keymaps as liveGrepKeymaps } from '$lib/keymaps/live-grep';
-	import { keymaps as findFilesKeymaps } from '$lib/keymaps/find-files';
 	import { keymaps as cmdlineKeymaps } from '$lib/keymaps/cmdline';
-	import FindFiles from '$lib/picker/FindFiles.svelte';
-	import FindReferences from '$lib/picker/FindReferences.svelte';
-	import FindBufferSymbols from '$lib/picker/FindBufferSymbols.svelte';
 
 	onMount(async () => {
 		await init();
 		startListening();
-		const allKeymaps: App.Keymap[] = [...liveGrepKeymaps, ...findFilesKeymaps, ...cmdlineKeymaps];
+		const allKeymaps: App.Keymap[] = [...liveGrepKeymaps, ...cmdlineKeymaps];
 		allKeymaps.forEach((keymap) => {
 			registerKeymap(keymap);
 		});
@@ -30,6 +25,7 @@
 	});
 	let floatingWindows = $derived(nestedState.floatingWindows);
 	let activeWindow = $derived(layout.windows.find((win) => win.id === layout.activeWindowId));
+	let PickerComponent = $derived(nestedState.activePicker?.component);
 </script>
 
 {#if cmdline.visible}
@@ -74,26 +70,13 @@
 		<StatusLine filepath={activeWindow?.filepath} {cursor} mode={activeWindow?.mode}></StatusLine>
 	</div>
 </div>
-{#if pickers.liveGrep}
-	<div class="picker bg-darker rounded-md p-2">
-		<LiveGrep />
-	</div>
-{/if}
-{#if pickers.findFiles}
+
+{#if PickerComponent}
 	<div class="picker bg-darker victor-mono rounded-md p-2">
-		<FindFiles />
+		<PickerComponent />
 	</div>
 {/if}
-{#if pickers.findReferences}
-	<div class="picker bg-darker victor-mono rounded-md p-2">
-		<FindReferences />
-	</div>
-{/if}
-{#if pickers.findBufferSymbols}
-	<div class="picker bg-darker victor-mono rounded-md p-2">
-		<FindBufferSymbols />
-	</div>
-{/if}
+
 <style>
 	.picker {
 		height: 90vh;

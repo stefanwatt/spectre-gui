@@ -1,7 +1,7 @@
 <script>
 	import Toast from '$lib/notification/Toast.svelte';
 	import { fade } from 'svelte/transition';
-	import { state } from '$lib/picker/results/results.service.svelte';
+	import { state } from '$lib/picker/live-grep-results/results.service.svelte';
 </script>
 
 <!-- <div -->

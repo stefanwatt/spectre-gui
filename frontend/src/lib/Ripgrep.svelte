@@ -1,7 +1,7 @@
 <script>
-	import Results from '$lib/results/Results.svelte';
+	import Results from '$lib/live-grep-results/Results.svelte';
 	import { setup_keymaps } from '$lib/keymaps.service.js';
-	import { search } from '$lib/results/results.service';
+	import { search } from '$lib/live-grep-results/results.service';
 	import { onMount } from 'svelte';
 	import {
 		search_term,

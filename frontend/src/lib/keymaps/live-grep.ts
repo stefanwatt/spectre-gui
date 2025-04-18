@@ -1,9 +1,9 @@
-import { pickers } from '$lib/state.svelte';
+import { nestedState } from '$lib/state.svelte';
 import {
   cursorToNextMatch,
   cursorToPrevMatch,
-  state as resultsState
-} from '$lib/picker/results/results.service.svelte';
+  state
+} from '$lib/picker/live-grep-results/results.service.svelte';
 import { SendKey, OpenFile, CreateQuickfixList } from '$lib/wailsjs/go/main/App';
 
 function sendKey(e: KeyboardEvent) {
@@ -18,19 +18,12 @@ export const keymaps: App.Keymap[] = [
     mods: [],
     action: async () => {
       const runtime = await import('$lib/wailsjs/runtime/runtime');
-      const selectedMatch = resultsState.selectedMatch
+      const selectedMatch = state.selectedMatch
       if (!selectedMatch) return
       if (runtime) {
         OpenFile(selectedMatch.AbsolutePath, selectedMatch.Row, selectedMatch.Col);
+        nestedState.activePicker = undefined
       }
-    }
-  },
-  {
-    key: 'Escape',
-    mode: 'live-grep',
-    mods: [],
-    action: () => {
-      pickers.liveGrep = false;
     }
   },
   {
@@ -51,7 +44,7 @@ export const keymaps: App.Keymap[] = [
     mode: 'live-grep',
     mods: ['c'],
     action: async () => {
-      const entries = resultsState.results
+      const entries = state.results
         .flatMap(result => result.Matches)
         .map(match => {
           return {
@@ -62,7 +55,7 @@ export const keymaps: App.Keymap[] = [
           }
         })
       await CreateQuickfixList(entries)
-      pickers.liveGrep=false
+      nestedState.activePicker = undefined
     }
   },
   {

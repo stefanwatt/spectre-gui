@@ -2,8 +2,8 @@ import { OpenFile } from '$lib/wailsjs/go/main/App';
 import * as runtime from '$lib/wailsjs/runtime/runtime';
 import { nvimWindows, layout, cursor, pickers, cmdline, nestedState } from "$lib/state.svelte"
 import {
-  state as resultsState
-} from '$lib/picker/results/results.service.svelte';
+  state as liveGrepState
+} from '$lib/picker/live-grep-results/results.service.svelte';
 import { handleKeypress } from '$lib/keymaps/keymap-service';
 
 export async function init() {
@@ -26,21 +26,21 @@ export function startListening() {
   runtime.EventsOn(
     'live-grep-prev-page',
     (updatedResults: App.SearchResult, updatedPageIndex: number) => {
-      resultsState.results = updatedResults.GroupedMatches;
-      resultsState.pageIndex = updatedPageIndex;
+      liveGrepState.results = updatedResults.GroupedMatches;
+      liveGrepState.pageIndex = updatedPageIndex;
     }
   );
 
   runtime.EventsOn(
     'live-grep-next-page',
     (updatedResults: App.SearchResult, updatedPageIndex: number) => {
-      resultsState.results = updatedResults.GroupedMatches;
-      resultsState.pageIndex = updatedPageIndex;
+      liveGrepState.results = updatedResults.GroupedMatches;
+      liveGrepState.pageIndex = updatedPageIndex;
     }
   );
 
   runtime.EventsOn('live-grep-open-selected-match', () => {
-    const selectedMatch = resultsState.selectedMatch;
+    const selectedMatch = liveGrepState.selectedMatch;
     if (!selectedMatch) return;
     OpenFile(selectedMatch.AbsolutePath, selectedMatch.Row, selectedMatch.Col);
   });
@@ -51,21 +51,11 @@ export function startListening() {
     activeWindow.filepath = filepath
   });
 
-  runtime.EventsOn('show-find-files', () => {
-    pickers.findFiles = true;
-  });
-
-  runtime.EventsOn('show-find-references', () => {
-    pickers.findReferences = true;
-  });
-
-  runtime.EventsOn('show_live_grep', () => {
-    pickers.liveGrep = true;
-  });
-
-  runtime.EventsOn('show-find-buffer-symbols', () => {
-    pickers.findBufferSymbols = true;
-  });
+  pickers.forEach(picker => {
+    runtime.EventsOn(picker.showEvent, () => {
+      nestedState.activePicker = picker
+    });
+  })
 
   runtime.EventsOn('cmdline_pos', (data) => {
     cmdline.pos = data.pos;

@@ -15,6 +15,5 @@
 <Picker
 	{onQueryChanged}
 	mode={'find-buffer-symbols'}
-	pickerPropName={'findBufferSymbols'}
 	title={'Find Buffer Symbols'}
 />

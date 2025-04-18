@@ -1,17 +1,12 @@
 import type { SvelteComponent } from "svelte";
 import type { Writable as _Writable } from "svelte/store";
 import type { KeymapMode } from "./routes/keymap-service";
+import { type PickerKeymapMode } from "$lib/state.svelte";
 // See https://kit.svelte.dev/docs/types#app
 // for information about these interfaces
 declare global {
 
   namespace App {
-    interface Pickers {
-      liveGrep: boolean
-      findBufferSymbols: boolean
-      findFiles: boolean
-      findReferences: boolean
-    }
     interface NvimPosition {
       row: number;
       col: number;
@@ -153,7 +148,13 @@ declare global {
     }
 
     type Writable<T> = _Writable<T>
-    type KeymapMode = 'cmdline' | 'live-grep' | 'normal' | 'find-files' | 'find-references' | 'find-buffer-symbols'
+
+    interface Picker {
+      showEvent: string
+      component: LegacyComponentType
+      keymapMode: string
+    }
+    type KeymapMode = 'cmdline' | 'normal' | PickerKeymapMode
     interface Keymap {
       mods: Modifier[];
       mode: KeymapMode
@@ -429,6 +430,5 @@ declare global {
     type KeyboardEventKey = NamedKey | AlphanumericKey;
   }
 }
-
 
 export { };

@@ -1,18 +1,16 @@
 <script lang="ts">
 	import { registerKeymap } from '$lib/keymaps/keymap-service';
-	import { pickers } from '$lib/state.svelte';
 	import { isInBounds } from '$lib/utils.service';
 	import { OpenFile } from '$lib/wailsjs/go/main/App';
-	import NoResults from './results/NoResults.svelte';
+	import NoResults from './live-grep-results/NoResults.svelte';
 	import { nestedState } from '$lib/state.svelte';
 
 	interface PickerProps {
 		onQueryChanged: (query: string) => void;
 		mode: App.KeymapMode;
-		pickerPropName: keyof App.Pickers;
 		title: string;
 	}
-	let { onQueryChanged, mode, pickerPropName, title }: PickerProps = $props();
+	let { onQueryChanged, mode, title }: PickerProps = $props();
 	let pickerState = $state({ query: '' });
 
 	$effect(() => {
@@ -53,16 +51,7 @@
 		mods: [],
 		action: () => {
 			OpenFile(selectedMatch.absolutePath, selectedMatch.row || 1, selectedMatch.col || 1);
-			pickers[pickerPropName] = false;
-		}
-	});
-
-	registerKeymap({
-		key: 'Escape',
-		mode,
-		mods: [],
-		action: () => {
-			pickers[pickerPropName] = false;
+			nestedState.activePicker = undefined;
 		}
 	});
 
@@ -103,7 +92,7 @@
 					<span>:</span>
 				{/if}
 				{#if result.row && result.col}
-					<span class="ml-4 w-20 flex justify-start">
+					<span class="ml-4 flex w-20 justify-start">
 						<span class="text-center text-green">{result.row}</span>
 						<span>:</span>
 						<span class="text-center text-blue">{result.col}</span>

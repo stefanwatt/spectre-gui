@@ -12,4 +12,4 @@
 	}
 </script>
 
-<Picker {onQueryChanged} mode={'find-references'} pickerPropName={'findReferences'} title={'Find References'} />
+<Picker {onQueryChanged} mode={'find-references'} title={'Find References'} />
