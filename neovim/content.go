@@ -27,14 +27,6 @@ func fromCell(cell *Cell) *Token {
 	}
 }
 
-func fromFloatingCell(cell *Cell) *Token {
-	return &Token{
-		Text:      cell.Char,
-		Classes:   "",
-		highlight: cell.Highlight,
-	}
-}
-
 func (t *Token) toCell() *Cell {
 	classes := make(map[string]bool)
 	for _, class := range strings.Split(t.Classes, " ") {
@@ -51,12 +43,6 @@ func (t *Token) toCell() *Cell {
 func MapTokens(cells []*Cell) []*Token {
 	return utils.MapArray(cells, func(cell *Cell) *Token {
 		return fromCell(cell)
-	})
-}
-
-func MapFloatingTokens(cells []*Cell) []*Token {
-	return utils.MapArray(cells, func(cell *Cell) *Token {
-		return fromFloatingCell(cell)
 	})
 }
 
@@ -78,26 +64,6 @@ func (s *Screen) optimizeGrid(grid *Grid) []ContentRow {
 		} else {
 			contentRows[row].Tokens = MapTokens(grid.OptimizedRows[row])
 			contentRows[row].Index = lineNumber
-		}
-	}
-	return contentRows
-}
-
-func (s *Screen) optimizeFloatingGrid(grid *Grid) []ContentRow {
-	contentRows := make([]ContentRow, grid.Height)
-	for row := 0; row < grid.Height; row++ {
-		rowCells := grid.Cells[row]
-		if grid.DirtyRows[row] {
-			// Pass the current row number to optimizeRow
-			cells := s.optimizeRow(rowCells, row, grid.Cursor)
-			tokens := MapFloatingTokens(cells)
-			contentRows[row].Tokens = tokens
-			contentRows[row].Index = row
-			grid.OptimizedRows[row] = cells
-			grid.DirtyRows[row] = false
-		} else {
-			contentRows[row].Tokens = MapFloatingTokens(grid.OptimizedRows[row])
-			contentRows[row].Index = row
 		}
 	}
 	return contentRows
@@ -133,9 +99,6 @@ func (s *Screen) trimGutter(row []*Cell) ([]*Cell, int) {
 
 	return row[gutterWidth:], lineNumber
 }
-
-// Now optimizeRow works with just a single row and cursor position
-// Added currentRow parameter to correctly check cursor position
 func (s *Screen) optimizeRow(rowCells []*Cell, currentRow int, cursor struct {
 	Row int
 	Col int

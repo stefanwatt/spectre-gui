@@ -7,7 +7,7 @@
 		<div id="row-{row.index}" class="flex overflow-hidden whitespace-pre leading-none">
 			{#each row.tokens as token}
 				{#if token?.text}
-					<span class="cell inline-block h-full hl-{token?.highlight} {token?.classes}">
+					<span class="cell inline-block h-full {token?.classes}">
 						{decode ? decode(token.text) : token.text}
 					</span>
 				{:else}

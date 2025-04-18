@@ -2,6 +2,7 @@ package neovim
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -32,7 +33,6 @@ func (g *Grid) toString() string {
 	return result
 }
 
-
 func toHexCells(cells [][]*Cell) [][]Cell {
 	newCells := make([][]Cell, len(cells))
 	for i, row := range cells {
@@ -60,7 +60,12 @@ type Cell struct {
 
 func (c *Cell) ClassesToString() string {
 	var builder strings.Builder
+	var classes []string
 	for class, _ := range c.Classes {
+		classes = append(classes, class)
+	}
+	sort.Strings(classes)
+	for _, class := range classes {
 		builder.WriteString(class)
 		builder.WriteString(" ")
 	}

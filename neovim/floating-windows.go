@@ -1,15 +1,18 @@
 package neovim
 
+import "nvim-gui/utils"
+
 
 func isHex(window *Window) bool {
 	ft := ""
 	if window.Buffer != nil {
 		ft = (*window.Buffer).Filetype
 	}
-	return !(ft == "fzflua_backdrop")
+	return ft == "blink-cmp-menu"
 }
 
 func (s *Screen) renderFloatingWindow(window *Window) []ContentRow {
+	utils.Log("renderFloatingWindow")
 	if isHex(window) {
 		return window.Grid.toHex()
 	} else {
@@ -18,7 +21,8 @@ func (s *Screen) renderFloatingWindow(window *Window) []ContentRow {
 }
 
 func (s *Screen) renderFzfLua(grid *Grid) []ContentRow {
-	content := s.optimizeFloatingGrid(grid)
+	utils.Log("renderFzfLua")
+	content := s.optimizeGrid(grid)
 	return trimPerimeter(content)
 }
 
