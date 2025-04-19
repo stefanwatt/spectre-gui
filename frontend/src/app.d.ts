@@ -14,10 +14,8 @@ declare global {
 
     interface NvimToken {
       text: string;
-      fg: string;
-      bg: string;
       classes: string;
-      highlight: string;
+      highlight: number;
     }
 
     interface NvimRow {

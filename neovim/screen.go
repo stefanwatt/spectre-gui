@@ -557,7 +557,7 @@ func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
 	if row >= 0 && row < grid.Height {
 		grid.DirtyRows[row] = true
 	}
-	if previousRow != row {
+	if previousRow != row && len(grid.DirtyRows) >= previousRow {
 		grid.DirtyRows[previousRow] = true
 	}
 }
@@ -748,7 +748,11 @@ func (s *Screen) winClose(args []interface{}) {
 		if grid == gridId {
 			win, exists := s.Windows[winId]
 			if exists && win.IsFloating() {
-				Runtime.EventsEmit(s.ctx, "floating_window_closed", winId)
+				if win.ZIndex == 69420 {
+					Runtime.EventsEmit(s.ctx, "preview-window-closed", winId)
+				} else {
+					Runtime.EventsEmit(s.ctx, "floating_window_closed", winId)
+				}
 			}
 			delete(s.GridToWindow, grid)
 			delete(s.Windows, winId)
@@ -999,6 +1003,11 @@ func (s *Screen) EmitFloatingWindows() {
 		if !window.IsFloating() {
 			continue
 		}
+		if window.ZIndex == 69420 {
+			previeWindow := s.mapWindowInfo(window, winId)
+			Runtime.EventsEmit(s.ctx, "preview-window", previeWindow)
+			continue
+		}
 		// Get the associated grid
 		_, exists := s.Grids[window.Grid.ID]
 		if !exists {
@@ -1007,28 +1016,7 @@ func (s *Screen) EmitFloatingWindows() {
 		} else {
 			utils.Log(fmt.Sprintf("emitfloat found grid for %d", window.Grid.ID))
 		}
-
-		anchorWindow, _ := s.GridToWindow[window.AnchorGrid]
-
-		// Create a window info object
-		windowInfo := map[string]interface{}{
-			"id":           winId,
-			"gridId":       window.Grid.ID,
-			"anchorWindow": anchorWindow,
-			"anchor":       window.Anchor,
-			"col":          window.StartCol,
-			"row":          window.StartRow,
-			"width":        window.Width,
-			"height":       window.Height,
-			"zIndex":       window.ZIndex,
-			"focusable":    window.Focusable,
-			"isPopup":      window.IsPopupmenu,
-		}
-		if window.Buffer != nil {
-			windowInfo["filetype"] = &window.Buffer.Filetype
-		}
-		//NOTE: need hex encoding for some nerdfont stuff (e.g. completion window)
-		windowInfo["isHex"] = isHex(window)
+		windowInfo := s.mapWindowInfo(window, winId)
 		s.Windows[winId].Dirty = true
 		floatingWindows = append(floatingWindows, windowInfo)
 	}
@@ -1038,6 +1026,29 @@ func (s *Screen) EmitFloatingWindows() {
 	}
 }
 
-func (s *Screen) GetActiveWindow() *Window{
+func (s *Screen) mapWindowInfo(window *Window, winId int) map[string]interface{} {
+	anchorWindow, _ := s.GridToWindow[window.AnchorGrid]
+	windowInfo := map[string]interface{}{
+		"id":           winId,
+		"gridId":       window.Grid.ID,
+		"anchorWindow": anchorWindow,
+		"anchor":       window.Anchor,
+		"col":          window.StartCol,
+		"row":          window.StartRow,
+		"width":        window.Width,
+		"height":       window.Height,
+		"zIndex":       window.ZIndex,
+		"focusable":    window.Focusable,
+		"isPopup":      window.IsPopupmenu,
+	}
+	if window.Buffer != nil {
+		windowInfo["filetype"] = &window.Buffer.Filetype
+	}
+	//NOTE: need hex encoding for some nerdfont stuff (e.g. completion window)
+	windowInfo["isHex"] = isHex(window)
+	return windowInfo
+}
+
+func (s *Screen) GetActiveWindow() *Window {
 	return s.Windows[s.ActiveWindow]
 }

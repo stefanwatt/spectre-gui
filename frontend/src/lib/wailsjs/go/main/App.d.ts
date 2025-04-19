@@ -3,6 +3,8 @@
 import {neovim} from '../models';
 import {picker} from '../models';
 
+export function ClosePreview(arg1:number):Promise<void>;
+
 export function CreateQuickfixList(arg1:Array<neovim.QuickfixEntry>):Promise<void>;
 
 export function FindBufferSymbols(arg1:string):Promise<Array<picker.PickerResult>>;
@@ -18,6 +20,8 @@ export function GetLiveGrepOpts():Promise<picker.LiveGrepPickerState>;
 export function GetNextPage():Promise<picker.SearchResult>;
 
 export function GetPrevPage():Promise<picker.SearchResult>;
+
+export function GetPreview(arg1:string,arg2:number,arg3:number):Promise<void>;
 
 export function GetReplacementText(arg1:string,arg2:string,arg3:string,arg4:boolean):Promise<string>;
 

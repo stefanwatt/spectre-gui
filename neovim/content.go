@@ -9,21 +9,29 @@ import (
 )
 
 type Token struct {
-	Text      string `json:"text"`
-	Classes   string `json:"classes"`
-	highlight int
+	Text      string `json:"text" msgpack:"text"`
+	Classes   string `json:"classes" msgpack:"classes"`
+	Highlight int    `json:"highlight" msgpack:"hl_group"`
 }
 
 type ContentRow struct {
-	Index  int      `json:"index"`
-	Tokens []*Token `json:"tokens"`
+	Index  int      `json:"index" msgpack:"row"`
+	Tokens []*Token `json:"tokens" msgpack:"tokens"`
+}
+
+func (cr *ContentRow) ToString() string {
+	var sb strings.Builder
+	for _, token := range cr.Tokens {
+		sb.WriteString(token.Text)
+	}
+	return sb.String()
 }
 
 func fromCell(cell *Cell) *Token {
 	return &Token{
 		Text:      cell.Char,
 		Classes:   cell.ClassesToString(),
-		highlight: cell.Highlight,
+		Highlight: cell.Highlight,
 	}
 }
 
@@ -36,7 +44,7 @@ func (t *Token) toCell() *Cell {
 		Char:      t.Text,
 		Classes:   classes,
 		Dirty:     false,
-		Highlight: t.highlight, // check if we really need this
+		Highlight: t.Highlight, // check if we really need this
 	}
 }
 
@@ -185,7 +193,7 @@ func (g *Grid) toHex() []ContentRow {
 				hexChar += fmt.Sprintf("%x", r)
 			}
 			newToken.Text = hexChar
-			newToken.highlight = cell.Highlight
+			newToken.Highlight = cell.Highlight
 			newToken.Classes = cell.ClassesToString()
 			newContentRows[i].Tokens[j] = newToken
 		}

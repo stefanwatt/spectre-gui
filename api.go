@@ -141,6 +141,16 @@ func (a *App) CreateQuickfixList(entries []*neovim.QuickfixEntry) {
 	neovim.SetQuickfixList(entries)
 }
 
+func (a *App) ClosePreview(winId int) {
+	neovim.ClosePreview(winId)
+}
+
+func (a *App) GetPreview(filepath string, startRow int, endRow int) {
+	utils.Log(fmt.Sprintf("GetPreview filepath=%s startRow=%d endRow=%d", filepath, startRow, endRow))
+	neovim.ShowPreview(filepath, startRow, endRow)
+	neovim.NvimScreen.EmitFloatingWindows()
+}
+
 func (a *App) FindFiles(query string) []*picker.PickerResult {
 	if strings.TrimSpace(query) == "" {
 		return []*picker.PickerResult{}

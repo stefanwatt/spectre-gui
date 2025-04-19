@@ -23,14 +23,14 @@ var (
 )
 
 type PickerResult struct {
-	Filename     string `json:"filename"`
-	RelativePath string `json:"relativePath"`
-	AbsolutePath string `json:"absolutePath"`
-	Icon         string `json:"icon"`
-	IconColor    string `json:"iconColor"`
-	Text         string `json:"text"`
-	Row          int    `json:"row"`
-	Col          int    `json:"col"`
+	Filename     string                `json:"filename"`
+	RelativePath string                `json:"relativePath"`
+	AbsolutePath string                `json:"absolutePath"`
+	Icon         string                `json:"icon"`
+	IconColor    string                `json:"iconColor"`
+	Text         string                `json:"text"`
+	Row          int                   `json:"row"`
+	Col          int                   `json:"col"`
 }
 
 func assert(assertion bool, message string) {

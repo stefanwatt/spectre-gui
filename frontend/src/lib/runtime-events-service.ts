@@ -98,6 +98,16 @@ export function startListening() {
     nestedState.floatingWindows = windows;
   });
 
+  runtime.EventsOn('preview-window', (updatedPreviewWindow: App.FloatingWindow) => {
+    if (!nestedState.activePicker) return
+    nestedState.previewWindow = updatedPreviewWindow;
+  })
+
+  runtime.EventsOn('preview-window-closed', (winId: number) => {
+    if (nestedState.previewWindow?.id !== winId) return
+    nestedState.previewWindow = undefined;
+  })
+
   runtime.EventsOn('floating_window_closed', (winId: number) => {
     nestedState.floatingWindows = nestedState.floatingWindows.filter((win) => win.id !== winId);
   });

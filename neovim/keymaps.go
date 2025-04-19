@@ -130,7 +130,7 @@ var shiftedChars = map[string]bool{
 	"|":  true, // Shift+\
 	":":  true, // Shift+;
 	"\"": true, // Shift+'
-	"<":  true, // Shift+, //TODO: this fucks my indent keymap
+	// "<":  true, // Shift+, //TODO: this fucks my indent keymap
 	">":  true, // Shift+.
 	"?":  true, // Shift+/
 	"~":  true, // Shift+`
