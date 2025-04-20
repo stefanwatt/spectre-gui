@@ -145,9 +145,8 @@ func (a *App) ClosePreview(winId int) {
 	neovim.ClosePreview(winId)
 }
 
-func (a *App) GetPreview(filepath string, startRow int, endRow int) {
-	utils.Log(fmt.Sprintf("GetPreview filepath=%s startRow=%d endRow=%d", filepath, startRow, endRow))
-	neovim.ShowPreview(filepath, startRow, endRow)
+func (a *App) GetPreview(filepath string, row int, col int) {
+	neovim.ShowPreview(filepath, row, col)
 	neovim.NvimScreen.EmitFloatingWindows()
 }
 

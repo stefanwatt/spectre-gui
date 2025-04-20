@@ -3,6 +3,7 @@ package neovim
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"nvim-gui/utils"
 	"os"
 	"path/filepath"
@@ -114,14 +115,38 @@ func ClosePreview(winId int) {
 	}
 }
 
-func ShowPreview(absolutePath string, startRow int, endRow int) {
+var (
+	previewLines = 40
+	nsId         int
+)
+
+func calculatePreviewRange(row int) (int, int) {
+	contextLines := previewLines / 2
+	start := int(math.Max(float64(1), float64(row-contextLines)))
+	end := row + contextLines
+	if start == 1 && row > contextLines {
+		missingLinesAbove := (row - contextLines) - start
+		end -= missingLinesAbove
+	}
+	return start, end
+}
+func getPreviewMatchOpts(col int) map[string]any {
+	return map[string]any{
+		"hl_group": "CurSearch",
+		"end_col":  col,
+		"priority": 100,
+	}
+}
+
+func ShowPreview(absolutePath string, row int, col int) {
+	startRow, endRow := calculatePreviewRange(row)
 	assert(FileExists(absolutePath), "tried to get highlighted content for file that doesnt exist: "+absolutePath)
 	lines, err := ReadFileLines(absolutePath, startRow, endRow)
 	assert(err == nil, "ShowPreview error reading lines")
 	buf, err := NvimInstance.CreateBuffer(false, true)
 	assert(err == nil, "ShowPreview error creating buffer")
 	utils.Log(fmt.Sprintf("ShowPreview buffer created: %s", buf.String()))
-	err = NvimInstance.SetBufferLines(buf, startRow-1, endRow-1, false, lines)
+	err = NvimInstance.SetBufferLines(buf, 1, previewLines, false, lines)
 	assert(err == nil, "ShowPreview error setting bufferlines")
 	bufId, err := strconv.Atoi(strings.Split(buf.String(), ":")[1])
 	assert(err == nil, "ShowPreview error getting buf id")
@@ -131,6 +156,16 @@ func ShowPreview(absolutePath string, startRow int, endRow int) {
 	err = NvimInstance.ExecLua(cmd, &filetype)
 	if err != nil {
 		filetype = filepath.Ext(absolutePath)
+
+	}
+	if nsId == 0 {
+		nsId, err = NvimInstance.CreateNamespace("nvim-gui-preview")
+		assert(err == nil, "ShowPreview error creating namespace")
+	}
+	relativeRow := row + 1 - startRow
+	_, err = NvimInstance.SetBufferExtmark(buf, nsId, relativeRow, col-1, getPreviewMatchOpts(col))
+	if err != nil {
+		panic(fmt.Sprintf("error setting extmark on row=%d col=%d error:\n%s", relativeRow, col, err.Error()))
 	}
 	err = NvimInstance.SetBufferOption(buf, "filetype", filetype)
 	assert(err == nil, "ShowPreview error setting filetype")
@@ -140,7 +175,7 @@ func ShowPreview(absolutePath string, startRow int, endRow int) {
 			Row:      3,
 			Col:      50,
 			Width:    100,
-			Height:   30,
+			Height:   previewLines,
 			ZIndex:   69420,
 		})
 		assert(err == nil, "ShowPreview error opening window")

@@ -52,7 +52,6 @@
 				return;
 			}
 			selectedMatchIndex++;
-			// GetPreview(selectedMatch.absolutePath, 1, 30);
 		}
 	});
 
@@ -66,7 +65,6 @@
 				return;
 			}
 			selectedMatchIndex--;
-			// GetPreview(selectedMatch.absolutePath, 1, 30);
 		}
 	});
 
@@ -89,7 +87,9 @@
 			return;
 		}
 
-		GetPreview(selectedMatch.absolutePath, 1, 40);
+		const row = selectedMatch.row || 1;
+		const col = selectedMatch.col || 1;
+		GetPreview(selectedMatch.absolutePath, row, col);
 		if (selectedMatchIndex < visibleStartIndex || selectedMatchIndex > visibleEndIndex) {
 			const halfBuffer = Math.floor(itemsToRender / 2);
 			visibleStartIndex = Math.max(0, selectedMatchIndex - halfBuffer);
@@ -146,7 +146,7 @@
 								style="color: {result.iconColor};">{result.icon}</span
 							>
 							{#if result.filename}
-								<span class="ml-4 text-center text-nowrap">{result.filename}</span>
+								<span class="ml-4 text-nowrap text-center">{result.filename}</span>
 								<span>:</span>
 							{/if}
 							{#if result.row && result.col}
@@ -164,8 +164,7 @@
 								<span
 									class:text-surface1={actualIndex !== selectedMatchIndex}
 									class:text-darker={actualIndex === selectedMatchIndex}
-									class="ovewflow-hidden ml-2  cut-off-start"
-									>{result.relativePath}</span
+									class="ovewflow-hidden cut-off-start ml-2">{result.relativePath}</span
 								>
 							{/if}
 						</div>

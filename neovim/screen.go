@@ -969,10 +969,10 @@ func (s *Screen) render() {
 		window.Dirty = false
 
 		grid := window.Grid
-		if window.IsFloating() {
-			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.renderFloatingWindow(window))
-		} else {
+		if !window.IsFloating() || window.ZIndex == 69420 {
 			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid))
+		} else {
+			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.renderFloatingWindow(window))
 		}
 	}
 }
