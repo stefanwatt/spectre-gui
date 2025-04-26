@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { FindFiles} from '$lib/wailsjs/go/main/App';
+	import { FindFiles } from '$lib/wailsjs/go/picker/Picker';
 	import Picker from './Picker.svelte';
 	import { nestedState } from '$lib/state.svelte';
 
@@ -12,4 +12,4 @@
 	}
 </script>
 
-<Picker {onQueryChanged} mode={'find-files'}  title={'Find Files'} />
+<Picker {onQueryChanged} mode={'find-files'} title={'Find Files'} />

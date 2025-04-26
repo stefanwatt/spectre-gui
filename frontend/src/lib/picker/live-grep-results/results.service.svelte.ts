@@ -1,4 +1,4 @@
-import { LiveGrep } from "$lib/wailsjs/go/main/App";
+import { LiveGrep } from "$lib/wailsjs/go/picker/LiveGrepPicker";
 export interface ResultsState {
   selectedMatch: App.RipgrepMatch | null;
   results: App.RipgrepResult[];
@@ -38,18 +38,18 @@ export function search(
       regex,
       matchWholeWord,
     ).then(
-      (res: App.SearchResult) => {
+      (res) => {
         console.log("response:", res)
         state.selectedMatch = null
-        state.results = res.GroupedMatches;
-        if (!res.GroupedMatches?.length) {
+        state.results = res.results;
+        if (!res.results?.length) {
           state.totalFiles = 0
           state.totalResults = 0
           state.pageIndex = 0
           state.totalPages = 0
           return;
         }
-        const matches = res.GroupedMatches[0]?.Matches;
+        const matches = res.results[0]?.Matches;
         if (!matches?.length || !matches[0]) {
           state.selectedMatch = null
           return;
@@ -57,10 +57,10 @@ export function search(
         const first_match = matches[0];
         console.assert(!!first_match, first_match);
         state.selectedMatch = first_match
-        state.totalFiles = res.TotalFiles
-        state.totalResults = res.TotalResults
-        state.pageIndex = res.PageIndex
-        state.totalPages = res.TotalPages
+        state.totalFiles = res.totalFiles
+        state.totalResults = res.totalResults
+        state.pageIndex = res.pageIndex
+        state.totalPages = res.totalPages
       },
     );
   } catch (error) {

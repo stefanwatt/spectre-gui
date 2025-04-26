@@ -4,7 +4,9 @@ import {
   cursorToPrevMatch,
   state
 } from '$lib/picker/live-grep-results/results.service.svelte';
-import { SendKey, OpenFile, CreateQuickfixList } from '$lib/wailsjs/go/main/App';
+import { SendKey, CreateQuickfixList } from '$lib/wailsjs/go/main/App';
+import { OpenFile } from '$lib/wailsjs/go/picker/Picker'
+import { GetLiveGrepOpts, GetNextPage, GetPrevPage } from '$lib/wailsjs/go/picker/LiveGrepPicker'
 
 function sendKey(e: KeyboardEvent) {
   e.preventDefault()
@@ -38,6 +40,26 @@ export const keymaps: App.Keymap[] = [
     mods: [],
     action: cursorToPrevMatch
   },
+  {
+    key: 'ArrowLeft',
+    mode: 'live-grep',
+    mods: ['c'],
+    action: async () => {
+      const liveGrepState = await GetPrevPage()
+      state.results = liveGrepState.results
+      state.pageIndex = liveGrepState.pageIndex
+    }
+  },
+  {
+    key: 'ArrowRight',
+    mode: 'live-grep',
+    mods: ['c'],
+    action: async () => {
+      const liveGrepState = await GetNextPage()
+      state.results = liveGrepState.results
+      state.pageIndex = liveGrepState.pageIndex
+    }
+  },
 
   {
     key: 'q',
@@ -58,16 +80,4 @@ export const keymaps: App.Keymap[] = [
       nestedState.activePicker = undefined
     }
   },
-  {
-    key: 'ArrowLeft',
-    mode: 'live-grep',
-    mods: ['c'],
-    action: sendKey
-  },
-  {
-    key: 'ArrowRight',
-    mode: 'live-grep',
-    mods: ['c'],
-    action: sendKey
-  }
 ]

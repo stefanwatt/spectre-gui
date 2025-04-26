@@ -49,7 +49,32 @@ func NewSymbolsPicker() *LspSymbolsPicker {
 	}
 }
 
-func (symbolPicker *LspSymbolsPicker) FindSymbols(symbols []*neovim.LspSymbolItem, query string) ([]*PickerResult, error) {
+func (sp *LspSymbolsPicker) FindBufferSymbols(query string) []*PickerResult {
+	activeWindow := neovim.NvimScreen.GetActiveWindow()
+	hasBuffer := activeWindow != nil && activeWindow.Buffer != nil
+	var results []*PickerResult
+	if hasBuffer &&
+		activeWindow.Buffer.Filepath == sp.Filepath {
+		_results, err := sp.filterMapSymbols(sp.Symbols, query)
+		if err != nil {
+			panic("error getting references\n" + err.Error())
+		}
+		results = _results
+	} else {
+		symbols := neovim.GetDocumentSymbols()
+		_results, err := sp.filterMapSymbols(symbols, query)
+		if err != nil {
+			panic("error getting references\n" + err.Error())
+		}
+		results = _results
+	}
+	if hasBuffer {
+		sp.Filepath = activeWindow.Buffer.Filepath
+	}
+	return results
+}
+
+func (symbolPicker *LspSymbolsPicker) filterMapSymbols(symbols []*neovim.LspSymbolItem, query string) ([]*PickerResult, error) {
 	symbolPicker.Symbols = symbols
 	if len(symbols) == 0 {
 		return []*PickerResult{}, nil
@@ -103,14 +128,14 @@ func (symbolPicker *LspSymbolsPicker) FindSymbols(symbols []*neovim.LspSymbolIte
 }
 
 func removeBracketedText(s string) string {
-    startIndex := strings.Index(s, "[")
-    if startIndex == -1 {
-        return s
-    }
-    
-    endIndex := strings.Index(s, "]")
-    if endIndex == -1 || endIndex < startIndex {
-        return s
-    }
-    return strings.TrimSpace(strings.TrimSpace(s[:startIndex]) + " " + strings.TrimSpace(s[endIndex+1:]))
+	startIndex := strings.Index(s, "[")
+	if startIndex == -1 {
+		return s
+	}
+
+	endIndex := strings.Index(s, "]")
+	if endIndex == -1 || endIndex < startIndex {
+		return s
+	}
+	return strings.TrimSpace(strings.TrimSpace(s[:startIndex]) + " " + strings.TrimSpace(s[endIndex+1:]))
 }

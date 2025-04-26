@@ -1,4 +1,4 @@
-import { OpenFile } from '$lib/wailsjs/go/main/App';
+import { OpenFile } from '$lib/wailsjs/go/picker/Picker';
 import * as runtime from '$lib/wailsjs/runtime/runtime';
 import { nvimWindows, layout, cursor, pickers, cmdline, nestedState } from "$lib/state.svelte"
 import {

@@ -4,7 +4,7 @@ import FindReferences from '$lib/picker/FindReferences.svelte';
 import FindHelp from '$lib/picker/FindHelp.svelte';
 import FindBufferSymbols from '$lib/picker/FindBufferSymbols.svelte';
 import { registerKeymap } from './keymaps/keymap-service';
-import { ClosePreview } from '$lib/wailsjs/go/main/App';
+import { ClosePreview } from '$lib/wailsjs/go/picker/Picker';
 
 export let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
 export let layout = $state<App.NvimLayout>({

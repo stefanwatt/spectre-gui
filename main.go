@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"net/http"
+	"nvim-gui/picker"
 	"nvim-gui/utils"
 	"os"
 	"strings"
@@ -73,6 +75,17 @@ func main() {
 		fmt.Println("error deleting nvim socket")
 	}
 
+	liveGrepPicker := picker.NewLiveGrepPicker()
+	referencesPicker := picker.NewReferencesPicker()
+	symbolsPicker := picker.NewSymbolsPicker()
+	picker := picker.NewPicker()
+
+	startup := func(ctx context.Context) {
+		app.startup(ctx)
+		liveGrepPicker.Ctx = ctx
+		picker.Ctx = ctx
+	}
+
 	err = wails.Run(&options.App{
 		Title:              "nvim-gui",
 		LogLevel:           logger.ERROR,
@@ -87,10 +100,14 @@ func main() {
 			WebviewGpuPolicy: linux.WebviewGpuPolicyAlways,
 		},
 		BackgroundColour: &options.RGBA{R: 39, G: 42, B: 56, A: 1},
-		OnStartup:        app.startup,
+		OnStartup:        startup,
 		OnDomReady:       app.mounted,
 		Bind: []interface{}{
 			app,
+			liveGrepPicker,
+			referencesPicker,
+			symbolsPicker,
+			picker,
 		},
 	})
 	if err != nil {

@@ -25,7 +25,41 @@ func NewReferencesPicker() *LspReferencesPicker {
 	}
 }
 
-func (refPicker *LspReferencesPicker) FindReferences(references []*neovim.LspReferenceItem, query string) ([]*PickerResult, error) {
+func (rp *LspReferencesPicker) FindReferences(query string) []*PickerResult {
+	activeWindow := neovim.NvimScreen.GetActiveWindow()
+	hasCursor := activeWindow != nil &&
+		activeWindow.Cursor != nil
+	hasBuffer := activeWindow != nil && activeWindow.Buffer != nil
+	var results []*PickerResult
+	if hasCursor &&
+		activeWindow.Cursor.Col == rp.Col &&
+		activeWindow.Cursor.Row == rp.Row &&
+		hasBuffer &&
+		activeWindow.Buffer.Filepath == rp.Filepath {
+		_results, err := rp.filterMapReferences(rp.References, query)
+		if err != nil {
+			panic("error getting references\n" + err.Error())
+		}
+		results = _results
+	} else {
+		references := neovim.GetReferencesUnderCursor()
+		_results, err := rp.filterMapReferences(references, query)
+		if err != nil {
+			panic("error getting references\n" + err.Error())
+		}
+		results = _results
+	}
+	if hasCursor {
+		rp.Col = activeWindow.Cursor.Col
+		rp.Row = activeWindow.Cursor.Row
+	}
+	if hasBuffer {
+		rp.Filepath = activeWindow.Buffer.Filepath
+	}
+	return results
+}
+
+func (refPicker *LspReferencesPicker) filterMapReferences(references []*neovim.LspReferenceItem, query string) ([]*PickerResult, error) {
 	refPicker.References = references
 	if len(references) == 0 {
 		return []*PickerResult{}, nil

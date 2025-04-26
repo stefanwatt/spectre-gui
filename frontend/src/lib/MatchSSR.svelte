@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { GetReplacementText, OpenFile } from '$lib/wailsjs/go/main/App';
+	import { GetReplacementText } from '$lib/wailsjs/go/main/App';
+	import { OpenFile } from '$lib/wailsjs/go/picker/Picker';
 
 	let {
 		match,

@@ -1,6 +1,6 @@
 * ( ) Todo
 **  ( ) general 
-   - ( ) add more binding structs so that i dont need to do everything in api.go
+   - (x) add more binding structs so that i dont need to do everything in api.go
     - (x) adding a picker has a lot of manual steps
     - ( ) nothing is rendered intially, gotta press esc or something to get a render
     - ( ) random crashes.. no clue what triggers em. dont happen very often 

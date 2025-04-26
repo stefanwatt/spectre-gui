@@ -5,11 +5,10 @@
 		search
 	} from '$lib/picker/live-grep-results/results.service.svelte';
 	import { onMount } from 'svelte';
-	import { GetLiveGrepOpts } from '$lib/wailsjs/go/main/App';
+	import { GetLiveGrepOpts } from '$lib/wailsjs/go/picker/LiveGrepPicker';
 	import SearchForm from '$lib/form/Search.svelte';
 
 	let state = $state<App.LiveGrepOpts>();
-
 
 	$effect(() => {
 		if (!state) return;

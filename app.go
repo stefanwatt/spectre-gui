@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"nvim-gui/neovim"
-	"nvim-gui/picker"
 	"nvim-gui/utils"
 )
 
@@ -13,16 +12,10 @@ var ctx context.Context
 type App struct {
 	ctx              context.Context
 	File             string
-	liveGrepPicker   *picker.LiveGrepPicker
-	referencesPicker *picker.LspReferencesPicker
-	symbolsPicker    *picker.LspSymbolsPicker
 }
 
 func NewApp() *App {
 	return &App{
-		liveGrepPicker:   picker.NewLiveGrepPicker(),
-		referencesPicker: picker.NewReferencesPicker(),
-		symbolsPicker:    picker.NewSymbolsPicker(),
 	}
 }
 

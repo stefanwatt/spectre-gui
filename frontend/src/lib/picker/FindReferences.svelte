@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { FindReferences } from '$lib/wailsjs/go/main/App';
+	import { FindReferences } from '$lib/wailsjs/go/picker/LspReferencesPicker';
 	import Picker from './Picker.svelte';
 	import { nestedState } from '$lib/state.svelte';
 

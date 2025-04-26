@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { registerKeymap } from '$lib/keymaps/keymap-service';
 	import { isInBounds } from '$lib/utils.service';
-	import { OpenFile, GetPreview } from '$lib/wailsjs/go/main/App';
+	import { OpenFile, GetPreview } from '$lib/wailsjs/go/picker/Picker';
 	import NoResults from './live-grep-results/NoResults.svelte';
 	import { nestedState, nvimWindows } from '$lib/state.svelte';
 	import FloatingGrid from '$lib/floating-windows/FloatingGrid.svelte';

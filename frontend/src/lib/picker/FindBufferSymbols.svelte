@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { FindBufferSymbols } from '$lib/wailsjs/go/main/App';
+	import { FindBufferSymbols } from '$lib/wailsjs/go/picker/LspSymbolsPicker';
 	import Picker from './Picker.svelte';
 	import { nestedState } from '$lib/state.svelte';
 
@@ -12,8 +12,4 @@
 	}
 </script>
 
-<Picker
-	{onQueryChanged}
-	mode={'find-buffer-symbols'}
-	title={'Find Buffer Symbols'}
-/>
+<Picker {onQueryChanged} mode={'find-buffer-symbols'} title={'Find Buffer Symbols'} />

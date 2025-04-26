@@ -8,11 +8,11 @@ import (
 	"nvim-gui/picker/highlighting"
 	"nvim-gui/picker/match"
 	"nvim-gui/utils"
-	"time"
 )
 
 type LiveGrepPicker struct {
 	searchContext SearchContext
+	Ctx           context.Context
 	State         LiveGrepPickerState
 }
 
@@ -54,16 +54,18 @@ type SearchContext struct {
 	ctx         context.Context
 	cancel_func context.CancelFunc
 }
-type SearchResult struct {
-	GroupedMatches []match.MatchesOfFile
-	PageIndex      int
-	TotalPages     int
-	TotalResults   int
-	TotalFiles     int
+type LiveGrepPage struct {
+	GroupedMatches []match.MatchesOfFile `json:"results"`
+	PageIndex      int                   `json:"pageIndex"`
+	TotalPages     int                   `json:"totalPages"`
+	TotalResults   int                   `json:"totalResults"`
+	TotalFiles     int                   `json:"totalFiles"`
 }
 
-func (p *LiveGrepPicker) SendKey(key string, ctrl bool, alt bool, shift bool) {
-	//TODO: handle keymaps
+// ---------API START----------
+
+func (lgp *LiveGrepPicker) GetLiveGrepOpts() LiveGrepPickerState {
+	return lgp.State
 }
 
 func (p *LiveGrepPicker) LiveGrep(
@@ -74,20 +76,16 @@ func (p *LiveGrepPicker) LiveGrep(
 	case_sensitive bool,
 	regex bool,
 	match_whole_word bool,
-	ctx context.Context,
-) SearchResult {
-
+) LiveGrepPage {
 	if searchTerm == "" {
-		return SearchResult{}
+		return LiveGrepPage{}
 	}
-	utils.Log(fmt.Sprintf("LiveGrep searching for %s in dir %s", searchTerm, dir))
-	utils.StartTime = time.Now()
 	if p.searchContext.cancel_func != nil {
 		p.searchContext.cancel_func()
 	}
 	var searchContext context.Context
 	searchContext, p.searchContext.cancel_func = context.WithCancel(context.Background())
-	ctx, update_dir := filewatcher.InitContext(p.State.Dir, dir, ctx)
+	ctx, update_dir := filewatcher.InitContext(p.State.Dir, dir, p.Ctx)
 	p.State.Dir = update_dir
 	rg_lines, err := ext.Ripgrep(
 		searchContext,
@@ -106,10 +104,72 @@ func (p *LiveGrepPicker) LiveGrep(
 		if ctx.Err() == context.Canceled {
 			utils.Log("Search was canceled")
 		}
-		return SearchResult{}
+		return LiveGrepPage{}
 	}
 	p.State.Pagination = MapPagination(rg_lines)
-	matches := utils.MapArrayConcurrent(p.State.Pagination.pages[0].matches, func(page_match PageMatch) match.Match {
+	matches := mapMatches(p.State.Pagination.pages[0].matches, searchTerm, regex)
+	grouped_matches := match.MapSearchResult(matches)
+	dirs := match.MapDirs(grouped_matches)
+	go filewatcher.WatchFiles(ctx, dirs, dir, OnWrite, OnDelete)
+	paths := utils.MapArray(rg_lines, func(line string) string {
+		return ext.MapRipgrepInfo(line).Path
+	})
+	total_files := utils.CountUniqueItems(paths)
+	return LiveGrepPage{
+		GroupedMatches: grouped_matches,
+		TotalPages:     len(p.State.Pagination.pages),
+		PageIndex:      p.State.Pagination.PageIndex,
+		TotalResults:   len(rg_lines),
+		TotalFiles:     total_files,
+	}
+}
+
+func (p *LiveGrepPicker) GetPrevPage() LiveGrepPage {
+	if len(p.State.Pagination.pages) == 0 {
+		return LiveGrepPage{}
+	}
+	p.State.Pagination.PageIndex--
+	if p.State.Pagination.PageIndex < 0 {
+		p.State.Pagination.PageIndex = len(p.State.Pagination.pages) - 1
+	}
+	page := p.State.Pagination.pages[p.State.Pagination.PageIndex]
+	matches := mapMatches(page.matches, p.State.SearchTerm, p.State.Regex)
+	grouped_matches := match.MapSearchResult(matches)
+
+	return LiveGrepPage{
+		GroupedMatches: grouped_matches,
+		TotalPages:     len(p.State.Pagination.pages),
+		PageIndex:      p.State.Pagination.PageIndex,
+		TotalResults:   p.State.TotalResults,
+		TotalFiles:     p.State.TotalFiles,
+	}
+}
+
+func (p *LiveGrepPicker) GetNextPage() LiveGrepPage {
+	if len(p.State.Pagination.pages) == 0 {
+		return LiveGrepPage{}
+	}
+	p.State.Pagination.PageIndex++
+	if p.State.Pagination.PageIndex >= len(p.State.Pagination.pages) {
+		p.State.Pagination.PageIndex = 0
+	}
+	page := p.State.Pagination.pages[p.State.Pagination.PageIndex]
+	matches := mapMatches(page.matches, p.State.SearchTerm, p.State.Regex)
+	grouped_matches := match.MapSearchResult(matches)
+
+	return LiveGrepPage{
+		GroupedMatches: grouped_matches,
+		TotalPages:     len(p.State.Pagination.pages),
+		PageIndex:      p.State.Pagination.PageIndex,
+		TotalResults:   p.State.TotalResults,
+		TotalFiles:     p.State.TotalFiles,
+	}
+}
+
+// ---------API END------------
+
+func mapMatches(matches []PageMatch, searchTerm string, regex bool) []match.Match {
+	return utils.MapArrayConcurrent(matches, func(page_match PageMatch) match.Match {
 		line := page_match.rgLine
 		rg_info := ext.MapRipgrepInfo(line)
 		m := match.MapMatch(
@@ -132,20 +192,4 @@ func (p *LiveGrepPicker) LiveGrep(
 		m.Html = html
 		return m
 	})
-	grouped_matches := match.MapSearchResult(matches)
-	dirs := match.MapDirs(grouped_matches)
-	// TODO: how to handle errors in a go routine?
-	go filewatcher.WatchFiles(ctx, dirs, dir, OnWrite, OnDelete)
-
-	paths := utils.MapArray(rg_lines, func(line string) string {
-		return ext.MapRipgrepInfo(line).Path
-	})
-	total_files := utils.CountUniqueItems(paths)
-	return SearchResult{
-		GroupedMatches: grouped_matches,
-		TotalPages:     len(p.State.Pagination.pages),
-		PageIndex:      p.State.Pagination.PageIndex,
-		TotalResults:   len(rg_lines),
-		TotalFiles:     total_files,
-	}
 }

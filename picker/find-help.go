@@ -10,7 +10,7 @@ import (
 
 var helpTags []*neovim.HelpTag
 
-func FindHelp(query string) ([]*PickerResult, error) {
+func (p *Picker) FindHelp(query string) []*PickerResult {
 	if len(helpTags) == 0 {
 		helpTags = neovim.GetHelpTags()
 	}
@@ -23,7 +23,7 @@ func FindHelp(query string) ([]*PickerResult, error) {
 	filteredLines, err := filterWithFzf(helpTagLines, query)
 
 	if err != nil {
-		return []*PickerResult{}, err
+		panic("FindHelp error filtering with fzf")
 	}
 
 	var results []*PickerResult
@@ -50,5 +50,8 @@ func FindHelp(query string) ([]*PickerResult, error) {
 		})
 	}
 
-	return results, nil
+	if err != nil {
+		panic("error getting help files")
+	}
+	return results
 }
