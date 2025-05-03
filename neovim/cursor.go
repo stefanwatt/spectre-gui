@@ -8,8 +8,8 @@ import (
 )
 
 type Cursor struct {
-	Row int
-	Col int
+	Row int `json:"row"`
+	Col int `json:"col"`
 }
 
 type CursorMoveEvent struct {
@@ -32,6 +32,11 @@ func (s *Screen) UpdateCursor() {
 	if err == nil && nvimWindow != nil {
 		windowCursor, err := NvimInstance.WindowCursor(*nvimWindow)
 		if err == nil {
+			activeWin, exists := s.Windows[s.ActiveWindow]
+			if exists {
+				updatedCursor := Cursor{Row: windowCursor[0], Col: windowCursor[1]}
+				activeWin.Cursor = &updatedCursor
+			}
 			cursorMoveEvent := CursorMoveEvent{
 				Row:            uint64(windowCursor[0]),
 				Col:            uint64(windowCursor[1]),

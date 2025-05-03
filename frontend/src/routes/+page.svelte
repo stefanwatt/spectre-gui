@@ -4,7 +4,7 @@
 	import CmdLine from './cmdline/CmdLine.svelte';
 	import FloatingWindowContainer from '$lib/floating-windows/FloatingWindowContainer.svelte';
 	import NvimWindow from '$lib/windows/NvimWindow.svelte';
-	import { cmdline, nvimWindows, layout, cursor, nestedState } from '$lib/state.svelte';
+	import { cmdline, windowContentRowMap, layout, cursor, nestedState } from '$lib/state.svelte';
 	import { init, startListening } from '$lib/runtime-events-service';
 	import { handleKeypress, registerKeymap } from '$lib/keymaps/keymap-service';
 	import { keymaps as liveGrepKeymaps } from '$lib/keymaps/live-grep';
@@ -25,6 +25,12 @@
 	});
 	let floatingWindows = $derived(nestedState.floatingWindows);
 	let activeWindow = $derived(layout.windows.find((win) => win.id === layout.activeWindowId));
+	$effect(() => {
+		//NOTE: we dont want to rely on redraw events for cursor updates
+		//so we have a separate event listener for cursor updates
+		if (!activeWindow) return;
+		activeWindow.cursor = cursor;
+	});
 	let PickerComponent = $derived(nestedState.activePicker?.component);
 </script>
 
@@ -58,13 +64,17 @@
 						class="nvim-window relative border border-solid border-transparent bg-base-100"
 						style="grid-column-start: {win.colStart}; grid-column-end:{win.colEnd}; grid-row-start: {win.rowStart}; grid-row-end:{win.rowEnd};"
 					>
-						<NvimWindow {nvimWindows} {win} {cursor} />
-						<FloatingWindowContainer {floatingWindows} {nvimWindows} anchorWindow={win.id} />
+						<NvimWindow {windowContentRowMap} {win} />
+						<FloatingWindowContainer
+							{floatingWindows}
+							{windowContentRowMap}
+							anchorWindow={win.id}
+						/>
 					</div>
 				{/each}
 			</div>
 		{/if}
-		<FloatingWindowContainer {floatingWindows} {nvimWindows} anchorWindow={0} />
+		<FloatingWindowContainer {floatingWindows} {windowContentRowMap} anchorWindow={0} />
 	</div>
 	<div class="h-10">
 		<StatusLine filepath={activeWindow?.filepath} {cursor} mode={activeWindow?.mode}></StatusLine>

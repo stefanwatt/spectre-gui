@@ -9,11 +9,11 @@
 
 	interface FloatingWindowProps {
 		win: App.FloatingWindow;
-		nvimWindows: App.NvimWindowMap;
+		windowContentRowMap: App.WindowContentRowMap;
 	}
-	let { win, nvimWindows }: FloatingWindowProps = $props();
+	let { win, windowContentRowMap }: FloatingWindowProps = $props();
 
-	let content = $derived(nvimWindows[win.id]);
+	let content = $derived(windowContentRowMap[win.id]);
 	let position: Position = $derived(calculatePosition(win.row, win.col, win.filetype));
 	function decode(message: string) {
 		if (!win.isHex) return message;

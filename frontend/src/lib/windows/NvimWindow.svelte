@@ -3,17 +3,16 @@
 
 	interface NvimWindowProps {
 		win: App.NvimWindow;
-		nvimWindows: App.NvimWindowMap;
-		cursor: { row: number; col: number };
+		windowContentRowMap: App.WindowContentRowMap;
 	}
-	let { win, nvimWindows, cursor }: NvimWindowProps = $props();
+	let { win, windowContentRowMap }: NvimWindowProps = $props();
 	//TODO: this should not even happen
 	function filterDuplicateIndices() {
 		const seenIndices = new Set();
 		const rows = [];
-		if (!nvimWindows || !nvimWindows[win.id]) return [];
-		for (let i = 0; i < nvimWindows[win.id].length; i++) {
-			const row = nvimWindows[win.id][i];
+		if (!windowContentRowMap || !windowContentRowMap[win.id]) return [];
+		for (let i = 0; i < windowContentRowMap[win.id].length; i++) {
+			const row = windowContentRowMap[win.id][i];
 			if (!seenIndices.has(row.index)) {
 				seenIndices.add(row.index);
 				rows.push(row);
@@ -24,9 +23,4 @@
 	let content = $derived(filterDuplicateIndices());
 </script>
 
-<Grid
-	{content}
-	{cursor}
-	lineNumbers={win.lineNumbers}
-	relativeLineNumbers={true}
-/>
+<Grid {content} cursor={win.cursor} lineNumbers={win.lineNumbers} relativeLineNumbers={true} />

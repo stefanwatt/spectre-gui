@@ -99,6 +99,7 @@ func (s *Screen) CalculateGridLayout() {
 			LineNumbers:         window.lineNumbers,
 			RelativeLineNumbers: window.relativeLineNumbers,
 			Mode:                window.Mode,
+			Cursor:              window.Cursor,
 		}
 		if window.Buffer != nil {
 			buf := *window.Buffer

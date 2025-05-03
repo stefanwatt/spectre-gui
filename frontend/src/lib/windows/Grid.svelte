@@ -17,7 +17,7 @@
 </script>
 
 {#each content || [] as row (row.index)}
-	<div id="row-{row.index}" class="flex overflow-hidden whitespace-pre leading-none">
+	<div id="row-{row.index}" class="cursor-{JSON.stringify(cursor)} flex overflow-hidden whitespace-pre leading-none">
 		{#if lineNumbers}
 			{#if cursor && cursor.row === row.index}
 				<span

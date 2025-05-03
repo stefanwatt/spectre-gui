@@ -15,7 +15,7 @@ type Token struct {
 }
 
 type ContentRow struct {
-	Index  int      `json:"index" msgpack:"row"`
+	Index  int      `json:"index" msgpack:"row"` // basically the line number
 	Tokens []*Token `json:"tokens" msgpack:"tokens"`
 }
 

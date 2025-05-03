@@ -4,10 +4,11 @@
 	interface FloatingWindowContainerProps {
 		floatingWindows: App.FloatingWindow[];
 		anchorWindow: number;
-		nvimWindows: App.NvimWindowMap;
+		windowContentRowMap: App.WindowContentRowMap;
 	}
 
-	let { floatingWindows, anchorWindow, nvimWindows }: FloatingWindowContainerProps = $props();
+	let { floatingWindows, anchorWindow, windowContentRowMap }: FloatingWindowContainerProps =
+		$props();
 
 	let filteredFloatingWindows = $derived(
 		floatingWindows.filter((fw) => fw.anchorWindow === anchorWindow)
@@ -15,5 +16,5 @@
 </script>
 
 {#each filteredFloatingWindows as floatingWin (floatingWin.id)}
-	<FloatingWindow  win={floatingWin} {nvimWindows} />
+	<FloatingWindow win={floatingWin} {windowContentRowMap} />
 {/each}

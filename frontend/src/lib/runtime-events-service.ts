@@ -1,6 +1,6 @@
 import { OpenFile } from '$lib/wailsjs/go/picker/Picker';
 import * as runtime from '$lib/wailsjs/runtime/runtime';
-import { nvimWindows, layout, cursor, pickers, cmdline, nestedState } from "$lib/state.svelte"
+import { windowContentRowMap, layout, cursor, pickers, cmdline, nestedState } from "$lib/state.svelte"
 import {
   state as liveGrepState
 } from '$lib/picker/live-grep-results/results.service.svelte';
@@ -75,7 +75,7 @@ export function startListening() {
 
   runtime.EventsOn('content-updated', (winId: number, updatedContent: App.NvimRow[]) => {
     console.log("content-updated for winId=" + winId, updatedContent)
-    nvimWindows[winId] = updatedContent;
+    windowContentRowMap[winId] = updatedContent;
   });
 
   runtime.EventsOn(
@@ -113,6 +113,6 @@ export function startListening() {
   });
 
   runtime.EventsOn('hide-window', (winId: number) => {
-    delete nvimWindows[winId];
+    delete windowContentRowMap[winId];
   });
 }

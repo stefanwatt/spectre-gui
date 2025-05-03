@@ -15,13 +15,7 @@ import (
 	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-type CursorState struct {
-	Row uint64
-	Col uint64
-}
-
 var (
-	cursorState      CursorState
 	currentMode      string
 	NvimInstance     *nvim.Nvim
 	fgColorClasses   map[string]string
@@ -117,7 +111,7 @@ func StartListening(ctx context.Context) {
 		NvimInstance.RegisterHandler("redraw", func(updates ...[]interface{}) {
 			NvimScreen.handleRedraw(updates)
 		})
-				
+
 		SetupKeymaps()
 
 		NvimInstance.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data []string) {

@@ -3,7 +3,7 @@
 	import { isInBounds } from '$lib/utils.service';
 	import { OpenFile, GetPreview } from '$lib/wailsjs/go/picker/Picker';
 	import NoResults from './live-grep-results/NoResults.svelte';
-	import { nestedState, nvimWindows } from '$lib/state.svelte';
+	import { nestedState, windowContentRowMap } from '$lib/state.svelte';
 	import FloatingGrid from '$lib/floating-windows/FloatingGrid.svelte';
 
 	interface PickerProps {
@@ -105,7 +105,7 @@
 	});
 	let scrollContainer: HTMLElement;
 	let previewContent = $derived(
-		nestedState.previewWindow && nvimWindows[nestedState.previewWindow.id]
+		nestedState.previewWindow && windowContentRowMap[nestedState.previewWindow.id]
 	);
 </script>
 

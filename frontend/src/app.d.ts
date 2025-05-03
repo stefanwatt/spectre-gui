@@ -23,7 +23,7 @@ declare global {
       tokens: NvimToken[]
     }
 
-    interface NvimWindowMap {
+    interface WindowContentRowMap {
       [key: number]: NvimRow[];
     }
     interface NvimContent {
@@ -54,6 +54,7 @@ declare global {
       filetype: string;
       filepath: string;
       mode: VimMode;
+      cursor: { row: number, col: number }
     }
 
     interface CmdLine {

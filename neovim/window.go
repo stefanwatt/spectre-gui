@@ -47,6 +47,7 @@ type WindowAPI struct {
 	Filetype            string  `json:"filetype"`
 	Filepath            string  `json:"filepath"`
 	Mode                string  `json:"mode"`
+	Cursor              *Cursor `json:"cursor"`
 }
 
 // Equal compares two WindowAPI structs and returns true if they are equal.

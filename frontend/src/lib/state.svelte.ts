@@ -13,7 +13,7 @@ export let layout = $state<App.NvimLayout>({
   activeWindowId: 0,
   windows: []
 });
-export let nvimWindows = $state<App.NvimWindowMap>({});
+export let windowContentRowMap = $state<App.WindowContentRowMap>({});
 
 
 export let pickers = $state([
