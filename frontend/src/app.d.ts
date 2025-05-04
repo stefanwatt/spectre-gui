@@ -21,6 +21,11 @@ declare global {
     interface NvimRow {
       index: number;
       tokens: NvimToken[]
+      markdownOpts?: MarkdownOpts
+    }
+
+    interface MarkdownOpts {
+      quoteLevel: number
     }
 
     interface WindowContentRowMap {

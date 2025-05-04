@@ -7,7 +7,7 @@
     - (x) filepath change doesnt update in statusline because it's only recomputed when the layout changes
     - (x) bug: dt) does not work
     - ( ) line numbers sometimes dont show up immediately, but will be there after triggering a redraw
-    - ( ) line numbers are not per grid/window; for example with relative numbers and a two way split 
+    - (x) line numbers are not per grid/window; for example with relative numbers and a two way split 
       -> moving in one window will affect the other
     - ( ) we cannot always rely on line numbers being present
     - (x) line numbers are a little offset

@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind base;
 
+.font-bold {
+  text-shadow:
+    0.5px 0 currentColor,
+    0 0.5px currentColor;
+}
+
+blockquote .font-bold {
+  text-shadow: none !important;
+}
+
 .active-window.mode-i .cursor {
   box-shadow: -2px 0 0 0 #eebebe;
 }

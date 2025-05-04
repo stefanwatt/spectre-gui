@@ -42,28 +42,10 @@ type Screen struct {
 }
 
 func NewScreen(ctx context.Context, cols int, rows int) *Screen {
-	content := make([][]*Cell, rows)
-	for i := range content {
-		content[i] = make([]*Cell, cols)
-		for j := range content[i] {
-			content[i][j] = &Cell{
-				Char:      " ",
-				Highlight: 0,
-			}
-		}
-	}
-
-	// Create default grid
-	defaultGrid := &Grid{
-		ID:     1,
-		Width:  cols,
-		Height: rows,
-		Cells:  content,
-	}
 
 	// Create grids map and add default grid
 	grids := make(map[int]*Grid)
-	grids[1] = defaultGrid
+	grids[1] = NewGrid(rows, cols)
 
 	// Create default highlight
 	highlights := make(map[int]*Highlight)
@@ -476,12 +458,8 @@ func (s *Screen) gridResize(gridId int, width int, height int) {
 	}
 	grid, exists := s.Grids[gridId]
 	if !exists {
-		grid = &Grid{
-			ID:     gridId,
-			Width:  0,
-			Height: 0,
-			Cells:  nil,
-		}
+		grid = NewGrid(0, 0)
+		grid.ID = gridId
 		s.Grids[gridId] = grid
 	}
 
@@ -970,7 +948,11 @@ func (s *Screen) render() {
 
 		grid := window.Grid
 		if !window.IsFloating() || window.ZIndex == 69420 {
-			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid))
+			filetype := ""
+			if window.Buffer != nil {
+				filetype = (*window.Buffer).Filetype
+			}
+			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid, filetype))
 		} else {
 			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.renderFloatingWindow(window))
 		}

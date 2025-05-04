@@ -2,7 +2,6 @@ package neovim
 
 import "nvim-gui/utils"
 
-
 func isHex(window *Window) bool {
 	ft := ""
 	if window.Buffer != nil {
@@ -22,7 +21,7 @@ func (s *Screen) renderFloatingWindow(window *Window) []ContentRow {
 
 func (s *Screen) renderFzfLua(grid *Grid) []ContentRow {
 	utils.Log("renderFzfLua")
-	content := s.optimizeGrid(grid)
+	content := s.optimizeGrid(grid, "fzflua")
 	return trimPerimeter(content)
 }
 

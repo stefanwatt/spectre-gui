@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Grid from './Grid.svelte';
+	import MarkdownGrid from './markdown/MarkdownGrid.svelte';
 
 	interface NvimWindowProps {
 		win: App.NvimWindow;
@@ -23,4 +24,8 @@
 	let content = $derived(filterDuplicateIndices());
 </script>
 
-<Grid {content} cursor={win.cursor} lineNumbers={win.lineNumbers} relativeLineNumbers={true} />
+{#if win.filepath.endsWith('.md')}
+	<MarkdownGrid {content} cursor={win.cursor} lineNumbers={win.lineNumbers} relativeLineNumbers={true} />
+{:else}
+	<Grid {content} cursor={win.cursor} lineNumbers={win.lineNumbers} relativeLineNumbers={true} />
+{/if}

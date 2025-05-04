@@ -14,9 +14,18 @@ type Token struct {
 	Highlight int    `json:"highlight" msgpack:"hl_group"`
 }
 
+type MarkdownOpts struct {
+	QuoteLevel int `json:"quoteLevel"`
+}
+
+func NewMarkdownOpts() *MarkdownOpts {
+	return &MarkdownOpts{QuoteLevel: 0}
+}
+
 type ContentRow struct {
-	Index  int      `json:"index" msgpack:"row"` // basically the line number
-	Tokens []*Token `json:"tokens" msgpack:"tokens"`
+	Index        int           `json:"index" msgpack:"row"` // basically the line number
+	Tokens       []*Token      `json:"tokens" msgpack:"tokens"`
+	MarkdownOpts *MarkdownOpts `json:"markdownOpts"`
 }
 
 func (cr *ContentRow) ToString() string {
@@ -44,7 +53,7 @@ func (t *Token) toCell() *Cell {
 		Char:      t.Text,
 		Classes:   classes,
 		Dirty:     false,
-		Highlight: t.Highlight, // check if we really need this
+		Highlight: t.Highlight,
 	}
 }
 
@@ -54,7 +63,7 @@ func MapTokens(cells []*Cell) []*Token {
 	})
 }
 
-func (s *Screen) optimizeGrid(grid *Grid) []ContentRow {
+func (s *Screen) optimizeGrid(grid *Grid, filetype string) []ContentRow {
 	contentRows := make([]ContentRow, grid.Height)
 	for row := 0; row < grid.Height; row++ {
 		rowCells, lineNumber := s.trimGutter(grid.Cells[row])
@@ -69,12 +78,36 @@ func (s *Screen) optimizeGrid(grid *Grid) []ContentRow {
 			contentRows[row].Index = lineNumber
 			grid.OptimizedRows[row] = cells
 			grid.DirtyRows[row] = false
+
+			if filetype == "markdown" {
+				markdownOpts := getMarkdownOpts(contentRows[row])
+				contentRows[row].MarkdownOpts = markdownOpts
+				grid.MarkdownOpts[row] = markdownOpts
+			}
 		} else {
 			contentRows[row].Tokens = MapTokens(grid.OptimizedRows[row])
 			contentRows[row].Index = lineNumber
+			if opts, exists := grid.MarkdownOpts[row]; exists {
+				contentRows[row].MarkdownOpts = opts
+			} else {
+				contentRows[row].MarkdownOpts = getMarkdownOpts(contentRows[row])
+			}
 		}
 	}
 	return contentRows
+}
+
+func getMarkdownOpts(contentRow ContentRow) *MarkdownOpts {
+	text := contentRow.ToString()
+	re := regexp.MustCompile(`^(\s*>)+`)
+	match := re.FindString(text)
+	count := 0
+	for _, r := range match {
+		if r == '>' {
+			count++
+		}
+	}
+	return &MarkdownOpts{QuoteLevel: count}
 }
 
 // Extract line number from gutter and return the remaining cells

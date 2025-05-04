@@ -1,4 +1,6 @@
 <script lang="ts">
+	import LineNumber from "./LineNumber.svelte";
+
 	let { content, decode, cursor, lineNumbers, relativeLineNumbers }: App.GridProps = $props();
 
 	function computeRelativeLineNumbers() {
@@ -17,29 +19,14 @@
 </script>
 
 {#each content || [] as row (row.index)}
-	<div id="row-{row.index}" class="cursor-{JSON.stringify(cursor)} flex overflow-hidden whitespace-pre leading-none">
-		{#if lineNumbers}
-			{#if cursor && cursor.row === row.index}
-				<span
-					class:!pr-[2ch]={relativeLineNumbers}
-					class="w-[6ch] text-text cursor-row-{cursor.row} flex items-center justify-end pr-2 text-right"
-				>
-					{cursor.row}
-				</span>
-			{:else}
-				<span
-					class:!text-text={cursor?.row === row.index}
-					class:!pr-[1ch]={relativeLineNumbers && cursor?.row === row.index}
-					class="w-[6ch] pr-2 text-right flex items-center justify-end text-surface1"
-				>
-					{#if relativeLineNumbers}
-						{relativeLineNumbersList[row.index]}
-					{:else}
-						{row.index}
-					{/if}
-				</span>
-			{/if}
-		{/if}
+	<div id="row-{row.index}" class="flex overflow-hidden whitespace-pre leading-none">
+		<LineNumber
+			{lineNumbers}
+			{relativeLineNumbers}
+			{relativeLineNumbersList}
+			{cursor}
+			index={row.index}
+		/>
 		{#each row.tokens as token}
 			{#if token?.text}
 				<span class="cell inline-block h-full {token?.classes}">

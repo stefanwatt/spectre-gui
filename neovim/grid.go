@@ -17,6 +17,27 @@ type Grid struct {
 	}
 	DirtyRows     []bool
 	OptimizedRows [][]*Cell
+	MarkdownOpts  map[int]*MarkdownOpts
+}
+
+func NewGrid(rows int, cols int) *Grid {
+	content := make([][]*Cell, rows)
+	for i := range content {
+		content[i] = make([]*Cell, cols)
+		for j := range content[i] {
+			content[i][j] = &Cell{
+				Char:      " ",
+				Highlight: 0,
+			}
+		}
+	}
+	return &Grid{
+		ID:           1,
+		Width:        cols,
+		Height:       rows,
+		Cells:        content,
+		MarkdownOpts: make(map[int]*MarkdownOpts),
+	}
 }
 
 func (g *Grid) toString() string {
