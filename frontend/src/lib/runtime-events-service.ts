@@ -7,12 +7,21 @@ import {
 import { handleKeypress } from '$lib/keymaps/keymap-service';
 
 export async function init() {
-  runtime.EventsEmit('get-highlights');
 }
 export function startListening() {
   window.addEventListener('keydown', handleKeypress);
   window.addEventListener('resize', function () {
     runtime.EventsEmit('resize');
+  });
+
+  runtime.EventsOn('highlight-css', (css: string) => {
+    let el = document.getElementById('nvim-hl-style');
+    if (!el) {
+      el = document.createElement('style');
+      el.id = 'nvim-hl-style';
+      document.head.appendChild(el);
+    }
+    el.textContent = css;
   });
   runtime.EventsOn('cmdline_show', (data) => {
     cmdline.visible = true;

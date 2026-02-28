@@ -164,7 +164,7 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 				s.defaultColorsSet(fg, bg, sp)
 			}
 		case "hl_attr_define":
-			s.hlAttrDefineWrapper(args)
+			s.hlAttrDefine(args)
 		case "mode_change":
 			for _, arg := range args {
 				gridArgs := arg.([]interface{})
@@ -569,20 +569,7 @@ func (s *Screen) defaultColorsSet(fg int, bg int, sp int) {
 	s.scheduleRender()
 }
 
-func (s *Screen) hlAttrDefineWrapper(args []interface{}) {
-	if isDBLoaded.Load() {
-		s.hlAttrDefine(args)
-	} else {
-		wg.Add(1)
-		hlAttrQueue <- func() {
-			s.hlAttrDefine(args)
-		}
-	}
-}
-
 func (s *Screen) hlAttrDefine(args []interface{}) {
-	highlightUpdates := make([]map[string]interface{}, 0)
-
 	for _, attr := range args {
 		attrData := attr.([]interface{})
 		id := utils.ReflectToInt(attrData[0])
@@ -592,10 +579,12 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 
 		if fg, ok := rgbAttrs["foreground"]; ok {
 			highlight.Foreground = utils.ReflectToInt(fg)
+			highlight.HasForeground = true
 		}
 
 		if bg, ok := rgbAttrs["background"]; ok {
 			highlight.Background = utils.ReflectToInt(bg)
+			highlight.HasBackground = true
 		}
 
 		if sp, ok := rgbAttrs["special"]; ok {
@@ -630,27 +619,8 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 		s.Highlights[id] = highlight
 		s.highlightsMu.Unlock()
 
-		// Create a map with highlight properties to send to frontend
-		fg := highlight.fgHex()
-		bg := highlight.bgHex()
-		highlightDef := map[string]interface{}{
-			"id":            id,
-			"fg":            fg,
-			"bg":            bg,
-			"bold":          highlight.Bold,
-			"italic":        highlight.Italic,
-			"underline":     highlight.Underline,
-			"undercurl":     highlight.Undercurl,
-			"strikethrough": highlight.Strikethrough,
-			"reverse":       highlight.Reverse,
-		}
-
-		assert(fgColorClasses != nil, "running hlAttrDefine before colorClasses were loaded")
-
-		go func() {
-			addForegroundColorClass(fg)
-			addBackgroundColorClass(bg)
-		}()
+		addForegroundColorClass(highlight.fgHex())
+		addBackgroundColorClass(highlight.bgHex())
 
 		hlClasses := highlight.getClasses()
 		hlClassesStr := mapClassesString(hlClasses)
@@ -663,14 +633,9 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 		}
 		effectiveHlIdsMu.Unlock()
 		addIdClasses(effectiveHlId, hlClasses)
-		highlightUpdates = append(highlightUpdates, highlightDef)
 	}
 
-	// Emit highlight definitions to frontend
-	if len(highlightUpdates) > 0 {
-		Runtime.EventsEmit(s.ctx, "highlight_defined", highlightUpdates)
-	}
-
+	emitHighlightCSS(s.ctx)
 	s.scheduleRender()
 }
 

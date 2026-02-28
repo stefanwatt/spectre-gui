@@ -1,8 +1,11 @@
 package neovim
 
 import (
+	"context"
 	"fmt"
 	"strings"
+
+	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type Highlight struct {
@@ -15,17 +18,17 @@ type Highlight struct {
 	Underline     bool
 	Undercurl     bool
 	Strikethrough bool
+	HasForeground bool
+	HasBackground bool
 }
 
 // tailwind classes for font stuff
 var (
-	BOLD           = "font-bold"
-	ITALIC         = "italic"
-	UNDERLINE      = "underline"
-	UNDERCURL      = "underline decoration-wavy"
-	STRIKETHROUGH  = "line-trough"
-	CLASSES_IN_CSS = "/home/stefan/.config/nvim-gui/classes-in-css.txt"
-	CSS_FILE       = "/home/stefan/.config/nvim-gui/nvim-hl.css"
+	BOLD          = "font-bold"
+	ITALIC        = "italic"
+	UNDERLINE     = "underline"
+	UNDERCURL     = "underline decoration-wavy"
+	STRIKETHROUGH = "line-through"
 )
 
 func mapClassesString(classes []string) string {
@@ -37,39 +40,46 @@ func (h *Highlight) toString() string {
 }
 
 func (h *Highlight) fgHex() string {
-	return fmt.Sprintf("#%06x", h.Foreground)
-}
-func (h *Highlight) bgHex() string {
-	hex := fmt.Sprintf("#%06x", h.Background)
-	if hex == "#000000" {
+	if !h.HasForeground {
 		return ""
 	}
-	return hex
+	return fmt.Sprintf("#%06x", h.Foreground)
+}
+
+func (h *Highlight) bgHex() string {
+	if !h.HasBackground {
+		return ""
+	}
+	return fmt.Sprintf("#%06x", h.Background)
 }
 
 func (h *Highlight) getClasses() []string {
 	var classes []string
 
 	fgHex := h.fgHex()
-	if fgHex != "" { // Check if fgHex is not empty
+	if fgHex != "" {
+		fgColorClassesMu.Lock()
 		fgClass, exists := fgColorClasses[fgHex]
+		fgColorClassesMu.Unlock()
 		if !exists {
-			err := addForegroundColorClass(fgHex)
-			assert(err == nil, fmt.Sprintf("failed to add fg color class for %s", fgHex))
-			fgClass, exists = fgColorClasses[fgHex]
-			assert(exists, fmt.Sprintf("failed to find fg color class for %s after adding", fgHex))
+			addForegroundColorClass(fgHex)
+			fgColorClassesMu.Lock()
+			fgClass = fgColorClasses[fgHex]
+			fgColorClassesMu.Unlock()
 		}
 		classes = append(classes, fgClass)
 	}
 
 	bgHex := h.bgHex()
-	if bgHex != "" { // Check if bgHex is not empty
+	if bgHex != "" {
+		bgColorClassesMu.Lock()
 		bgClass, exists := bgColorClasses[bgHex]
+		bgColorClassesMu.Unlock()
 		if !exists {
-			err := addBackgroundColorClass(bgHex)
-			assert(err == nil, fmt.Sprintf("failed to add bg color class for %s", bgHex))
-			bgClass, exists = bgColorClasses[bgHex]
-			assert(exists, fmt.Sprintf("failed to find bg color class for %s after adding", bgHex))
+			addBackgroundColorClass(bgHex)
+			bgColorClassesMu.Lock()
+			bgClass = bgColorClasses[bgHex]
+			bgColorClassesMu.Unlock()
 		}
 		classes = append(classes, bgClass)
 	}
@@ -97,46 +107,20 @@ func (h *Highlight) getClasses() []string {
 	return classes
 }
 
-func updateHighlightCSS(optionalData ...interface{}) {
-	lines, err := readLinesFromFile(CLASSES_IN_CSS)
-	classesInCss := make(map[string]bool)
-	for _, line := range lines {
-		classesInCss[strings.TrimSpace(line)] = true
-	}
-	if err != nil {
-		panic(err.Error())
-	}
-
+func emitHighlightCSS(ctx context.Context) {
 	var cssBuilder strings.Builder
-	var classesInCssBuilder strings.Builder
+
+	fgColorClassesMu.Lock()
 	for color, class := range fgColorClasses {
-		if _, exists := classesInCss[class]; exists {
-			continue
-		}
-		classesInCssBuilder.WriteString(class + "\n")
-		cssBuilder.WriteString(fmt.Sprintf(`
-				.%s {
-					color: %s;
-				}
-			`, class, color))
+		cssBuilder.WriteString(fmt.Sprintf(".%s{color:%s}", class, color))
 	}
+	fgColorClassesMu.Unlock()
+
+	bgColorClassesMu.Lock()
 	for color, class := range bgColorClasses {
-		if _, exists := classesInCss[class]; exists {
-			continue
-		}
-		classesInCssBuilder.WriteString(class + "\n")
-		cssBuilder.WriteString(fmt.Sprintf(`
-				.%s {
-					background-color: %s;
-				}
-			`, class, color))
+		cssBuilder.WriteString(fmt.Sprintf(".%s{background-color:%s}", class, color))
 	}
-	err = appendStringToFile(CSS_FILE, cssBuilder.String())
-	if err != nil {
-		panic("could not write css file:\n" + err.Error())
-	}
-	err = appendStringToFile(CLASSES_IN_CSS, classesInCssBuilder.String())
-	if err != nil {
-		panic("could not write classes-in-css file:\n" + err.Error())
-	}
+	bgColorClassesMu.Unlock()
+
+	Runtime.EventsEmit(ctx, "highlight-css", cssBuilder.String())
 }

@@ -18,10 +18,10 @@ import (
 var (
 	currentMode      string
 	NvimInstance     *nvim.Nvim
-	fgColorClasses   map[string]string
-	bgColorClasses   map[string]string
-	idClasses        map[int][]string
-	effectiveHlIds   map[string]int = make(map[string]int)
+	fgColorClasses   = make(map[string]string)
+	bgColorClasses   = make(map[string]string)
+	idClasses        = make(map[int][]string)
+	effectiveHlIds   = make(map[string]int)
 	effectiveHlIdsMu sync.Mutex
 )
 
@@ -40,9 +40,6 @@ func CalculateGridSize(windowWidth, windowHeight int) (rows, cols int) {
 
 func StartListening(ctx context.Context) {
 	var err error
-	go loadDatabase()
-	go processHlAttrQueue()
-	waitForHlAttrDefine()
 	width, height := Runtime.WindowGetSize(ctx)
 	rows, cols := CalculateGridSize(width, height)
 	utils.Log(fmt.Sprintf("StartListening initializing screen with width=%d height=%d rows=%d cols=%d", width, height, rows, cols))
@@ -81,8 +78,6 @@ func StartListening(ctx context.Context) {
 		Runtime.Quit(ctx)
 		return
 	}
-
-	Runtime.EventsOn(ctx, "get-highlights", updateHighlightCSS)
 
 	// Run a goroutine to handle Neovim serving and exit
 	go func() {
