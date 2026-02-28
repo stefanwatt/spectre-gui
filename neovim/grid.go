@@ -15,6 +15,7 @@ type Grid struct {
 		Row int
 		Col int
 	}
+	TopLine       int // first visible buffer line (0-indexed), from win_viewport
 	DirtyRows     []bool
 	OptimizedRows [][]*Cell
 	MarkdownOpts  map[int]*MarkdownOpts

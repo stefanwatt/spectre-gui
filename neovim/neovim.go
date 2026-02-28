@@ -84,6 +84,28 @@ func StartListening(ctx context.Context) {
 		defer close(nvimExitChan)
 		defer NvimInstance.Close()
 
+		// Register all handlers BEFORE AttachUI so no events are missed.
+		// The go-client's internal goroutine dispatches notifications immediately;
+		// if handlers aren't registered when hl_attr_define arrives, highlights are lost.
+		NvimInstance.RegisterHandler("redraw", func(updates ...[]interface{}) {
+			NvimScreen.handleRedraw(updates)
+		})
+
+		NvimInstance.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data []string) {
+			assert(len(data) == 1, "BufEnter: malformed data")
+			filepath := filepath.Base(data[0])
+			Runtime.EventsEmit(NvimScreen.ctx, "BufEnter", filepath)
+		})
+
+		NvimInstance.RegisterHandler("TrekClosed", func(_ *nvim.Nvim, windowArgs []uint64) {
+			utils.Log("TrekClosed args=", windowArgs)
+			assert(len(windowArgs) == 3, "incorrect length windowIds")
+			windowIds := utils.MapArray(windowArgs, func(arg uint64) int {
+				return utils.ReflectToInt(arg)
+			})
+			NvimScreen.closeTrek(windowIds)
+		})
+
 		opts := map[string]interface{}{
 			"rgb":            true,
 			"ext_linegrid":   true,
@@ -103,26 +125,11 @@ func StartListening(ctx context.Context) {
 			return
 		}
 
-		NvimInstance.RegisterHandler("redraw", func(updates ...[]interface{}) {
-			NvimScreen.handleRedraw(updates)
-		})
+		// Disable neovim's gutter and wrapping — we render line numbers ourselves
+		// using win_viewport topline, and enforce nowrap for correct line indexing.
+		NvimInstance.Command("set nonumber norelativenumber signcolumn=no foldcolumn=0 nowrap")
 
 		SetupKeymaps()
-
-		NvimInstance.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data []string) {
-			assert(len(data) == 1, "BufEnter: malformed data")
-			filepath := filepath.Base(data[0])
-			Runtime.EventsEmit(NvimScreen.ctx, "BufEnter", filepath)
-		})
-
-		NvimInstance.RegisterHandler("TrekClosed", func(_ *nvim.Nvim, windowArgs []uint64) {
-			utils.Log("TrekClosed args=", windowArgs)
-			assert(len(windowArgs) == 3, "incorrect length windowIds")
-			windowIds := utils.MapArray(windowArgs, func(arg uint64) int {
-				return utils.ReflectToInt(arg)
-			})
-			NvimScreen.closeTrek(windowIds)
-		})
 
 		if err := NvimInstance.Serve(); err != nil {
 			utils.Log(fmt.Sprintf("Neovim process terminated: %v\n%s", err, debug.Stack()))

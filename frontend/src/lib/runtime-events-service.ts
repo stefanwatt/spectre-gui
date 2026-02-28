@@ -77,7 +77,7 @@ export function startListening() {
   runtime.EventsOn('layout-updated', (updatedLayout: App.NvimLayout) => {
     console.log('layout updates', updatedLayout)
     layout.cols = updatedLayout.cols;
-    layout.rows = updatedLayout.cols;
+    layout.rows = updatedLayout.rows;
     layout.activeWindowId = updatedLayout?.activeWindowId;
     layout.windows = updatedLayout.windows;
   });

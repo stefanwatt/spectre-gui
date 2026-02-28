@@ -7,21 +7,7 @@
 		windowContentRowMap: App.WindowContentRowMap;
 	}
 	let { win, windowContentRowMap }: NvimWindowProps = $props();
-	//TODO: this should not even happen
-	function filterDuplicateIndices() {
-		const seenIndices = new Set();
-		const rows = [];
-		if (!windowContentRowMap || !windowContentRowMap[win.id]) return [];
-		for (let i = 0; i < windowContentRowMap[win.id].length; i++) {
-			const row = windowContentRowMap[win.id][i];
-			if (!seenIndices.has(row.index)) {
-				seenIndices.add(row.index);
-				rows.push(row);
-			}
-		}
-		return rows;
-	}
-	let content = $derived(filterDuplicateIndices());
+	let content = $derived(windowContentRowMap?.[win.id] ?? []);
 </script>
 
 {#if win.filepath.endsWith('.md')}

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"nvim-gui/utils"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -66,11 +65,11 @@ func MapTokens(cells []*Cell) []*Token {
 func (s *Screen) optimizeGrid(grid *Grid, filetype string) []ContentRow {
 	contentRows := make([]ContentRow, grid.Height)
 	for row := 0; row < grid.Height; row++ {
-		rowCells, lineNumber := s.trimGutter(grid.Cells[row])
-		if lineNumber < 1 {
-			rowCells = grid.Cells[row]
-			lineNumber = row
-		}
+		// TODO: handle folds — folded lines cause line numbers to jump,
+		// topline+row won't be correct when folds are present.
+		lineNumber := grid.TopLine + row + 1 // 1-indexed buffer line
+		rowCells := grid.Cells[row]
+
 		if grid.DirtyRows[row] {
 			cells := s.optimizeRow(rowCells, row, grid.Cursor)
 			tokens := MapTokens(cells)
@@ -110,36 +109,6 @@ func getMarkdownOpts(contentRow ContentRow) *MarkdownOpts {
 	return &MarkdownOpts{QuoteLevel: count}
 }
 
-// Extract line number from gutter and return the remaining cells
-func (s *Screen) trimGutter(row []*Cell) ([]*Cell, int) {
-	// Extract line number from gutter (first 6 characters)
-	lineNumber := -1
-	gutterWidth := 6
-	if len(row) >= gutterWidth {
-		gutterText := ""
-		for i := 0; i < gutterWidth && i < len(row); i++ {
-			gutterText += row[i].Char
-		}
-
-		// Use regex to extract the line number
-		// This pattern looks for one or more digits in the gutter text
-		re := regexp.MustCompile(`\d+`)
-		matches := re.FindAllString(gutterText, -1)
-		if len(matches) > 0 {
-			// Use the first match if there are multiple numbers
-			if parsedNum, err := strconv.Atoi(matches[0]); err == nil {
-				lineNumber = parsedNum
-			}
-		}
-	}
-
-	// Return the row without the gutter
-	if len(row) <= gutterWidth {
-		return []*Cell{}, lineNumber
-	}
-
-	return row[gutterWidth:], lineNumber
-}
 func (s *Screen) optimizeRow(rowCells []*Cell, currentRow int, cursor struct {
 	Row int
 	Col int
@@ -152,12 +121,10 @@ func (s *Screen) optimizeRow(rowCells []*Cell, currentRow int, cursor struct {
 
 	var currentToken *Cell
 	lastHl := 0
-	gutterWidth := 6 // The width of the gutter we trimmed
 
 	for col := 0; col < len(rowCells); col++ {
 		cell := rowCells[col]
-		// Only show cursor if we're on the cursor's row and column (adjusted for gutter)
-		isCursor := cursor.Row == currentRow && cursor.Col == col+gutterWidth
+		isCursor := cursor.Row == currentRow && cursor.Col == col
 
 		if isCursor {
 			if currentToken != nil {

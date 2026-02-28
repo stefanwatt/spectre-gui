@@ -392,41 +392,42 @@ func (s *Screen) gridClear(gridId int) {
 }
 
 func (s *Screen) handleWinViewport(args []interface{}) {
-	if len(args) < 1 {
-		return
+	for _, arg := range args {
+		viewportArgs, ok := arg.([]interface{})
+		if !ok || len(viewportArgs) < 8 {
+			continue
+		}
+
+		gridId := utils.ReflectToInt(viewportArgs[0])
+		topLine := utils.ReflectToInt(viewportArgs[2])
+		botLine := utils.ReflectToInt(viewportArgs[3])
+		curLine := utils.ReflectToInt(viewportArgs[4])
+		lineCount := utils.ReflectToInt(viewportArgs[6])
+
+		// Store topline on the grid for line number calculation
+		if grid, exists := s.Grids[gridId]; exists {
+			grid.TopLine = topLine
+		}
+
+		// Track on screen for the active grid
+		s.topLine = topLine
+		s.botLine = botLine
+		s.curLine = curLine
+		s.lineCount = lineCount
+
+		if f, ok := viewportArgs[7].(float64); ok {
+			s.scrollDelta = f
+		} else {
+			s.scrollDelta = float64(utils.ReflectToInt(viewportArgs[7]))
+		}
+
+		Runtime.EventsEmit(s.ctx, "viewport_changed", map[string]interface{}{
+			"top_line":   topLine,
+			"bot_line":   botLine,
+			"cur_line":   curLine,
+			"line_count": lineCount,
+		})
 	}
-
-	viewportArgs, ok := args[0].([]interface{})
-	if !ok || len(viewportArgs) < 8 {
-		return
-	}
-
-	grid := utils.ReflectToInt(viewportArgs[0])
-	if grid != 1 {
-		return // Only care about main grid
-	}
-
-	// win := utils.ReflectToInt(viewportArgs[1]) // Window ID
-	s.topLine = utils.ReflectToInt(viewportArgs[2])
-	s.botLine = utils.ReflectToInt(viewportArgs[3])
-	s.curLine = utils.ReflectToInt(viewportArgs[4])
-	// curcol := utils.ReflectToInt(viewportArgs[5])
-	s.lineCount = utils.ReflectToInt(viewportArgs[6])
-
-	// Convert to float64 if it's a float
-	if f, ok := viewportArgs[7].(float64); ok {
-		s.scrollDelta = f
-	} else {
-		s.scrollDelta = float64(utils.ReflectToInt(viewportArgs[7]))
-	}
-
-	// Emit viewport info to frontend
-	Runtime.EventsEmit(s.ctx, "viewport_changed", map[string]interface{}{
-		"top_line":   s.topLine,
-		"bot_line":   s.botLine,
-		"cur_line":   s.curLine,
-		"line_count": s.lineCount,
-	})
 }
 
 func (s *Screen) handleWinViewportMargins(args []interface{}) {
@@ -523,19 +524,12 @@ func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
 
 	s.ActiveGrid = gridId
 	s.ActiveWindow = s.GridToWindow[gridId]
-	window := s.Windows[s.ActiveWindow]
-	//TODO: probably a cleaner way to handle this, but theres an offset issue. idk why
-	if window != nil &&
-		window.Buffer != nil &&
-		window.Buffer.Filetype == "qf" {
-		grid.Cursor.Col += 6
-	}
 	s.UpdateCursor()
 	utils.Log(fmt.Sprintf("gridCursorGoto row=%d col=%d activeWindowId=%d", row, col, s.ActiveWindow))
 	if row >= 0 && row < grid.Height {
 		grid.DirtyRows[row] = true
 	}
-	if previousRow != row && len(grid.DirtyRows) >= previousRow {
+	if previousRow != row && previousRow >= 0 && previousRow < len(grid.DirtyRows) {
 		grid.DirtyRows[previousRow] = true
 	}
 }
@@ -779,16 +773,9 @@ func (s *Screen) winPos(args []interface{}) {
 	window.StartRow = row
 	window.StartCol = col
 	window.Hidden = false
-
-	var result bool
-	err := NvimInstance.WindowOption(nwindow, "number", &result)
-	if err == nil {
-		window.lineNumbers = result
-	}
-	err = NvimInstance.WindowOption(nwindow, "relativenumber", &result)
-	if err == nil {
-		window.relativeLineNumbers = result
-	}
+	// Line numbers are rendered by the frontend — neovim's gutter is disabled
+	window.lineNumbers = true
+	window.relativeLineNumbers = true
 	utils.Log(fmt.Sprintf("winPos id=%d gridId=%d StartRow=%d StartCol=%d Width=%d Height=%d", winId, gridId, row, col, width, height))
 	s.windowsMu.RUnlock()
 

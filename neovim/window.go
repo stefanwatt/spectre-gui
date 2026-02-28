@@ -69,21 +69,23 @@ func (w *WindowAPI) Equal(other *WindowAPI) bool {
 // NewWindow creates a new window with the given ID and grid ID
 func NewWindow(id int, grid *Grid) *Window {
 	return &Window{
-		ID:          id,
-		Dirty:       true,
-		Grid:        grid,
-		Type:        "normal",
-		Anchor:      "",
-		AnchorGrid:  0,
-		StartRow:    0,
-		StartCol:    0,
-		Width:       0,
-		Height:      0,
-		Focusable:   true,
-		ZIndex:      0,
-		IsPopupmenu: false,
-		Cursor:      &Cursor{Row: 1, Col: 1},
-		Mode:        "normal",
+		ID:                  id,
+		Dirty:               true,
+		Grid:                grid,
+		Type:                "normal",
+		Anchor:              "",
+		AnchorGrid:          0,
+		StartRow:            0,
+		StartCol:            0,
+		Width:               0,
+		Height:              0,
+		Focusable:           true,
+		ZIndex:              0,
+		IsPopupmenu:         false,
+		Cursor:              &Cursor{Row: 1, Col: 1},
+		Mode:                "normal",
+		lineNumbers:         true,
+		relativeLineNumbers: true,
 	}
 }
 
