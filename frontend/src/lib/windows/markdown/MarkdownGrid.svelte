@@ -4,7 +4,7 @@
 	import MarkdownRow from './MarkdownRow.svelte';
 	import Quote from './Quote.svelte';
 	import Table from './Table.svelte';
-	let { content, decode, cursor, lineNumbers, relativeLineNumbers }: App.GridProps = $props();
+	let { content, decode, cursor, lineNumbers, relativeLineNumbers, cursorLineColor }: App.GridProps = $props();
 
 	$effect(() => {
 		if (!cursor?.row && cursor?.row !== 0) return;
@@ -127,7 +127,7 @@
 	{#if isInTableGroup(i) && !isFirstOfTableGroup(i)}
 		<!-- skip non-first table rows, they're rendered by the Table component -->
 	{:else}
-		<div id="row-{row.index}" class="flex overflow-hidden whitespace-pre leading-none">
+		<div id="row-{row.index}" class="flex overflow-hidden whitespace-pre leading-none" style={row.index === cursor?.row && cursorLineColor ? `background: ${cursorLineColor}` : ''}>
 			<LineNumber
 				{lineNumbers}
 				{relativeLineNumbers}

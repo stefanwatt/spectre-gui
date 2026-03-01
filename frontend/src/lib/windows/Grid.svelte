@@ -1,7 +1,7 @@
 <script lang="ts">
 	import LineNumber from "./LineNumber.svelte";
 
-	let { content, decode, cursor, lineNumbers, relativeLineNumbers }: App.GridProps = $props();
+	let { content, decode, cursor, lineNumbers, relativeLineNumbers, cursorLineColor }: App.GridProps = $props();
 
 	function computeRelativeLineNumbers() {
 		if (!content || !cursor || !relativeLineNumbers || cursor.row === undefined) return [];
@@ -19,7 +19,7 @@
 </script>
 
 {#each content || [] as row (row.index)}
-	<div id="row-{row.index}" class="flex overflow-hidden whitespace-pre leading-none">
+	<div id="row-{row.index}" class="flex overflow-hidden whitespace-pre leading-none" style={row.index === cursor?.row && cursorLineColor ? `background: ${cursorLineColor}` : ''}>
 		<LineNumber
 			{lineNumbers}
 			{relativeLineNumbers}
