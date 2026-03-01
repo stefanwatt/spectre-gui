@@ -106,6 +106,8 @@ func (s *Screen) CalculateGridLayout() {
 			w.Filetype = buf.Filetype
 			w.Filepath = buf.Filepath
 		}
+		w.ColorColumns = s.ColorColumns
+		w.ColorColumnColor = s.ColorColumnColor
 
 		windowAPIs = append(windowAPIs, w)
 	}

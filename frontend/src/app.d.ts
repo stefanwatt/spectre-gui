@@ -75,6 +75,8 @@ declare global {
       filepath: string;
       mode: VimMode;
       cursor: { row: number, col: number }
+      colorColumns: number[];
+      colorColumnColor: string;
     }
 
     interface CmdLine {

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strconv"
 	"sync"
 
 	"nvim-gui/utils"
@@ -179,9 +180,11 @@ func StartListening(ctx context.Context) {
 			return
 		}
 
-		// Disable neovim's gutter and wrapping — we render line numbers ourselves
-		// using win_viewport topline, and enforce nowrap for correct line indexing.
-		NvimInstance.Command("set nonumber norelativenumber signcolumn=no foldcolumn=0 nowrap")
+		// Read colorcolumn value and highlight color before disabling
+		readColorColumn(NvimScreen)
+
+		// Disable neovim's gutter, wrapping, and colorcolumn — we render these ourselves.
+		NvimInstance.Command("set nonumber norelativenumber signcolumn=no foldcolumn=0 nowrap colorcolumn=")
 
 		// Open test file if env var is set (used by e2e tests)
 		if testFile := os.Getenv("NVIM_GUI_TEST_FILE"); testFile != "" {
@@ -227,6 +230,45 @@ func StartListening(ctx context.Context) {
 	}
 
 	log.Println("listening terminating")
+}
+
+func readColorColumn(screen *Screen) {
+	// Read colorcolumn setting (returns a list of strings like {"80"} or {"+1", "120"})
+	var ccValues []interface{}
+	err := NvimInstance.ExecLua("return vim.opt.colorcolumn:get()", &ccValues)
+	if err != nil {
+		utils.Log(fmt.Sprintf("Error reading colorcolumn: %v", err))
+		return
+	}
+
+	var columns []int
+	for _, v := range ccValues {
+		str := fmt.Sprintf("%v", v)
+		// Only support absolute column numbers (skip relative like "+1")
+		col, err := strconv.Atoi(str)
+		if err == nil && col > 0 {
+			columns = append(columns, col)
+		}
+	}
+	screen.ColorColumns = columns
+
+	if len(columns) == 0 {
+		return
+	}
+
+	// Read ColorColumn highlight group color
+	var hlResult map[string]interface{}
+	err = NvimInstance.ExecLua("return vim.api.nvim_get_hl(0, {name='ColorColumn'})", &hlResult)
+	if err != nil {
+		utils.Log(fmt.Sprintf("Error reading ColorColumn highlight: %v", err))
+		return
+	}
+
+	if bg, ok := hlResult["bg"]; ok {
+		bgInt := utils.ReflectToInt(bg)
+		screen.ColorColumnColor = fmt.Sprintf("#%06x", bgInt)
+	}
+	utils.Log(fmt.Sprintf("ColorColumn: columns=%v color=%s", screen.ColorColumns, screen.ColorColumnColor))
 }
 
 func isVisualMode(mode string) bool {
