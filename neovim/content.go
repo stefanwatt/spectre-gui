@@ -26,9 +26,21 @@ type TableRowOpts struct {
 	Alignments []string   `json:"alignments"`
 }
 
+type ImageMeta struct {
+	Line    int    // 0-indexed buffer line
+	URL     string
+	AltText string
+}
+
+type ImageOpts struct {
+	URL     string `json:"url"`
+	AltText string `json:"altText"`
+}
+
 type MarkdownOpts struct {
 	QuoteLevel int           `json:"quoteLevel"`
 	Table      *TableRowOpts `json:"table,omitempty"`
+	Image      *ImageOpts    `json:"image,omitempty"`
 }
 
 func NewMarkdownOpts() *MarkdownOpts {
@@ -101,6 +113,10 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 				if tableMeta != nil && !isCursorInTable(cursorLine, tableMeta) {
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
 				}
+				imageMeta := s.getImageMetaForLine(bufNr, bufferLine)
+				if imageMeta != nil && cursorLine != bufferLine {
+					markdownOpts.Image = &ImageOpts{URL: imageMeta.URL, AltText: imageMeta.AltText}
+				}
 				contentRows[row].MarkdownOpts = markdownOpts
 				grid.MarkdownOpts[row] = markdownOpts
 			}
@@ -113,6 +129,10 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 				tableMeta := s.getTableMetaForLine(bufNr, bufferLine)
 				if tableMeta != nil && !isCursorInTable(cursorLine, tableMeta) {
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
+				}
+				imageMeta := s.getImageMetaForLine(bufNr, bufferLine)
+				if imageMeta != nil && cursorLine != bufferLine {
+					markdownOpts.Image = &ImageOpts{URL: imageMeta.URL, AltText: imageMeta.AltText}
 				}
 				contentRows[row].MarkdownOpts = markdownOpts
 				grid.MarkdownOpts[row] = markdownOpts

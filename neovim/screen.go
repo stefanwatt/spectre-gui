@@ -2,6 +2,7 @@ package neovim
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"math"
 	"nvim-gui/utils"
@@ -41,6 +42,8 @@ type Screen struct {
 	layout          *GridLayout
 	tableMetadata   map[int][]TableMeta // bufNr -> []TableMeta
 	tableMetadataMu sync.RWMutex
+	imageMetadata   map[int][]ImageMeta // bufNr -> []ImageMeta
+	imageMetadataMu sync.RWMutex
 }
 
 func NewScreen(ctx context.Context, cols int, rows int) *Screen {
@@ -74,6 +77,7 @@ func NewScreen(ctx context.Context, cols int, rows int) *Screen {
 		margins:       make([]int, 4), // Initialize margins slice
 		layout:        NewGridLayout(),
 		tableMetadata: make(map[int][]TableMeta),
+		imageMetadata: make(map[int][]ImageMeta),
 	}
 }
 
@@ -1084,6 +1088,59 @@ func parseMarkdownTables(tablesRaw []interface{}) []TableMeta {
 		})
 	}
 	return tables
+}
+
+func (s *Screen) setImageMetadata(bufNr int, images []ImageMeta) {
+	s.imageMetadataMu.Lock()
+	defer s.imageMetadataMu.Unlock()
+	s.imageMetadata[bufNr] = images
+}
+
+func (s *Screen) getImageMetaForLine(bufNr int, bufferLine int) *ImageMeta {
+	if bufNr == 0 {
+		return nil
+	}
+	s.imageMetadataMu.RLock()
+	defer s.imageMetadataMu.RUnlock()
+	images, exists := s.imageMetadata[bufNr]
+	if !exists {
+		return nil
+	}
+	for i := range images {
+		if images[i].Line == bufferLine {
+			return &images[i]
+		}
+	}
+	return nil
+}
+
+func parseMarkdownImages(imagesRaw []interface{}) []ImageMeta {
+	var images []ImageMeta
+	for _, raw := range imagesRaw {
+		imageData, ok := raw.([]interface{})
+		if !ok || len(imageData) < 3 {
+			continue
+		}
+		line := utils.ReflectToInt(imageData[0])
+		url, ok := imageData[1].(string)
+		if !ok {
+			continue
+		}
+		alt, _ := imageData[2].(string)
+
+		// Rewrite local paths to use the local-image server
+		if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+			encoded := base64.URLEncoding.EncodeToString([]byte(url))
+			url = "/local-image/" + encoded
+		}
+
+		images = append(images, ImageMeta{
+			Line:    line,
+			URL:     url,
+			AltText: alt,
+		})
+	}
+	return images
 }
 
 func (s *Screen) GetActiveWindow() *Window {

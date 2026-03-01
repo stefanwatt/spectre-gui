@@ -31,9 +31,15 @@ declare global {
       alignments: string[];
     }
 
+    interface ImageOpts {
+      url: string;
+      altText: string;
+    }
+
     interface MarkdownOpts {
       quoteLevel: number
       table?: TableRowOpts
+      image?: ImageOpts
     }
 
     interface WindowContentRowMap {

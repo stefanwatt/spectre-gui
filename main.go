@@ -65,7 +65,8 @@ func main() {
 		Width:              1024,
 		Height:             768,
 		AssetServer: &assetserver.Options{
-			Assets: assets,
+			Assets:  assets,
+			Handler: &LocalImageHandler{},
 		},
 		Linux: &linux.Options{
 			WebviewGpuPolicy: linux.WebviewGpuPolicyAlways,

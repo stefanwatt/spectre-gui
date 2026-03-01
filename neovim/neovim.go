@@ -129,6 +129,22 @@ func StartListening(ctx context.Context) {
 			}
 		})
 
+		NvimInstance.RegisterHandler("MarkdownImages", func(updates ...[]interface{}) {
+			for _, data := range updates {
+				if len(data) < 2 {
+					continue
+				}
+				bufNr := utils.ReflectToInt(data[0])
+				imagesRaw, ok := data[1].([]interface{})
+				if !ok {
+					continue
+				}
+				images := parseMarkdownImages(imagesRaw)
+				utils.Log(fmt.Sprintf("MarkdownImages received: bufNr=%d, images=%d", bufNr, len(images)))
+				NvimScreen.setImageMetadata(bufNr, images)
+			}
+		})
+
 		opts := map[string]interface{}{
 			"rgb":            true,
 			"ext_linegrid":   true,

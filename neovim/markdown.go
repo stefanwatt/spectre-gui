@@ -71,12 +71,76 @@ local function get_table_metadata(bufnr)
   return tables
 end
 
+local function get_image_metadata(bufnr)
+  local ok, parser = pcall(vim.treesitter.get_parser, bufnr, 'markdown_inline')
+  if not ok or not parser then
+    return {}
+  end
+
+  local trees = parser:parse()
+  if not trees or #trees == 0 then
+    return {}
+  end
+
+  local images = {}
+  local buf_dir = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(bufnr), ':p:h')
+
+  for _, tree in ipairs(trees) do
+    local root = tree:root()
+    local function walk(node)
+      if node:type() == 'image' then
+        local start_row, start_col, end_row, end_col = node:range()
+        -- Only standalone images: must be on a single line and span the full line content
+        if start_row == end_row then
+          local line_text = vim.api.nvim_buf_get_lines(bufnr, start_row, start_row + 1, false)[1] or ''
+          local trimmed = vim.trim(line_text)
+          local node_text = vim.treesitter.get_node_text(node, bufnr)
+          if trimmed == node_text then
+            local url = ''
+            local alt = ''
+            for child in node:iter_children() do
+              if child:type() == 'image_description' then
+                alt = vim.treesitter.get_node_text(child, bufnr)
+              elseif child:type() == 'link_destination' then
+                url = vim.treesitter.get_node_text(child, bufnr)
+              end
+            end
+            -- Resolve relative local paths
+            if url ~= '' and not url:match('^https?://') then
+              local resolved = vim.fn.resolve(buf_dir .. '/' .. url)
+              url = resolved
+            end
+            if url ~= '' then
+              table.insert(images, { start_row, url, alt })
+            end
+          end
+        end
+      else
+        for child in node:iter_children() do
+          walk(child)
+        end
+      end
+    end
+    walk(root)
+  end
+
+  return images
+end
+
 local function send_tables(bufnr)
   if vim.bo[bufnr].filetype ~= 'markdown' then
     return
   end
   local tables = get_table_metadata(bufnr)
   vim.rpcnotify(channel, 'MarkdownTables', {bufnr, tables})
+end
+
+local function send_images(bufnr)
+  if vim.bo[bufnr].filetype ~= 'markdown' then
+    return
+  end
+  local images = get_image_metadata(bufnr)
+  vim.rpcnotify(channel, 'MarkdownImages', {bufnr, images})
 end
 
 local group = vim.api.nvim_create_augroup('NvimGuiMarkdownTables', { clear = true })
@@ -87,10 +151,12 @@ vim.api.nvim_create_autocmd({ 'BufEnter', 'TextChanged', 'TextChangedI', 'Insert
   callback = function(ev)
     disable_markdown_renderers()
     send_tables(ev.buf)
+    send_images(ev.buf)
   end,
 })
 
 -- Run immediately for the current buffer (VimEnter/BufEnter already fired before this Lua loads)
 disable_markdown_renderers()
 send_tables(vim.api.nvim_get_current_buf())
+send_images(vim.api.nvim_get_current_buf())
 `
