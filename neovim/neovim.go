@@ -145,6 +145,21 @@ func StartListening(ctx context.Context) {
 			}
 		})
 
+		NvimInstance.RegisterHandler("MarkdownHeadings", func(updates ...[]interface{}) {
+			for _, data := range updates {
+				if len(data) < 2 {
+					continue
+				}
+				bufNr := utils.ReflectToInt(data[0])
+				headingsRaw, ok := data[1].([]interface{})
+				if !ok {
+					continue
+				}
+				headings := parseMarkdownHeadings(headingsRaw)
+				NvimScreen.setHeadingMetadata(bufNr, headings)
+			}
+		})
+
 		opts := map[string]interface{}{
 			"rgb":            true,
 			"ext_linegrid":   true,

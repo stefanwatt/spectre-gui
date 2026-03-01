@@ -42,8 +42,10 @@ type Screen struct {
 	layout          *GridLayout
 	tableMetadata   map[int][]TableMeta // bufNr -> []TableMeta
 	tableMetadataMu sync.RWMutex
-	imageMetadata   map[int][]ImageMeta // bufNr -> []ImageMeta
-	imageMetadataMu sync.RWMutex
+	imageMetadata     map[int][]ImageMeta   // bufNr -> []ImageMeta
+	imageMetadataMu   sync.RWMutex
+	headingMetadata   map[int]map[int]int // bufNr -> line -> heading level
+	headingMetadataMu sync.RWMutex
 }
 
 func NewScreen(ctx context.Context, cols int, rows int) *Screen {
@@ -76,8 +78,9 @@ func NewScreen(ctx context.Context, cols int, rows int) *Screen {
 		PendingRender: false,
 		margins:       make([]int, 4), // Initialize margins slice
 		layout:        NewGridLayout(),
-		tableMetadata: make(map[int][]TableMeta),
-		imageMetadata: make(map[int][]ImageMeta),
+		tableMetadata:   make(map[int][]TableMeta),
+		imageMetadata:   make(map[int][]ImageMeta),
+		headingMetadata: make(map[int]map[int]int),
 	}
 }
 
@@ -1141,6 +1144,39 @@ func parseMarkdownImages(imagesRaw []interface{}) []ImageMeta {
 		})
 	}
 	return images
+}
+
+func (s *Screen) setHeadingMetadata(bufNr int, headings map[int]int) {
+	s.headingMetadataMu.Lock()
+	defer s.headingMetadataMu.Unlock()
+	s.headingMetadata[bufNr] = headings
+}
+
+func (s *Screen) getHeadingLevel(bufNr int, bufferLine int) int {
+	if bufNr == 0 {
+		return 0
+	}
+	s.headingMetadataMu.RLock()
+	defer s.headingMetadataMu.RUnlock()
+	headings, exists := s.headingMetadata[bufNr]
+	if !exists {
+		return 0
+	}
+	return headings[bufferLine]
+}
+
+func parseMarkdownHeadings(headingsRaw []interface{}) map[int]int {
+	headings := make(map[int]int)
+	for _, raw := range headingsRaw {
+		entry, ok := raw.([]interface{})
+		if !ok || len(entry) < 2 {
+			continue
+		}
+		line := utils.ReflectToInt(entry[0])
+		level := utils.ReflectToInt(entry[1])
+		headings[line] = level
+	}
+	return headings
 }
 
 func (s *Screen) GetActiveWindow() *Window {
