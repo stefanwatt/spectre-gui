@@ -130,12 +130,12 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 			grid.DirtyRows[row] = false
 
 			if filetype == "markdown" {
-				markdownOpts := getMarkdownOpts(contentRows[row], cursorLine, bufferLine)
+				markdownOpts := getMarkdownOpts(contentRows[row])
 				if headingLevel := s.getHeadingLevel(bufNr, bufferLine); headingLevel > 0 {
 					markdownOpts.HeadingLevel = headingLevel
 				}
 				tableMeta := s.getTableMetaForLine(bufNr, bufferLine)
-				if tableMeta != nil && !isCursorInTable(cursorLine, tableMeta) {
+				if tableMeta != nil {
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
 				}
 				imageMeta := s.getImageMetaForLine(bufNr, bufferLine)
@@ -145,7 +145,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 				if checked, isTask := s.getTaskMetaForLine(bufNr, bufferLine); isTask && cursorLine != bufferLine {
 					markdownOpts.Task = &TaskOpts{Checked: checked}
 				}
-				if cbMeta := s.getCodeBlockMetaForLine(bufNr, bufferLine); cbMeta != nil && !isCursorInCodeBlock(cursorLine, cbMeta) {
+				if cbMeta := s.getCodeBlockMetaForLine(bufNr, bufferLine); cbMeta != nil {
 					position := "middle"
 					if bufferLine == cbMeta.StartLine {
 						position = "first"
@@ -165,12 +165,12 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 			contentRows[row].Index = lineNumber
 			if filetype == "markdown" {
 				// Must recompute table opts even for non-dirty rows because TopLine changes on scroll
-				markdownOpts := getMarkdownOpts(contentRows[row], cursorLine, bufferLine)
+				markdownOpts := getMarkdownOpts(contentRows[row])
 				if headingLevel := s.getHeadingLevel(bufNr, bufferLine); headingLevel > 0 {
 					markdownOpts.HeadingLevel = headingLevel
 				}
 				tableMeta := s.getTableMetaForLine(bufNr, bufferLine)
-				if tableMeta != nil && !isCursorInTable(cursorLine, tableMeta) {
+				if tableMeta != nil {
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
 				}
 				imageMeta := s.getImageMetaForLine(bufNr, bufferLine)
@@ -180,7 +180,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 				if checked, isTask := s.getTaskMetaForLine(bufNr, bufferLine); isTask && cursorLine != bufferLine {
 					markdownOpts.Task = &TaskOpts{Checked: checked}
 				}
-				if cbMeta := s.getCodeBlockMetaForLine(bufNr, bufferLine); cbMeta != nil && !isCursorInCodeBlock(cursorLine, cbMeta) {
+				if cbMeta := s.getCodeBlockMetaForLine(bufNr, bufferLine); cbMeta != nil {
 					position := "middle"
 					if bufferLine == cbMeta.StartLine {
 						position = "first"
@@ -202,22 +202,6 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 	return contentRows
 }
 
-// isCursorInTable returns true if the cursor's 0-indexed buffer line
-// falls within the table's range (with the same ±1 border extension
-// used by getTableMetaForLine for box-drawing rows).
-func isCursorInTable(cursorLine int, meta *TableMeta) bool {
-	if cursorLine < 0 || meta == nil {
-		return false
-	}
-	return cursorLine >= meta.StartLine-1 && cursorLine < meta.EndLine+1
-}
-
-func isCursorInCodeBlock(cursorLine int, meta *CodeBlockMeta) bool {
-	if cursorLine < 0 || meta == nil {
-		return false
-	}
-	return cursorLine >= meta.StartLine && cursorLine < meta.EndLine
-}
 
 func applyInlineCodeClass(tokens []*Token, ranges []ColRange) {
 	col := 0
@@ -241,17 +225,14 @@ func applyInlineCodeClass(tokens []*Token, ranges []ColRange) {
 	}
 }
 
-func getMarkdownOpts(contentRow ContentRow, cursorLine int, bufferLine int) *MarkdownOpts {
+func getMarkdownOpts(contentRow ContentRow) *MarkdownOpts {
 	text := contentRow.ToString()
 	count := 0
-	// Only set quoteLevel when cursor is not on this line
-	if cursorLine != bufferLine {
-		re := regexp.MustCompile(`^(\s*>)+`)
-		match := re.FindString(text)
-		for _, r := range match {
-			if r == '>' {
-				count++
-			}
+	re := regexp.MustCompile(`^(\s*>)+`)
+	match := re.FindString(text)
+	for _, r := range match {
+		if r == '>' {
+			count++
 		}
 	}
 	return &MarkdownOpts{QuoteLevel: count}

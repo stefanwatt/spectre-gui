@@ -191,17 +191,17 @@
 			/>
 
 			{#if isInTableGroup(i)}
-				<Table rows={getTableGroup(i) ?? []} {decode} />
+				<Table rows={getTableGroup(i) ?? []} {decode} cursorRow={cursor?.row} />
 			{:else if isInCodeBlockGroup(i)}
 				<div class="mx-6">
-				<CodeBlock rows={getCodeBlockGroup(i)} {decode} />
+				<CodeBlock rows={getCodeBlockGroup(i)} {decode} cursorRow={cursor?.row} />
 				</div>
 			{:else if row.markdownOpts?.image}
 				<img src={row.markdownOpts.image.url} alt={row.markdownOpts.image.altText}
 					class="max-w-full max-h-96 object-contain" />
 			{:else if isInQuoteGroup(i)}
 				{#if isFirstOfQuoteGroup(i)}
-					<Quote rows={getQuoteGroup(i)} {decode} />
+					<Quote rows={getQuoteGroup(i)} {decode} cursorRow={cursor?.row} />
 				{/if}
 			{:else}
 				<MarkdownRow {row} {decode} cursorOnRow={cursor?.row === row.index} />

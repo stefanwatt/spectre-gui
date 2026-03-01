@@ -3,10 +3,12 @@
 	import MarkdownRow from './MarkdownRow.svelte';
 	let {
 		rows,
-		decode
+		decode,
+		cursorRow
 	}: {
 		rows: App.NvimRow[];
 		decode?: (input: string) => string;
+		cursorRow?: number;
 	} = $props();
 
 	function stripQuotePrefix(row: App.NvimRow): App.NvimRow {
@@ -38,7 +40,7 @@
 		for (const row of rows) {
 			const rowLevel = row.markdownOpts?.quoteLevel ?? 0;
 			if (rowLevel === level) {
-				current.push(stripQuotePrefix(row));
+				current.push(cursorRow === row.index ? row : stripQuotePrefix(row));
 			} else if (rowLevel > level) {
 				if (
 					nested.length === 0 ||
@@ -63,7 +65,7 @@
 		{/each}
 
 		{#each groupData.nested as group}
-			<Quote rows={group} {decode} />
+			<Quote rows={group} {decode} {cursorRow} />
 		{/each}
 	</p>
 </blockquote>
