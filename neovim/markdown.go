@@ -3,6 +3,20 @@ package neovim
 const markdownTablesLua = `
 local channel = ...
 
+-- Disable markdown rendering plugins that replace table characters
+local function disable_markdown_renderers()
+  pcall(function()
+    if package.loaded['markview'] then
+      vim.cmd('Markview disable')
+    end
+  end)
+  pcall(function()
+    if package.loaded['render-markdown'] then
+      vim.cmd('RenderMarkdown disable')
+    end
+  end)
+end
+
 local function get_table_metadata(bufnr)
   local ok, parser = pcall(vim.treesitter.get_parser, bufnr, 'markdown')
   if not ok or not parser then
@@ -71,7 +85,12 @@ vim.api.nvim_create_autocmd({ 'BufEnter', 'TextChanged', 'TextChangedI', 'Insert
   group = group,
   pattern = '*.md',
   callback = function(ev)
+    disable_markdown_renderers()
     send_tables(ev.buf)
   end,
 })
+
+-- Run immediately for the current buffer (VimEnter/BufEnter already fired before this Lua loads)
+disable_markdown_renderers()
+send_tables(vim.api.nvim_get_current_buf())
 `

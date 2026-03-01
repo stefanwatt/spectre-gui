@@ -97,6 +97,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int) []ContentR
 				markdownOpts := getMarkdownOpts(contentRows[row])
 				tableMeta := s.getTableMetaForLine(bufNr, bufferLine)
 				if tableMeta != nil {
+					utils.Log(fmt.Sprintf("table metadata found: bufNr=%d bufferLine=%d startLine=%d endLine=%d", bufNr, bufferLine, tableMeta.StartLine, tableMeta.EndLine))
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
 				}
 				contentRows[row].MarkdownOpts = markdownOpts
@@ -110,6 +111,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int) []ContentR
 				markdownOpts := getMarkdownOpts(contentRows[row])
 				tableMeta := s.getTableMetaForLine(bufNr, bufferLine)
 				if tableMeta != nil {
+					utils.Log(fmt.Sprintf("table metadata found (cached): bufNr=%d bufferLine=%d startLine=%d endLine=%d", bufNr, bufferLine, tableMeta.StartLine, tableMeta.EndLine))
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
 				}
 				contentRows[row].MarkdownOpts = markdownOpts

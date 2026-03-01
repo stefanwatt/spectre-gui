@@ -124,6 +124,7 @@ func StartListening(ctx context.Context) {
 					continue
 				}
 				tables := parseMarkdownTables(tablesRaw)
+				utils.Log(fmt.Sprintf("MarkdownTables received: bufNr=%d, tables=%d", bufNr, len(tables)))
 				NvimScreen.setTableMetadata(bufNr, tables)
 			}
 		})
