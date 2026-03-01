@@ -71,6 +71,44 @@ local function get_table_metadata(bufnr)
   return tables
 end
 
+local function get_heading_metadata(bufnr)
+  local ok, parser = pcall(vim.treesitter.get_parser, bufnr, 'markdown')
+  if not ok or not parser then
+    return {}
+  end
+
+  local trees = parser:parse()
+  if not trees or #trees == 0 then
+    return {}
+  end
+
+  local root = trees[1]:root()
+  local headings = {}
+
+  local function walk(node)
+    local ntype = node:type()
+    if ntype == 'atx_heading' then
+      local start_row = node:range()
+      -- Determine level from the marker child
+      for child in node:iter_children() do
+        local ctype = child:type()
+        if ctype:match('^atx_h%d_marker$') then
+          local level = tonumber(ctype:match('%d'))
+          table.insert(headings, { start_row, level })
+          break
+        end
+      end
+    else
+      for child in node:iter_children() do
+        walk(child)
+      end
+    end
+  end
+
+  walk(root)
+  return headings
+end
+
 local function get_image_metadata(bufnr)
   local ok, parser = pcall(vim.treesitter.get_parser, bufnr, 'markdown_inline')
   if not ok or not parser then
@@ -143,6 +181,14 @@ local function send_images(bufnr)
   vim.rpcnotify(channel, 'MarkdownImages', {bufnr, images})
 end
 
+local function send_headings(bufnr)
+  if vim.bo[bufnr].filetype ~= 'markdown' then
+    return
+  end
+  local headings = get_heading_metadata(bufnr)
+  vim.rpcnotify(channel, 'MarkdownHeadings', {bufnr, headings})
+end
+
 local group = vim.api.nvim_create_augroup('NvimGuiMarkdownTables', { clear = true })
 
 vim.api.nvim_create_autocmd({ 'BufEnter', 'TextChanged', 'TextChangedI', 'InsertLeave' }, {
@@ -152,6 +198,7 @@ vim.api.nvim_create_autocmd({ 'BufEnter', 'TextChanged', 'TextChangedI', 'Insert
     disable_markdown_renderers()
     send_tables(ev.buf)
     send_images(ev.buf)
+    send_headings(ev.buf)
   end,
 })
 
@@ -159,4 +206,5 @@ vim.api.nvim_create_autocmd({ 'BufEnter', 'TextChanged', 'TextChangedI', 'Insert
 disable_markdown_renderers()
 send_tables(vim.api.nvim_get_current_buf())
 send_images(vim.api.nvim_get_current_buf())
+send_headings(vim.api.nvim_get_current_buf())
 `

@@ -38,6 +38,7 @@ declare global {
 
     interface MarkdownOpts {
       quoteLevel: number
+      headingLevel?: number
       table?: TableRowOpts
       image?: ImageOpts
     }

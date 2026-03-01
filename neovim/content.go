@@ -38,9 +38,10 @@ type ImageOpts struct {
 }
 
 type MarkdownOpts struct {
-	QuoteLevel int           `json:"quoteLevel"`
-	Table      *TableRowOpts `json:"table,omitempty"`
-	Image      *ImageOpts    `json:"image,omitempty"`
+	QuoteLevel   int           `json:"quoteLevel"`
+	HeadingLevel int           `json:"headingLevel,omitempty"`
+	Table        *TableRowOpts `json:"table,omitempty"`
+	Image        *ImageOpts    `json:"image,omitempty"`
 }
 
 func NewMarkdownOpts() *MarkdownOpts {
@@ -109,6 +110,9 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 
 			if filetype == "markdown" {
 				markdownOpts := getMarkdownOpts(contentRows[row])
+				if headingLevel := s.getHeadingLevel(bufNr, bufferLine); headingLevel > 0 && cursorLine != bufferLine {
+					markdownOpts.HeadingLevel = headingLevel
+				}
 				tableMeta := s.getTableMetaForLine(bufNr, bufferLine)
 				if tableMeta != nil && !isCursorInTable(cursorLine, tableMeta) {
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
@@ -126,6 +130,9 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 			if filetype == "markdown" {
 				// Must recompute table opts even for non-dirty rows because TopLine changes on scroll
 				markdownOpts := getMarkdownOpts(contentRows[row])
+				if headingLevel := s.getHeadingLevel(bufNr, bufferLine); headingLevel > 0 && cursorLine != bufferLine {
+					markdownOpts.HeadingLevel = headingLevel
+				}
 				tableMeta := s.getTableMetaForLine(bufNr, bufferLine)
 				if tableMeta != nil && !isCursorInTable(cursorLine, tableMeta) {
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
