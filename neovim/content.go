@@ -131,7 +131,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 
 			if filetype == "markdown" {
 				markdownOpts := getMarkdownOpts(contentRows[row], cursorLine, bufferLine)
-				if headingLevel := s.getHeadingLevel(bufNr, bufferLine); headingLevel > 0 && cursorLine != bufferLine {
+				if headingLevel := s.getHeadingLevel(bufNr, bufferLine); headingLevel > 0 {
 					markdownOpts.HeadingLevel = headingLevel
 				}
 				tableMeta := s.getTableMetaForLine(bufNr, bufferLine)
@@ -166,7 +166,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 			if filetype == "markdown" {
 				// Must recompute table opts even for non-dirty rows because TopLine changes on scroll
 				markdownOpts := getMarkdownOpts(contentRows[row], cursorLine, bufferLine)
-				if headingLevel := s.getHeadingLevel(bufNr, bufferLine); headingLevel > 0 && cursorLine != bufferLine {
+				if headingLevel := s.getHeadingLevel(bufNr, bufferLine); headingLevel > 0 {
 					markdownOpts.HeadingLevel = headingLevel
 				}
 				tableMeta := s.getTableMetaForLine(bufNr, bufferLine)

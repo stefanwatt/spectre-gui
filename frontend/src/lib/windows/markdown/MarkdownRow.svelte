@@ -2,10 +2,12 @@
 	import MarkdownToken from './MarkdownToken.svelte';
 	let {
 		row,
-		decode
+		decode,
+		cursorOnRow = false
 	}: {
 		row: App.NvimRow;
 		decode?: (input: string) => string;
+		cursorOnRow?: boolean;
 	} = $props();
 
 	let headingLevel = $derived(row.markdownOpts?.headingLevel || 0);
@@ -57,7 +59,7 @@
 	</div>
 {:else if headingLevel > 0}
 	<span class="heading heading-{headingLevel}">
-		{#each displayTokens as token}
+		{#each cursorOnRow ? row.tokens : displayTokens as token}
 			<MarkdownToken {token} {decode} />
 		{/each}
 	</span>
