@@ -10,8 +10,30 @@
 	let content = $derived(windowContentRowMap?.[win.id] ?? []);
 </script>
 
-{#if win.filepath.endsWith('.md')}
-	<MarkdownGrid {content} cursor={win.cursor} lineNumbers={win.lineNumbers} relativeLineNumbers={true} />
-{:else}
-	<Grid {content} cursor={win.cursor} lineNumbers={win.lineNumbers} relativeLineNumbers={true} />
-{/if}
+<div class="relative h-full">
+	<div class="relative z-[1]">
+		{#if win.filepath.endsWith('.md')}
+			<MarkdownGrid {content} cursor={win.cursor} lineNumbers={win.lineNumbers} relativeLineNumbers={true} />
+		{:else}
+			<Grid {content} cursor={win.cursor} lineNumbers={win.lineNumbers} relativeLineNumbers={true} />
+		{/if}
+	</div>
+	{#each win.colorColumns ?? [] as col (col)}
+		<div
+			class="color-column"
+			style="left: calc({col}ch + {win.lineNumbers ? 6 : 0}ch); background: {win.colorColumnColor}"
+		></div>
+	{/each}
+</div>
+
+<style>
+	.color-column {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 1ch;
+		pointer-events: none;
+		opacity: 0.5;
+		z-index: 0;
+	}
+</style>

@@ -46,6 +46,8 @@ type Screen struct {
 	imageMetadataMu   sync.RWMutex
 	headingMetadata   map[int]map[int]int // bufNr -> line -> heading level
 	headingMetadataMu sync.RWMutex
+	ColorColumns      []int  // columns where colorcolumn should render (e.g. [80])
+	ColorColumnColor  string // hex color e.g. "#2a2a3a"
 }
 
 func NewScreen(ctx context.Context, cols int, rows int) *Screen {
