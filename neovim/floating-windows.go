@@ -21,7 +21,7 @@ func (s *Screen) renderFloatingWindow(window *Window) []ContentRow {
 
 func (s *Screen) renderFzfLua(grid *Grid) []ContentRow {
 	utils.Log("renderFzfLua")
-	content := s.optimizeGrid(grid, "fzflua", 0)
+	content := s.optimizeGrid(grid, "fzflua", 0, -1)
 	return trimPerimeter(content)
 }
 

@@ -912,7 +912,11 @@ func (s *Screen) render() {
 			if filetype == "markdown" {
 				utils.Log(fmt.Sprintf("render: winId=%d filetype=%s bufNr=%d", winId, filetype, bufNr))
 			}
-			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid, filetype, bufNr))
+			cursorLine := -1
+			if window.Cursor != nil {
+				cursorLine = window.Cursor.Row - 1 // convert 1-indexed to 0-indexed
+			}
+			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid, filetype, bufNr, cursorLine))
 		} else {
 			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.renderFloatingWindow(window))
 		}
@@ -995,7 +999,11 @@ func (s *Screen) EmitCurrentState() {
 			filetype = (*window.Buffer).Filetype
 			bufNr = (*window.Buffer).BufNr
 		}
-		Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid, filetype, bufNr))
+		cursorLine := -1
+		if window.Cursor != nil {
+			cursorLine = window.Cursor.Row - 1
+		}
+		Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid, filetype, bufNr, cursorLine))
 	}
 }
 

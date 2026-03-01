@@ -76,7 +76,9 @@ func MapTokens(cells []*Cell) []*Token {
 	})
 }
 
-func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int) []ContentRow {
+// cursorLine is the 0-indexed buffer line of the cursor, or -1 if unknown.
+// When the cursor falls within a table, table rendering is suppressed (conceal/reveal).
+func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine int) []ContentRow {
 	contentRows := make([]ContentRow, grid.Height)
 	for row := 0; row < grid.Height; row++ {
 		// TODO: handle folds — folded lines cause line numbers to jump,
@@ -96,8 +98,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int) []ContentR
 			if filetype == "markdown" {
 				markdownOpts := getMarkdownOpts(contentRows[row])
 				tableMeta := s.getTableMetaForLine(bufNr, bufferLine)
-				if tableMeta != nil {
-					utils.Log(fmt.Sprintf("table metadata found: bufNr=%d bufferLine=%d startLine=%d endLine=%d", bufNr, bufferLine, tableMeta.StartLine, tableMeta.EndLine))
+				if tableMeta != nil && !isCursorInTable(cursorLine, tableMeta) {
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
 				}
 				contentRows[row].MarkdownOpts = markdownOpts
@@ -110,8 +111,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int) []ContentR
 				// Must recompute table opts even for non-dirty rows because TopLine changes on scroll
 				markdownOpts := getMarkdownOpts(contentRows[row])
 				tableMeta := s.getTableMetaForLine(bufNr, bufferLine)
-				if tableMeta != nil {
-					utils.Log(fmt.Sprintf("table metadata found (cached): bufNr=%d bufferLine=%d startLine=%d endLine=%d", bufNr, bufferLine, tableMeta.StartLine, tableMeta.EndLine))
+				if tableMeta != nil && !isCursorInTable(cursorLine, tableMeta) {
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
 				}
 				contentRows[row].MarkdownOpts = markdownOpts
@@ -122,6 +122,16 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int) []ContentR
 		}
 	}
 	return contentRows
+}
+
+// isCursorInTable returns true if the cursor's 0-indexed buffer line
+// falls within the table's range (with the same ±1 border extension
+// used by getTableMetaForLine for box-drawing rows).
+func isCursorInTable(cursorLine int, meta *TableMeta) bool {
+	if cursorLine < 0 || meta == nil {
+		return false
+	}
+	return cursorLine >= meta.StartLine-1 && cursorLine < meta.EndLine+1
 }
 
 func getMarkdownOpts(contentRow ContentRow) *MarkdownOpts {
