@@ -20,7 +20,7 @@
 	{#if cursor && cursor.row === index}
 		<span
 			class:!pr-[2ch]={relativeLineNumbers}
-			class="w-[6ch] text-text cursor-row-{cursor.row} flex items-center justify-end pr-2 text-right"
+			class="w-[6ch] shrink-0 text-text cursor-row-{cursor.row} flex items-center justify-end pr-2 text-right"
 		>
 			{cursor.row}
 		</span>
@@ -28,7 +28,7 @@
 		<span
 			class:!text-text={cursor?.row === index}
 			class:!pr-[1ch]={relativeLineNumbers && cursor?.row === index}
-			class="flex w-[6ch] items-center justify-end pr-2 text-right text-surface1"
+			class="flex w-[6ch] shrink-0 items-center justify-end pr-2 text-right text-surface1"
 		>
 			{#if relativeLineNumbers}
 				{relativeLineNumbersList[index]}

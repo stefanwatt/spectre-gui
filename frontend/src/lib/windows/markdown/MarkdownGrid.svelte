@@ -1,9 +1,19 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import LineNumber from '../LineNumber.svelte';
 	import MarkdownRow from './MarkdownRow.svelte';
 	import Quote from './Quote.svelte';
 	import Table from './Table.svelte';
 	let { content, decode, cursor, lineNumbers, relativeLineNumbers }: App.GridProps = $props();
+
+	$effect(() => {
+		if (!cursor?.row && cursor?.row !== 0) return;
+		const _ = content;
+		tick().then(() => {
+			const el = document.getElementById(`row-${cursor.row}`);
+			el?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+		});
+	});
 
 	function computeRelativeLineNumbers() {
 		if (!content || !cursor || !relativeLineNumbers || cursor.row === undefined) return [];
