@@ -112,6 +112,9 @@
 			{#if isFirstOfTableGroup(i)}
 				<Table rows={getTableGroup(i) ?? []} {decode} />
 			{/if}
+		{:else if row.markdownOpts?.image}
+			<img src={row.markdownOpts.image.url} alt={row.markdownOpts.image.altText}
+				class="max-w-full max-h-96 object-contain" />
 		{:else if row.markdownOpts?.quoteLevel && content?.length}
 			{#if i === 0 || !content[i - 1].markdownOpts?.quoteLevel}
 				<!-- This is the first row of a quote group -->
