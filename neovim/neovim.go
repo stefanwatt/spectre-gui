@@ -161,6 +161,24 @@ func StartListening(ctx context.Context) {
 			}
 		})
 
+		NvimInstance.RegisterHandler("MarkdownTasks", func(updates ...[]interface{}) {
+			for _, data := range updates {
+				if len(data) < 2 {
+					utils.Log(fmt.Sprintf("MarkdownTasks: data too short len=%d", len(data)))
+					continue
+				}
+				bufNr := utils.ReflectToInt(data[0])
+				tasksRaw, ok := data[1].([]interface{})
+				if !ok {
+					utils.Log(fmt.Sprintf("MarkdownTasks: data[1] type assertion failed, type=%T value=%v", data[1], data[1]))
+					continue
+				}
+				tasks := parseMarkdownTasks(tasksRaw)
+				utils.Log(fmt.Sprintf("MarkdownTasks received: bufNr=%d, tasks=%v", bufNr, tasks))
+				NvimScreen.setTaskMetadata(bufNr, tasks)
+			}
+		})
+
 		opts := map[string]interface{}{
 			"rgb":            true,
 			"ext_linegrid":   true,

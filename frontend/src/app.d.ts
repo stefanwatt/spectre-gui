@@ -36,11 +36,16 @@ declare global {
       altText: string;
     }
 
+    interface TaskOpts {
+      checked: boolean
+    }
+
     interface MarkdownOpts {
       quoteLevel: number
       headingLevel?: number
       table?: TableRowOpts
       image?: ImageOpts
+      task?: TaskOpts
     }
 
     interface WindowContentRowMap {

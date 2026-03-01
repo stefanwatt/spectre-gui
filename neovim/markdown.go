@@ -189,6 +189,45 @@ local function send_headings(bufnr)
   vim.rpcnotify(channel, 'MarkdownHeadings', {bufnr, headings})
 end
 
+local function get_task_metadata(bufnr)
+  local ok, parser = pcall(vim.treesitter.get_parser, bufnr, 'markdown')
+  if not ok or not parser then
+    return {}
+  end
+
+  local trees = parser:parse()
+  if not trees or #trees == 0 then
+    return {}
+  end
+
+  local root = trees[1]:root()
+  local tasks = {}
+
+  local function walk(node)
+    local ntype = node:type()
+    if ntype == 'task_list_marker_checked' or ntype == 'task_list_marker_unchecked' then
+      local start_row = node:range()
+      local checked = ntype == 'task_list_marker_checked' and 1 or 0
+      table.insert(tasks, { start_row, checked })
+    else
+      for child in node:iter_children() do
+        walk(child)
+      end
+    end
+  end
+
+  walk(root)
+  return tasks
+end
+
+local function send_tasks(bufnr)
+  if vim.bo[bufnr].filetype ~= 'markdown' then
+    return
+  end
+  local tasks = get_task_metadata(bufnr)
+  vim.rpcnotify(channel, 'MarkdownTasks', {bufnr, tasks})
+end
+
 local group = vim.api.nvim_create_augroup('NvimGuiMarkdownTables', { clear = true })
 
 vim.api.nvim_create_autocmd({ 'BufEnter', 'TextChanged', 'TextChangedI', 'InsertLeave' }, {
@@ -199,6 +238,7 @@ vim.api.nvim_create_autocmd({ 'BufEnter', 'TextChanged', 'TextChangedI', 'Insert
     send_tables(ev.buf)
     send_images(ev.buf)
     send_headings(ev.buf)
+    send_tasks(ev.buf)
   end,
 })
 
@@ -207,4 +247,5 @@ disable_markdown_renderers()
 send_tables(vim.api.nvim_get_current_buf())
 send_images(vim.api.nvim_get_current_buf())
 send_headings(vim.api.nvim_get_current_buf())
+send_tasks(vim.api.nvim_get_current_buf())
 `
