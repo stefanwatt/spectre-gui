@@ -5,6 +5,7 @@
 	import Quote from './Quote.svelte';
 	import Table from './Table.svelte';
 	import CodeBlock from './CodeBlock.svelte';
+	import MarkdownToken from './MarkdownToken.svelte';
 	let { content, decode, cursor, lineNumbers, relativeLineNumbers, cursorLineColor }: App.GridProps = $props();
 
 	$effect(() => {
@@ -197,8 +198,19 @@
 				<CodeBlock rows={getCodeBlockGroup(i)} {decode} cursorRow={cursor?.row} />
 				</div>
 			{:else if row.markdownOpts?.image}
-				<img src={row.markdownOpts.image.url} alt={row.markdownOpts.image.altText}
-					class="max-w-full max-h-96 object-contain" />
+				{@const cursorOnImage = cursor?.row === row.index}
+				<div class="h-96 w-full overflow-hidden flex flex-col">
+					{#if cursorOnImage}
+						<div class="whitespace-pre leading-none">
+							{#each row.tokens as token, ti (ti)}<MarkdownToken {token} {decode} />{/each}
+						</div>
+						<img src="https://placehold.co/600x400?text=placeholder" alt={row.markdownOpts.image.altText}
+							class="max-w-full flex-1 min-h-0 object-contain" />
+					{:else}
+						<img src={row.markdownOpts.image.url} alt={row.markdownOpts.image.altText}
+							class="max-w-full h-full object-contain" />
+					{/if}
+				</div>
 			{:else if isInQuoteGroup(i)}
 				{#if isFirstOfQuoteGroup(i)}
 					<Quote rows={getQuoteGroup(i)} {decode} cursorRow={cursor?.row} />

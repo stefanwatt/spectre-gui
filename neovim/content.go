@@ -139,7 +139,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
 				}
 				imageMeta := s.getImageMetaForLine(bufNr, bufferLine)
-				if imageMeta != nil && cursorLine != bufferLine {
+				if imageMeta != nil {
 					markdownOpts.Image = &ImageOpts{URL: imageMeta.URL, AltText: imageMeta.AltText}
 				}
 				if checked, isTask := s.getTaskMetaForLine(bufNr, bufferLine); isTask && cursorLine != bufferLine {
@@ -174,7 +174,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
 				}
 				imageMeta := s.getImageMetaForLine(bufNr, bufferLine)
-				if imageMeta != nil && cursorLine != bufferLine {
+				if imageMeta != nil {
 					markdownOpts.Image = &ImageOpts{URL: imageMeta.URL, AltText: imageMeta.AltText}
 				}
 				if checked, isTask := s.getTaskMetaForLine(bufNr, bufferLine); isTask && cursorLine != bufferLine {
