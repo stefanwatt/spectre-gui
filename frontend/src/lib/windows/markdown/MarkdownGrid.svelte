@@ -204,7 +204,7 @@
 					<Quote rows={getQuoteGroup(i)} {decode} />
 				{/if}
 			{:else}
-				<MarkdownRow {row} {decode} />
+				<MarkdownRow {row} {decode} cursorOnRow={cursor?.row === row.index} />
 			{/if}
 		</div>
 	{/if}
