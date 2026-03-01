@@ -960,6 +960,35 @@ func (s *Screen) EmitFloatingWindows() {
 	}
 }
 
+// EmitCurrentState re-emits the current state to all connected clients
+// This is useful for late-connecting clients (like Playwright tests) that miss the initial events
+func (s *Screen) EmitCurrentState() {
+	emitHighlightCSS(s.ctx)
+
+	// Force emit layout regardless of dirty flag (late-connecting clients missed the initial emit)
+	s.CalculateGridLayout()
+	s.layout.ActiveWindowId = s.ActiveWindow
+	Runtime.EventsEmit(s.ctx, "layout-updated", s.layout)
+
+	// Re-emit content for all windows
+	s.windowsMu.RLock()
+	defer s.windowsMu.RUnlock()
+	for winId, window := range s.Windows {
+		if window.Hidden {
+			continue
+		}
+		grid, exists := s.Grids[window.Grid.ID]
+		if !exists {
+			continue
+		}
+		filetype := ""
+		if window.Buffer != nil {
+			filetype = (*window.Buffer).Filetype
+		}
+		Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid, filetype))
+	}
+}
+
 func (s *Screen) mapWindowInfo(window *Window, winId int) map[string]interface{} {
 	anchorWindow, _ := s.GridToWindow[window.AnchorGrid]
 	windowInfo := map[string]interface{}{

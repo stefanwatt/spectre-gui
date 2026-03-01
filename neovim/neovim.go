@@ -52,6 +52,13 @@ func StartListening(ctx context.Context) {
 		NvimScreen.Resize(cols, rows)
 	})
 
+	// Handle requests from frontend to re-emit current state (for late-connecting clients like Playwright)
+	Runtime.EventsOn(ctx, "request-state", func(optionalData ...interface{}) {
+		if NvimScreen != nil {
+			NvimScreen.EmitCurrentState()
+		}
+	})
+
 	nvimCtx, nvimCancel := context.WithCancel(ctx)
 	nvimExitChan := make(chan struct{})
 
@@ -128,6 +135,23 @@ func StartListening(ctx context.Context) {
 		// Disable neovim's gutter and wrapping — we render line numbers ourselves
 		// using win_viewport topline, and enforce nowrap for correct line indexing.
 		NvimInstance.Command("set nonumber norelativenumber signcolumn=no foldcolumn=0 nowrap")
+
+		// Open test file if env var is set (used by e2e tests)
+		if testFile := os.Getenv("NVIM_GUI_TEST_FILE"); testFile != "" {
+			// Convert to absolute path if relative
+			absPath := testFile
+			if !filepath.IsAbs(testFile) {
+				cwd, err := os.Getwd()
+				if err == nil {
+					absPath = filepath.Join(cwd, testFile)
+				}
+			}
+			utils.Log(fmt.Sprintf("Opening test file: %s", absPath))
+			err := NvimInstance.Command(fmt.Sprintf("edit %s", absPath))
+			if err != nil {
+				utils.Log(fmt.Sprintf("Error opening test file: %v", err))
+			}
+		}
 
 		SetupKeymaps()
 

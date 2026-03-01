@@ -14,6 +14,9 @@ export function startListening() {
     runtime.EventsEmit('resize');
   });
 
+  // Request current state from backend (for late-connecting clients like tests)
+  runtime.EventsEmit('request-state');
+
   runtime.EventsOn('highlight-css', (css: string) => {
     let el = document.getElementById('nvim-hl-style');
     if (!el) {

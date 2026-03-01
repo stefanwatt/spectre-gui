@@ -1,6 +1,7 @@
 {
   "devDependencies": {
-    "@catppuccin/tailwindcss": "^0.1.6"
+    "@catppuccin/tailwindcss": "^0.1.6",
+    "@playwright/test": "1.56.1"
   },
   "dependencies": {
     "prismjs": "^1.29.0"
