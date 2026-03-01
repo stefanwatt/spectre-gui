@@ -61,7 +61,7 @@
 						class:mode-n={win.mode === 'normal'}
 						class:mode-v={win.mode === 'visual'}
 						class:active-window={layout.activeWindowId === win.id}
-						class="nvim-window relative border border-solid border-transparent bg-base-100"
+						class="nvim-window relative border border-solid border-transparent bg-base-100 overflow-x-hidden overflow-y-auto scrollbar-hide"
 						style="grid-column-start: {win.colStart}; grid-column-end:{win.colEnd}; grid-row-start: {win.rowStart}; grid-row-end:{win.rowEnd};"
 					>
 						<NvimWindow {windowContentRowMap} {win} />
@@ -104,5 +104,11 @@
 		font-size: 22px;
 		line-height: 22px;
 		font-weight: 600;
+	}
+	.scrollbar-hide {
+		scrollbar-width: none;
+	}
+	.scrollbar-hide::-webkit-scrollbar {
+		display: none;
 	}
 </style>
