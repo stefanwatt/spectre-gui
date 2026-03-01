@@ -4,7 +4,8 @@
 		cursor,
 		relativeLineNumbers,
 		relativeLineNumbersList,
-		index
+		index,
+		rangeEnd
 	}: {
 		lineNumbers: boolean;
 		relativeLineNumbers: boolean;
@@ -13,11 +14,18 @@
 		};
 		cursor?: { row: number; col: number };
 		index: number;
+		rangeEnd?: number;
 	} = $props();
 </script>
 
 {#if lineNumbers}
-	{#if cursor && cursor.row === index}
+	{#if rangeEnd !== undefined}
+		<span
+			class="w-[6ch] shrink-0 text-surface1 flex items-center justify-end pr-2 text-right text-[0.7em]"
+		>
+			{index}-{rangeEnd}
+		</span>
+	{:else if cursor && cursor.row === index}
 		<span
 			class:!pr-[2ch]={relativeLineNumbers}
 			class="w-[6ch] shrink-0 text-text cursor-row-{cursor.row} flex items-center justify-end pr-2 text-right"

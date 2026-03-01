@@ -4,7 +4,6 @@
 #### h4
 ##### h5
 ###### h6
-
 Some text before the table.
 
 | Name  | Age | City     |
@@ -22,7 +21,6 @@ an image:
 
 > foo
 >> bar
-
 
 
 
