@@ -21,8 +21,8 @@ an image:
 
 > foo
 >> bar
-[x]
+- [x] completed task
 
-[ ]  
+- [ ] uncompleted task
 
 
