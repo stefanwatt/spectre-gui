@@ -1,13 +1,21 @@
 <script lang="ts">
 	let {
 		rows,
-		decode
+		decode,
+		cursorRow
 	}: {
 		rows: App.NvimRow[];
 		decode?: (input: string) => string;
+		cursorRow?: number;
 	} = $props();
 
 	let innerRows = $derived(rows.slice(1, -1));
+	let cursorInside = $derived(
+		cursorRow != null &&
+			rows.length > 0 &&
+			cursorRow >= rows[0].index &&
+			cursorRow <= rows[rows.length - 1].index
+	);
 	$effect(() => {
 		console.log('CodeBlock rows:', rows.length, 'innerRows:', innerRows.length);
 		console.log('CodeBlock all rows:', rows.map(r => ({ index: r.index, pos: r.markdownOpts?.codeBlock?.position, text: r.tokens.map(t => t.text).join('') })));
@@ -16,8 +24,8 @@
 </script>
 
 <div class="mockup-code">
-	{#each innerRows as row (row.index)}
-		<pre data-prefix={row.index}><code>{#each row.tokens as token, i (i)}{@const text = decode ? decode(token.text) : token.text}{#if text}<span class="cell {token.classes}">{text}</span>{:else}<span class="cell">&#x2800;</span>{/if}{/each}</code></pre>
+	{#each cursorInside ? rows : innerRows as row (row.index)}
+		<pre data-prefix={cursorInside ? '' : row.index}><code>{#each row.tokens as token, i (i)}{@const text = decode ? decode(token.text) : token.text}{#if text}<span class="cell {token.classes}">{text}</span>{:else}<span class="cell">&#x2800;</span>{/if}{/each}</code></pre>
 	{/each}
 </div>
 
