@@ -53,6 +53,13 @@ blockquote .font-bold {
   background-color: #161821;
 }
 
+/* Inline code */
+.code {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
 /* Background */
 .spectre-bg {
   color: #c6d0f5;

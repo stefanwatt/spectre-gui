@@ -40,12 +40,17 @@ declare global {
       checked: boolean
     }
 
+    interface CodeBlockOpts {
+      position: 'first' | 'middle' | 'last'
+    }
+
     interface MarkdownOpts {
       quoteLevel: number
       headingLevel?: number
       table?: TableRowOpts
       image?: ImageOpts
       task?: TaskOpts
+      codeBlock?: CodeBlockOpts
     }
 
     interface WindowContentRowMap {

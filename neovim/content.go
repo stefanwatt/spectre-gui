@@ -41,12 +41,28 @@ type TaskOpts struct {
 	Checked bool `json:"checked"`
 }
 
+type CodeBlockMeta struct {
+	StartLine int // 0-indexed buffer line (inclusive)
+	EndLine   int // 0-indexed buffer line (exclusive)
+}
+
+type ColRange struct {
+	StartCol int
+	EndCol   int
+}
+
+type CodeBlockOpts struct {
+	Position string `json:"position"` // "first", "middle", "last"
+}
+
+
 type MarkdownOpts struct {
-	QuoteLevel   int           `json:"quoteLevel"`
-	HeadingLevel int           `json:"headingLevel,omitempty"`
-	Table        *TableRowOpts `json:"table,omitempty"`
-	Image        *ImageOpts    `json:"image,omitempty"`
-	Task         *TaskOpts     `json:"task,omitempty"`
+	QuoteLevel   int            `json:"quoteLevel"`
+	HeadingLevel int            `json:"headingLevel,omitempty"`
+	Table        *TableRowOpts  `json:"table,omitempty"`
+	Image        *ImageOpts     `json:"image,omitempty"`
+	Task         *TaskOpts      `json:"task,omitempty"`
+	CodeBlock    *CodeBlockOpts `json:"codeBlock,omitempty"`
 }
 
 func NewMarkdownOpts() *MarkdownOpts {
@@ -129,6 +145,18 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 				if checked, isTask := s.getTaskMetaForLine(bufNr, bufferLine); isTask && cursorLine != bufferLine {
 					markdownOpts.Task = &TaskOpts{Checked: checked}
 				}
+				if cbMeta := s.getCodeBlockMetaForLine(bufNr, bufferLine); cbMeta != nil && !isCursorInCodeBlock(cursorLine, cbMeta) {
+					position := "middle"
+					if bufferLine == cbMeta.StartLine {
+						position = "first"
+					} else if bufferLine == cbMeta.EndLine-1 {
+						position = "last"
+					}
+					markdownOpts.CodeBlock = &CodeBlockOpts{Position: position}
+				}
+				if inlineRanges := s.getInlineCodeRanges(bufNr, bufferLine); len(inlineRanges) > 0 && cursorLine != bufferLine {
+					applyInlineCodeClass(contentRows[row].Tokens, inlineRanges)
+				}
 				contentRows[row].MarkdownOpts = markdownOpts
 				grid.MarkdownOpts[row] = markdownOpts
 			}
@@ -152,6 +180,18 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 				if checked, isTask := s.getTaskMetaForLine(bufNr, bufferLine); isTask && cursorLine != bufferLine {
 					markdownOpts.Task = &TaskOpts{Checked: checked}
 				}
+				if cbMeta := s.getCodeBlockMetaForLine(bufNr, bufferLine); cbMeta != nil && !isCursorInCodeBlock(cursorLine, cbMeta) {
+					position := "middle"
+					if bufferLine == cbMeta.StartLine {
+						position = "first"
+					} else if bufferLine == cbMeta.EndLine-1 {
+						position = "last"
+					}
+					markdownOpts.CodeBlock = &CodeBlockOpts{Position: position}
+				}
+				if inlineRanges := s.getInlineCodeRanges(bufNr, bufferLine); len(inlineRanges) > 0 && cursorLine != bufferLine {
+					applyInlineCodeClass(contentRows[row].Tokens, inlineRanges)
+				}
 				contentRows[row].MarkdownOpts = markdownOpts
 				grid.MarkdownOpts[row] = markdownOpts
 			} else if opts, exists := grid.MarkdownOpts[row]; exists {
@@ -170,6 +210,35 @@ func isCursorInTable(cursorLine int, meta *TableMeta) bool {
 		return false
 	}
 	return cursorLine >= meta.StartLine-1 && cursorLine < meta.EndLine+1
+}
+
+func isCursorInCodeBlock(cursorLine int, meta *CodeBlockMeta) bool {
+	if cursorLine < 0 || meta == nil {
+		return false
+	}
+	return cursorLine >= meta.StartLine && cursorLine < meta.EndLine
+}
+
+func applyInlineCodeClass(tokens []*Token, ranges []ColRange) {
+	col := 0
+	for _, token := range tokens {
+		tokenLen := len([]rune(token.Text))
+		tokenEnd := col + tokenLen
+		for _, r := range ranges {
+			if col < r.EndCol && tokenEnd > r.StartCol {
+				token.Classes += " code"
+				// Strip backtick delimiters at range boundaries
+				if col <= r.StartCol {
+					token.Text = strings.TrimLeft(token.Text, "`")
+				}
+				if tokenEnd >= r.EndCol {
+					token.Text = strings.TrimRight(token.Text, "`")
+				}
+				break
+			}
+		}
+		col = tokenEnd
+	}
 }
 
 func getMarkdownOpts(contentRow ContentRow, cursorLine int, bufferLine int) *MarkdownOpts {

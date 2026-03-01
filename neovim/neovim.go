@@ -164,18 +164,46 @@ func StartListening(ctx context.Context) {
 		NvimInstance.RegisterHandler("MarkdownTasks", func(updates ...[]interface{}) {
 			for _, data := range updates {
 				if len(data) < 2 {
-					utils.Log(fmt.Sprintf("MarkdownTasks: data too short len=%d", len(data)))
 					continue
 				}
 				bufNr := utils.ReflectToInt(data[0])
 				tasksRaw, ok := data[1].([]interface{})
 				if !ok {
-					utils.Log(fmt.Sprintf("MarkdownTasks: data[1] type assertion failed, type=%T value=%v", data[1], data[1]))
 					continue
 				}
 				tasks := parseMarkdownTasks(tasksRaw)
-				utils.Log(fmt.Sprintf("MarkdownTasks received: bufNr=%d, tasks=%v", bufNr, tasks))
 				NvimScreen.setTaskMetadata(bufNr, tasks)
+			}
+		})
+
+		NvimInstance.RegisterHandler("MarkdownCodeBlocks", func(updates ...[]interface{}) {
+			for _, data := range updates {
+				if len(data) < 2 {
+					continue
+				}
+				bufNr := utils.ReflectToInt(data[0])
+				blocksRaw, ok := data[1].([]interface{})
+				if !ok {
+					continue
+				}
+				blocks := parseMarkdownCodeBlocks(blocksRaw)
+				utils.Log(fmt.Sprintf("MarkdownCodeBlocks: bufNr=%d blocks=%v", bufNr, blocks))
+				NvimScreen.setCodeBlockMetadata(bufNr, blocks)
+			}
+		})
+
+		NvimInstance.RegisterHandler("MarkdownInlineCode", func(updates ...[]interface{}) {
+			for _, data := range updates {
+				if len(data) < 2 {
+					continue
+				}
+				bufNr := utils.ReflectToInt(data[0])
+				codesRaw, ok := data[1].([]interface{})
+				if !ok {
+					continue
+				}
+				codes := parseMarkdownInlineCode(codesRaw)
+				NvimScreen.setInlineCodeMetadata(bufNr, codes)
 			}
 		})
 
@@ -203,7 +231,7 @@ func StartListening(ctx context.Context) {
 		readCursorLine(NvimScreen)
 
 		// Disable neovim's gutter, wrapping, colorcolumn, and cursorline — we render these ourselves.
-		NvimInstance.Command("set nonumber norelativenumber signcolumn=no foldcolumn=0 nowrap colorcolumn= nocursorline")
+		NvimInstance.Command("set nonumber norelativenumber signcolumn=no foldcolumn=0 nowrap colorcolumn= nocursorline conceallevel=0")
 
 		// Open test file if env var is set (used by e2e tests)
 		if testFile := os.Getenv("NVIM_GUI_TEST_FILE"); testFile != "" {
