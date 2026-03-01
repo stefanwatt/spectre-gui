@@ -46,8 +46,12 @@ type Screen struct {
 	imageMetadataMu   sync.RWMutex
 	headingMetadata   map[int]map[int]int // bufNr -> line -> heading level
 	headingMetadataMu sync.RWMutex
-	taskMetadata      map[int]map[int]bool // bufNr -> line -> checked
-	taskMetadataMu    sync.RWMutex
+	taskMetadata        map[int]map[int]bool // bufNr -> line -> checked
+	taskMetadataMu      sync.RWMutex
+	codeBlockMetadata   map[int][]CodeBlockMeta // bufNr -> []CodeBlockMeta
+	codeBlockMetadataMu sync.RWMutex
+	inlineCodeMetadata   map[int]map[int][]ColRange // bufNr -> line -> []ColRange
+	inlineCodeMetadataMu sync.RWMutex
 	ColorColumns      []int  // columns where colorcolumn should render (e.g. [80])
 	ColorColumnColor  string // hex color e.g. "#2a2a3a"
 	CursorLineEnabled bool
@@ -87,7 +91,9 @@ func NewScreen(ctx context.Context, cols int, rows int) *Screen {
 		tableMetadata:   make(map[int][]TableMeta),
 		imageMetadata:   make(map[int][]ImageMeta),
 		headingMetadata: make(map[int]map[int]int),
-		taskMetadata:    make(map[int]map[int]bool),
+		taskMetadata:      make(map[int]map[int]bool),
+		codeBlockMetadata: make(map[int][]CodeBlockMeta),
+		inlineCodeMetadata: make(map[int]map[int][]ColRange),
 	}
 }
 
@@ -1211,7 +1217,6 @@ func parseMarkdownTasks(tasksRaw []interface{}) map[int]bool {
 	for _, raw := range tasksRaw {
 		entry, ok := raw.([]interface{})
 		if !ok || len(entry) < 2 {
-			utils.Log(fmt.Sprintf("parseMarkdownTasks: entry type=%T value=%v", raw, raw))
 			continue
 		}
 		line := utils.ReflectToInt(entry[0])
@@ -1219,6 +1224,81 @@ func parseMarkdownTasks(tasksRaw []interface{}) map[int]bool {
 		tasks[line] = checked
 	}
 	return tasks
+}
+
+func (s *Screen) setCodeBlockMetadata(bufNr int, blocks []CodeBlockMeta) {
+	s.codeBlockMetadataMu.Lock()
+	defer s.codeBlockMetadataMu.Unlock()
+	s.codeBlockMetadata[bufNr] = blocks
+}
+
+func (s *Screen) getCodeBlockMetaForLine(bufNr int, bufferLine int) *CodeBlockMeta {
+	if bufNr == 0 {
+		return nil
+	}
+	s.codeBlockMetadataMu.RLock()
+	defer s.codeBlockMetadataMu.RUnlock()
+	blocks, exists := s.codeBlockMetadata[bufNr]
+	if !exists {
+		return nil
+	}
+	for i := range blocks {
+		if bufferLine >= blocks[i].StartLine && bufferLine < blocks[i].EndLine {
+			return &blocks[i]
+		}
+	}
+	return nil
+}
+
+func parseMarkdownCodeBlocks(blocksRaw []interface{}) []CodeBlockMeta {
+	var blocks []CodeBlockMeta
+	for _, raw := range blocksRaw {
+		entry, ok := raw.([]interface{})
+		if !ok || len(entry) < 2 {
+			continue
+		}
+		startLine := utils.ReflectToInt(entry[0])
+		endLine := utils.ReflectToInt(entry[1])
+		blocks = append(blocks, CodeBlockMeta{
+			StartLine: startLine,
+			EndLine:   endLine,
+		})
+	}
+	return blocks
+}
+
+func (s *Screen) setInlineCodeMetadata(bufNr int, codes map[int][]ColRange) {
+	s.inlineCodeMetadataMu.Lock()
+	defer s.inlineCodeMetadataMu.Unlock()
+	s.inlineCodeMetadata[bufNr] = codes
+}
+
+func (s *Screen) getInlineCodeRanges(bufNr int, bufferLine int) []ColRange {
+	if bufNr == 0 {
+		return nil
+	}
+	s.inlineCodeMetadataMu.RLock()
+	defer s.inlineCodeMetadataMu.RUnlock()
+	lines, exists := s.inlineCodeMetadata[bufNr]
+	if !exists {
+		return nil
+	}
+	return lines[bufferLine]
+}
+
+func parseMarkdownInlineCode(codesRaw []interface{}) map[int][]ColRange {
+	codes := make(map[int][]ColRange)
+	for _, raw := range codesRaw {
+		entry, ok := raw.([]interface{})
+		if !ok || len(entry) < 3 {
+			continue
+		}
+		line := utils.ReflectToInt(entry[0])
+		startCol := utils.ReflectToInt(entry[1])
+		endCol := utils.ReflectToInt(entry[2])
+		codes[line] = append(codes[line], ColRange{StartCol: startCol, EndCol: endCol})
+	}
+	return codes
 }
 
 func (s *Screen) GetActiveWindow() *Window {

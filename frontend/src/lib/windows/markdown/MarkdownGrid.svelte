@@ -4,6 +4,7 @@
 	import MarkdownRow from './MarkdownRow.svelte';
 	import Quote from './Quote.svelte';
 	import Table from './Table.svelte';
+	import CodeBlock from './CodeBlock.svelte';
 	let { content, decode, cursor, lineNumbers, relativeLineNumbers, cursorLineColor }: App.GridProps = $props();
 
 	$effect(() => {
@@ -82,8 +83,38 @@
 		return groups;
 	}
 
+	function findCodeBlockGroups() {
+		if (!content) return [];
+
+		const groups: { start: number; end: number }[] = [];
+		let currentStart: number | null = null;
+
+		for (let i = 0; i < content.length; i++) {
+			const cb = content[i].markdownOpts?.codeBlock;
+			if (cb) {
+				if (currentStart === null) {
+					currentStart = i;
+				}
+				if (cb.position === 'last') {
+					groups.push({ start: currentStart, end: i });
+					currentStart = null;
+				}
+			} else {
+				if (currentStart !== null) {
+					groups.push({ start: currentStart, end: i - 1 });
+					currentStart = null;
+				}
+			}
+		}
+		if (currentStart !== null) {
+			groups.push({ start: currentStart, end: content.length - 1 });
+		}
+		return groups;
+	}
+
 	let quoteGroups = $derived(findQuoteGroups());
 	let tableGroups = $derived(findTableGroups());
+	let codeBlockGroups = $derived(findCodeBlockGroups());
 
 	function isInQuoteGroup(index: number): boolean {
 		return quoteGroups.some((g) => index >= g.start && index <= g.end);
@@ -121,11 +152,33 @@
 		if (!group) return undefined;
 		return content[group.end].index;
 	}
+
+	function isInCodeBlockGroup(index: number): boolean {
+		return codeBlockGroups.some((g) => index >= g.start && index <= g.end);
+	}
+
+	function isFirstOfCodeBlockGroup(index: number): boolean {
+		return codeBlockGroups.some((g) => g.start === index);
+	}
+
+	function getCodeBlockGroup(index: number): App.NvimRow[] {
+		if (!content) return [];
+		const group = codeBlockGroups.find((g) => index >= g.start && index <= g.end);
+		if (!group) return [];
+		return content.slice(group.start, group.end + 1);
+	}
+
+	function getCodeBlockGroupEndIndex(index: number): number | undefined {
+		if (!content) return undefined;
+		const group = codeBlockGroups.find((g) => g.start === index);
+		if (!group) return undefined;
+		return content[group.end].index;
+	}
 </script>
 
 {#each content || [] as row, i (row.index)}
-	{#if isInTableGroup(i) && !isFirstOfTableGroup(i)}
-		<!-- skip non-first table rows, they're rendered by the Table component -->
+	{#if (isInTableGroup(i) && !isFirstOfTableGroup(i)) || (isInCodeBlockGroup(i) && !isFirstOfCodeBlockGroup(i))}
+		<!-- skip non-first grouped rows, they're rendered by Table/CodeBlock component -->
 	{:else}
 		<div id="row-{row.index}" class="flex overflow-hidden whitespace-pre leading-none" style={row.index === cursor?.row && cursorLineColor ? `background: ${cursorLineColor}` : ''}>
 			<LineNumber
@@ -134,11 +187,15 @@
 				{relativeLineNumbersList}
 				{cursor}
 				index={row.index}
-				rangeEnd={isInTableGroup(i) ? getTableGroupEndIndex(i) : undefined}
+				rangeEnd={isInTableGroup(i) ? getTableGroupEndIndex(i) : isInCodeBlockGroup(i) ? getCodeBlockGroupEndIndex(i) : undefined}
 			/>
 
 			{#if isInTableGroup(i)}
 				<Table rows={getTableGroup(i) ?? []} {decode} />
+			{:else if isInCodeBlockGroup(i)}
+				<div class="mx-6">
+				<CodeBlock rows={getCodeBlockGroup(i)} {decode} />
+				</div>
 			{:else if row.markdownOpts?.image}
 				<img src={row.markdownOpts.image.url} alt={row.markdownOpts.image.altText}
 					class="max-w-full max-h-96 object-contain" />

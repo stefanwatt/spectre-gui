@@ -228,6 +228,84 @@ local function send_tasks(bufnr)
   vim.rpcnotify(channel, 'MarkdownTasks', {bufnr, tasks})
 end
 
+local function get_codeblock_metadata(bufnr)
+  local ok, parser = pcall(vim.treesitter.get_parser, bufnr, 'markdown')
+  if not ok or not parser then
+    return {}
+  end
+
+  local trees = parser:parse()
+  if not trees or #trees == 0 then
+    return {}
+  end
+
+  local root = trees[1]:root()
+  local codeblocks = {}
+
+  local function walk(node)
+    if node:type() == 'fenced_code_block' then
+      local start_row, _, end_row, _ = node:range()
+      table.insert(codeblocks, { start_row, end_row })
+    else
+      for child in node:iter_children() do
+        walk(child)
+      end
+    end
+  end
+
+  walk(root)
+  return codeblocks
+end
+
+local function get_inline_code_metadata(bufnr)
+  local ok, parser = pcall(vim.treesitter.get_parser, bufnr, 'markdown_inline')
+  if not ok or not parser then
+    return {}
+  end
+
+  local trees = parser:parse()
+  if not trees or #trees == 0 then
+    return {}
+  end
+
+  local results = {}
+  for _, tree in ipairs(trees) do
+    local root = tree:root()
+    local function walk(node)
+      if node:type() == 'code_span' then
+        local start_row, start_col, end_row, end_col = node:range()
+        -- Only handle single-line code spans
+        if start_row == end_row then
+          table.insert(results, { start_row, start_col, end_col })
+        end
+      else
+        for child in node:iter_children() do
+          walk(child)
+        end
+      end
+    end
+    walk(root)
+  end
+
+  return results
+end
+
+local function send_codeblocks(bufnr)
+  if vim.bo[bufnr].filetype ~= 'markdown' then
+    return
+  end
+  local codeblocks = get_codeblock_metadata(bufnr)
+  vim.rpcnotify(channel, 'MarkdownCodeBlocks', {bufnr, codeblocks})
+end
+
+local function send_inline_code(bufnr)
+  if vim.bo[bufnr].filetype ~= 'markdown' then
+    return
+  end
+  local inline_codes = get_inline_code_metadata(bufnr)
+  vim.rpcnotify(channel, 'MarkdownInlineCode', {bufnr, inline_codes})
+end
+
 local group = vim.api.nvim_create_augroup('NvimGuiMarkdownTables', { clear = true })
 
 vim.api.nvim_create_autocmd({ 'BufEnter', 'TextChanged', 'TextChangedI', 'InsertLeave' }, {
@@ -239,6 +317,8 @@ vim.api.nvim_create_autocmd({ 'BufEnter', 'TextChanged', 'TextChangedI', 'Insert
     send_images(ev.buf)
     send_headings(ev.buf)
     send_tasks(ev.buf)
+    send_codeblocks(ev.buf)
+    send_inline_code(ev.buf)
   end,
 })
 
@@ -248,4 +328,6 @@ send_tables(vim.api.nvim_get_current_buf())
 send_images(vim.api.nvim_get_current_buf())
 send_headings(vim.api.nvim_get_current_buf())
 send_tasks(vim.api.nvim_get_current_buf())
+send_codeblocks(vim.api.nvim_get_current_buf())
+send_inline_code(vim.api.nvim_get_current_buf())
 `
