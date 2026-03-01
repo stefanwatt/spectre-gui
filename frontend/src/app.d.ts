@@ -77,6 +77,7 @@ declare global {
       cursor: { row: number, col: number }
       colorColumns: number[];
       colorColumnColor: string;
+      cursorLineColor: string;
     }
 
     interface CmdLine {
@@ -158,6 +159,7 @@ declare global {
       cursor?: { row: number, col: number }
       lineNumbers: boolean;
       relativeLineNumbers: boolean;
+      cursorLineColor?: string;
     }
 
     interface CursorMoveEvent {

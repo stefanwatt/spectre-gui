@@ -48,6 +48,8 @@ type Screen struct {
 	headingMetadataMu sync.RWMutex
 	ColorColumns      []int  // columns where colorcolumn should render (e.g. [80])
 	ColorColumnColor  string // hex color e.g. "#2a2a3a"
+	CursorLineEnabled bool
+	CursorLineColor   string // hex color e.g. "#2a2a3a"
 }
 
 func NewScreen(ctx context.Context, cols int, rows int) *Screen {

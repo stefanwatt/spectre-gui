@@ -108,6 +108,9 @@ func (s *Screen) CalculateGridLayout() {
 		}
 		w.ColorColumns = s.ColorColumns
 		w.ColorColumnColor = s.ColorColumnColor
+		if s.CursorLineEnabled {
+			w.CursorLineColor = s.CursorLineColor
+		}
 
 		windowAPIs = append(windowAPIs, w)
 	}

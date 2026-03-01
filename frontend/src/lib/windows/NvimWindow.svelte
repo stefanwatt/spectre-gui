@@ -13,9 +13,9 @@
 <div class="relative h-full">
 	<div class="relative z-[1]">
 		{#if win.filepath.endsWith('.md')}
-			<MarkdownGrid {content} cursor={win.cursor} lineNumbers={win.lineNumbers} relativeLineNumbers={true} />
+			<MarkdownGrid {content} cursor={win.cursor} lineNumbers={win.lineNumbers} relativeLineNumbers={true} cursorLineColor={win.cursorLineColor} />
 		{:else}
-			<Grid {content} cursor={win.cursor} lineNumbers={win.lineNumbers} relativeLineNumbers={true} />
+			<Grid {content} cursor={win.cursor} lineNumbers={win.lineNumbers} relativeLineNumbers={true} cursorLineColor={win.cursorLineColor} />
 		{/if}
 	</div>
 	{#each win.colorColumns ?? [] as col (col)}

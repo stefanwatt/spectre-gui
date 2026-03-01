@@ -180,11 +180,12 @@ func StartListening(ctx context.Context) {
 			return
 		}
 
-		// Read colorcolumn value and highlight color before disabling
+		// Read colorcolumn and cursorline settings before disabling
 		readColorColumn(NvimScreen)
+		readCursorLine(NvimScreen)
 
-		// Disable neovim's gutter, wrapping, and colorcolumn — we render these ourselves.
-		NvimInstance.Command("set nonumber norelativenumber signcolumn=no foldcolumn=0 nowrap colorcolumn=")
+		// Disable neovim's gutter, wrapping, colorcolumn, and cursorline — we render these ourselves.
+		NvimInstance.Command("set nonumber norelativenumber signcolumn=no foldcolumn=0 nowrap colorcolumn= nocursorline")
 
 		// Open test file if env var is set (used by e2e tests)
 		if testFile := os.Getenv("NVIM_GUI_TEST_FILE"); testFile != "" {
@@ -269,6 +270,33 @@ func readColorColumn(screen *Screen) {
 		screen.ColorColumnColor = fmt.Sprintf("#%06x", bgInt)
 	}
 	utils.Log(fmt.Sprintf("ColorColumn: columns=%v color=%s", screen.ColorColumns, screen.ColorColumnColor))
+}
+
+func readCursorLine(screen *Screen) {
+	var enabled bool
+	err := NvimInstance.ExecLua("return vim.opt.cursorline:get()", &enabled)
+	if err != nil {
+		utils.Log(fmt.Sprintf("Error reading cursorline: %v", err))
+		return
+	}
+	screen.CursorLineEnabled = enabled
+
+	if !enabled {
+		return
+	}
+
+	var hlResult map[string]interface{}
+	err = NvimInstance.ExecLua("return vim.api.nvim_get_hl(0, {name='CursorLine'})", &hlResult)
+	if err != nil {
+		utils.Log(fmt.Sprintf("Error reading CursorLine highlight: %v", err))
+		return
+	}
+
+	if bg, ok := hlResult["bg"]; ok {
+		bgInt := utils.ReflectToInt(bg)
+		screen.CursorLineColor = fmt.Sprintf("#%06x", bgInt)
+	}
+	utils.Log(fmt.Sprintf("CursorLine: enabled=%v color=%s", screen.CursorLineEnabled, screen.CursorLineColor))
 }
 
 func isVisualMode(mode string) bool {
