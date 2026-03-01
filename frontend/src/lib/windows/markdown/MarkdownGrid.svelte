@@ -114,31 +114,41 @@
 		if (!group) return null;
 		return content.slice(group.start, group.end + 1);
 	}
+
+	function getTableGroupEndIndex(index: number): number | undefined {
+		if (!content) return undefined;
+		const group = tableGroups.find((g) => g.start === index);
+		if (!group) return undefined;
+		return content[group.end].index;
+	}
 </script>
 
 {#each content || [] as row, i (row.index)}
-	<div id="row-{row.index}" class="flex overflow-hidden whitespace-pre leading-none">
-		<LineNumber
-			{lineNumbers}
-			{relativeLineNumbers}
-			{relativeLineNumbersList}
-			{cursor}
-			index={row.index}
-		/>
+	{#if isInTableGroup(i) && !isFirstOfTableGroup(i)}
+		<!-- skip non-first table rows, they're rendered by the Table component -->
+	{:else}
+		<div id="row-{row.index}" class="flex overflow-hidden whitespace-pre leading-none">
+			<LineNumber
+				{lineNumbers}
+				{relativeLineNumbers}
+				{relativeLineNumbersList}
+				{cursor}
+				index={row.index}
+				rangeEnd={isInTableGroup(i) ? getTableGroupEndIndex(i) : undefined}
+			/>
 
-		{#if isInTableGroup(i)}
-			{#if isFirstOfTableGroup(i)}
+			{#if isInTableGroup(i)}
 				<Table rows={getTableGroup(i) ?? []} {decode} />
+			{:else if row.markdownOpts?.image}
+				<img src={row.markdownOpts.image.url} alt={row.markdownOpts.image.altText}
+					class="max-w-full max-h-96 object-contain" />
+			{:else if isInQuoteGroup(i)}
+				{#if isFirstOfQuoteGroup(i)}
+					<Quote rows={getQuoteGroup(i)} {decode} />
+				{/if}
+			{:else}
+				<MarkdownRow {row} {decode} />
 			{/if}
-		{:else if row.markdownOpts?.image}
-			<img src={row.markdownOpts.image.url} alt={row.markdownOpts.image.altText}
-				class="max-w-full max-h-96 object-contain" />
-		{:else if isInQuoteGroup(i)}
-			{#if isFirstOfQuoteGroup(i)}
-				<Quote rows={getQuoteGroup(i)} {decode} />
-			{/if}
-		{:else}
-			<MarkdownRow {row} {decode} />
-		{/if}
-	</div>
+		</div>
+	{/if}
 {/each}
