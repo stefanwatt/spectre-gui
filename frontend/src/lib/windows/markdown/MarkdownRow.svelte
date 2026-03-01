@@ -9,6 +9,7 @@
 	} = $props();
 
 	let headingLevel = $derived(row.markdownOpts?.headingLevel || 0);
+	let task = $derived(row.markdownOpts?.task);
 
 	// Strip leading "# " (headingLevel hashes + space) from the token stream
 	let displayTokens = $derived.by(() => {
@@ -27,9 +28,34 @@
 		}
 		return result;
 	});
+
+	// Strip leading "- [x] " or "- [ ] " (6 chars) from the token stream
+	let taskDisplayTokens = $derived.by(() => {
+		if (!task) return row.tokens;
+		let charsToStrip = 6;
+		const result: App.NvimToken[] = [];
+		for (const token of row.tokens) {
+			if (charsToStrip <= 0) {
+				result.push(token);
+			} else if (token.text.length <= charsToStrip) {
+				charsToStrip -= token.text.length;
+			} else {
+				result.push({ ...token, text: token.text.slice(charsToStrip) });
+				charsToStrip = 0;
+			}
+		}
+		return result;
+	});
 </script>
 
-{#if headingLevel > 0}
+{#if task}
+	<div class="task-row">
+		<input type="checkbox" checked={task.checked} disabled class="checkbox" />
+		{#each taskDisplayTokens as token}
+			<MarkdownToken extraClasses={task.checked ? ' line-through' : ''} {token} {decode} />
+		{/each}
+	</div>
+{:else if headingLevel > 0}
 	<span class="heading heading-{headingLevel}">
 		{#each displayTokens as token}
 			<MarkdownToken {token} {decode} />
@@ -42,6 +68,11 @@
 {/if}
 
 <style>
+	.task-row {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+	}
 	.heading {
 		display: inline-flex;
 		align-items: baseline;

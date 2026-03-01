@@ -37,11 +37,16 @@ type ImageOpts struct {
 	AltText string `json:"altText"`
 }
 
+type TaskOpts struct {
+	Checked bool `json:"checked"`
+}
+
 type MarkdownOpts struct {
 	QuoteLevel   int           `json:"quoteLevel"`
 	HeadingLevel int           `json:"headingLevel,omitempty"`
 	Table        *TableRowOpts `json:"table,omitempty"`
 	Image        *ImageOpts    `json:"image,omitempty"`
+	Task         *TaskOpts     `json:"task,omitempty"`
 }
 
 func NewMarkdownOpts() *MarkdownOpts {
@@ -121,6 +126,9 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 				if imageMeta != nil && cursorLine != bufferLine {
 					markdownOpts.Image = &ImageOpts{URL: imageMeta.URL, AltText: imageMeta.AltText}
 				}
+				if checked, isTask := s.getTaskMetaForLine(bufNr, bufferLine); isTask && cursorLine != bufferLine {
+					markdownOpts.Task = &TaskOpts{Checked: checked}
+				}
 				contentRows[row].MarkdownOpts = markdownOpts
 				grid.MarkdownOpts[row] = markdownOpts
 			}
@@ -140,6 +148,9 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 				imageMeta := s.getImageMetaForLine(bufNr, bufferLine)
 				if imageMeta != nil && cursorLine != bufferLine {
 					markdownOpts.Image = &ImageOpts{URL: imageMeta.URL, AltText: imageMeta.AltText}
+				}
+				if checked, isTask := s.getTaskMetaForLine(bufNr, bufferLine); isTask && cursorLine != bufferLine {
+					markdownOpts.Task = &TaskOpts{Checked: checked}
 				}
 				contentRows[row].MarkdownOpts = markdownOpts
 				grid.MarkdownOpts[row] = markdownOpts

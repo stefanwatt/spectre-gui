@@ -1,14 +1,15 @@
 <script lang="ts">
 	const imageExtensions = new Set(['png', 'jpg']);
 	const highlights = {
-		task: { completed: 168, uncompleted: 167 },
 		url: 170
 	};
 	let {
 		token,
+		extraClasses,
 		decode
 	}: {
 		token: App.NvimToken;
+		extraClasses: string;
 		decode?: (input: string) => string;
 	} = $props();
 	let text = $derived(decode ? decode(token.text) : token.text);
@@ -22,25 +23,14 @@
 </script>
 
 {#if text}
-	{#if token.highlight == highlights.task.completed || token.highlight == highlights.task.uncompleted}
-		<div class="flex items-center p-1">
-			<input
-				type="checkbox"
-				checked={token.highlight == highlights.task.completed}
-				class="checkbox"
-			/>
-			<span class="cell hl-{token.highlight} inline-block h-full {token?.classes}">
-				{text.slice(3)}
-			</span>
-		</div>
-	{:else if token.highlight == highlights.url}
+	{#if token.highlight == highlights.url}
 		{#if isImageUrl}
 			<img src={text} alt="image" />
 		{:else}
 			<a href={text}>{text}</a>
 		{/if}
 	{:else}
-		<span class="cell hl-{token.highlight} inline-block h-full {token?.classes}">
+		<span class="cell hl-{token.highlight} inline-block h-full {token?.classes} {extraClasses}">
 			{text}
 		</span>
 	{/if}

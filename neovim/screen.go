@@ -46,6 +46,8 @@ type Screen struct {
 	imageMetadataMu   sync.RWMutex
 	headingMetadata   map[int]map[int]int // bufNr -> line -> heading level
 	headingMetadataMu sync.RWMutex
+	taskMetadata      map[int]map[int]bool // bufNr -> line -> checked
+	taskMetadataMu    sync.RWMutex
 	ColorColumns      []int  // columns where colorcolumn should render (e.g. [80])
 	ColorColumnColor  string // hex color e.g. "#2a2a3a"
 	CursorLineEnabled bool
@@ -85,6 +87,7 @@ func NewScreen(ctx context.Context, cols int, rows int) *Screen {
 		tableMetadata:   make(map[int][]TableMeta),
 		imageMetadata:   make(map[int][]ImageMeta),
 		headingMetadata: make(map[int]map[int]int),
+		taskMetadata:    make(map[int]map[int]bool),
 	}
 }
 
@@ -1181,6 +1184,41 @@ func parseMarkdownHeadings(headingsRaw []interface{}) map[int]int {
 		headings[line] = level
 	}
 	return headings
+}
+
+func (s *Screen) setTaskMetadata(bufNr int, tasks map[int]bool) {
+	s.taskMetadataMu.Lock()
+	defer s.taskMetadataMu.Unlock()
+	s.taskMetadata[bufNr] = tasks
+}
+
+func (s *Screen) getTaskMetaForLine(bufNr int, bufferLine int) (checked bool, isTask bool) {
+	if bufNr == 0 {
+		return false, false
+	}
+	s.taskMetadataMu.RLock()
+	defer s.taskMetadataMu.RUnlock()
+	tasks, exists := s.taskMetadata[bufNr]
+	if !exists {
+		return false, false
+	}
+	checked, isTask = tasks[bufferLine]
+	return checked, isTask
+}
+
+func parseMarkdownTasks(tasksRaw []interface{}) map[int]bool {
+	tasks := make(map[int]bool)
+	for _, raw := range tasksRaw {
+		entry, ok := raw.([]interface{})
+		if !ok || len(entry) < 2 {
+			utils.Log(fmt.Sprintf("parseMarkdownTasks: entry type=%T value=%v", raw, raw))
+			continue
+		}
+		line := utils.ReflectToInt(entry[0])
+		checked := utils.ReflectToInt(entry[1]) == 1
+		tasks[line] = checked
+	}
+	return tasks
 }
 
 func (s *Screen) GetActiveWindow() *Window {

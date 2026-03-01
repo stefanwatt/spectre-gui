@@ -13,7 +13,7 @@
 	let alignments = $derived(rows[0]?.markdownOpts?.table?.alignments ?? []);
 </script>
 
-<div class="my-1 rounded-lg border border-surface0 overflow-hidden flex-1 mr-4">
+<div class="my-1 rounded-lg border border-surface0 overflow-hidden flex-1 mx-4 mr-4">
 	<table class="w-full text-sm">
 		{#if headerRows.length > 0}
 			<thead class="bg-surface0">
