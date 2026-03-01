@@ -75,6 +75,14 @@
 	let quoteGroups = $derived(findQuoteGroups());
 	let tableGroups = $derived(findTableGroups());
 
+	function isInQuoteGroup(index: number): boolean {
+		return quoteGroups.some((g) => index >= g.start && index <= g.end);
+	}
+
+	function isFirstOfQuoteGroup(index: number): boolean {
+		return quoteGroups.some((g) => g.start === index);
+	}
+
 	function getQuoteGroup(index: number): App.NvimRow[] {
 		if (!content) return [];
 		const group = quoteGroups.find((group) => index >= group.start && index <= group.end);
@@ -82,19 +90,19 @@
 		return content.slice(group.start, group.end + 1);
 	}
 
-	function getTableGroup(index: number): App.NvimRow[] | null {
-		if (!content) return null;
-		const group = tableGroups.find((g) => index >= g.start && index <= g.end);
-		if (!group) return null;
-		return content.slice(group.start, group.end + 1);
+	function isInTableGroup(index: number): boolean {
+		return tableGroups.some((g) => index >= g.start && index <= g.end);
 	}
 
 	function isFirstOfTableGroup(index: number): boolean {
 		return tableGroups.some((g) => g.start === index);
 	}
 
-	function isInTableGroup(index: number): boolean {
-		return tableGroups.some((g) => index >= g.start && index <= g.end);
+	function getTableGroup(index: number): App.NvimRow[] | null {
+		if (!content) return null;
+		const group = tableGroups.find((g) => index >= g.start && index <= g.end);
+		if (!group) return null;
+		return content.slice(group.start, group.end + 1);
 	}
 </script>
 
@@ -115,9 +123,8 @@
 		{:else if row.markdownOpts?.image}
 			<img src={row.markdownOpts.image.url} alt={row.markdownOpts.image.altText}
 				class="max-w-full max-h-96 object-contain" />
-		{:else if row.markdownOpts?.quoteLevel && content?.length}
-			{#if i === 0 || !content[i - 1].markdownOpts?.quoteLevel}
-				<!-- This is the first row of a quote group -->
+		{:else if isInQuoteGroup(i)}
+			{#if isFirstOfQuoteGroup(i)}
 				<Quote rows={getQuoteGroup(i)} {decode} />
 			{/if}
 		{:else}

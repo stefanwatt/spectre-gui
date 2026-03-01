@@ -4,6 +4,7 @@
     "@playwright/test": "1.56.1"
   },
   "dependencies": {
+    "@sveltejs/mcp": "^0.1.20",
     "prismjs": "^1.29.0"
   }
 }

@@ -109,7 +109,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 			grid.DirtyRows[row] = false
 
 			if filetype == "markdown" {
-				markdownOpts := getMarkdownOpts(contentRows[row])
+				markdownOpts := getMarkdownOpts(contentRows[row], cursorLine, bufferLine)
 				if headingLevel := s.getHeadingLevel(bufNr, bufferLine); headingLevel > 0 && cursorLine != bufferLine {
 					markdownOpts.HeadingLevel = headingLevel
 				}
@@ -129,7 +129,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 			contentRows[row].Index = lineNumber
 			if filetype == "markdown" {
 				// Must recompute table opts even for non-dirty rows because TopLine changes on scroll
-				markdownOpts := getMarkdownOpts(contentRows[row])
+				markdownOpts := getMarkdownOpts(contentRows[row], cursorLine, bufferLine)
 				if headingLevel := s.getHeadingLevel(bufNr, bufferLine); headingLevel > 0 && cursorLine != bufferLine {
 					markdownOpts.HeadingLevel = headingLevel
 				}
@@ -161,14 +161,17 @@ func isCursorInTable(cursorLine int, meta *TableMeta) bool {
 	return cursorLine >= meta.StartLine-1 && cursorLine < meta.EndLine+1
 }
 
-func getMarkdownOpts(contentRow ContentRow) *MarkdownOpts {
+func getMarkdownOpts(contentRow ContentRow, cursorLine int, bufferLine int) *MarkdownOpts {
 	text := contentRow.ToString()
-	re := regexp.MustCompile(`^(\s*>)+`)
-	match := re.FindString(text)
 	count := 0
-	for _, r := range match {
-		if r == '>' {
-			count++
+	// Only set quoteLevel when cursor is not on this line
+	if cursorLine != bufferLine {
+		re := regexp.MustCompile(`^(\s*>)+`)
+		match := re.FindString(text)
+		for _, r := range match {
+			if r == '>' {
+				count++
+			}
 		}
 	}
 	return &MarkdownOpts{QuoteLevel: count}
