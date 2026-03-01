@@ -3,6 +3,8 @@ package neovim
 import (
 	"errors"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/neovim/go-client/nvim"
 )
@@ -10,6 +12,7 @@ import (
 type Buffer struct {
 	Filepath string
 	Filetype string
+	BufNr    int
 }
 
 func getWindowBuffer(winId int) (*Buffer, error) {
@@ -48,9 +51,18 @@ func getWindowBuffer(winId int) (*Buffer, error) {
 
 	buffername, err := NvimInstance.BufferName(buffer)
 	assert(err == nil, "error getting bufname")
+
+	// Extract buffer number from buffer.String() which returns "buffer:N"
+	bufNr := 0
+	parts := strings.Split(buffer.String(), ":")
+	if len(parts) == 2 {
+		bufNr, _ = strconv.Atoi(parts[1])
+	}
+
 	result := Buffer{
 		Filetype: filetype,
 		Filepath: filepath.Base(buffername),
+		BufNr:    bufNr,
 	}
 	return &result, nil
 }

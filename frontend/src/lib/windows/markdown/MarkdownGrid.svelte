@@ -2,6 +2,7 @@
 	import LineNumber from '../LineNumber.svelte';
 	import MarkdownRow from './MarkdownRow.svelte';
 	import Quote from './Quote.svelte';
+	import Table from './Table.svelte';
 	let { content, decode, cursor, lineNumbers, relativeLineNumbers }: App.GridProps = $props();
 
 	function computeRelativeLineNumbers() {
@@ -40,13 +41,60 @@
 		return groups;
 	}
 
+	function findTableGroups() {
+		if (!content) return [];
+
+		const groups: { start: number; end: number; tableId: number }[] = [];
+		let currentStart: number | null = null;
+		let currentTableId: number | null = null;
+
+		for (let i = 0; i < content.length; i++) {
+			const tableId = content[i].markdownOpts?.table?.tableId;
+			if (tableId !== undefined && tableId !== null) {
+				if (currentStart === null || currentTableId !== tableId) {
+					if (currentStart !== null) {
+						groups.push({ start: currentStart, end: i - 1, tableId: currentTableId! });
+					}
+					currentStart = i;
+					currentTableId = tableId;
+				}
+			} else {
+				if (currentStart !== null) {
+					groups.push({ start: currentStart, end: i - 1, tableId: currentTableId! });
+					currentStart = null;
+					currentTableId = null;
+				}
+			}
+		}
+		if (currentStart !== null) {
+			groups.push({ start: currentStart, end: content.length - 1, tableId: currentTableId! });
+		}
+		return groups;
+	}
+
 	let quoteGroups = $derived(findQuoteGroups());
+	let tableGroups = $derived(findTableGroups());
 
 	function getQuoteGroup(index: number): App.NvimRow[] {
 		if (!content) return [];
 		const group = quoteGroups.find((group) => index >= group.start && index <= group.end);
 		if (!group) return [];
 		return content.slice(group.start, group.end + 1);
+	}
+
+	function getTableGroup(index: number): App.NvimRow[] | null {
+		if (!content) return null;
+		const group = tableGroups.find((g) => index >= g.start && index <= g.end);
+		if (!group) return null;
+		return content.slice(group.start, group.end + 1);
+	}
+
+	function isFirstOfTableGroup(index: number): boolean {
+		return tableGroups.some((g) => g.start === index);
+	}
+
+	function isInTableGroup(index: number): boolean {
+		return tableGroups.some((g) => index >= g.start && index <= g.end);
 	}
 </script>
 
@@ -60,7 +108,11 @@
 			index={row.index}
 		/>
 
-		{#if row.markdownOpts?.quoteLevel && content?.length}
+		{#if isInTableGroup(i)}
+			{#if isFirstOfTableGroup(i)}
+				<Table rows={getTableGroup(i) ?? []} {decode} />
+			{/if}
+		{:else if row.markdownOpts?.quoteLevel && content?.length}
 			{#if i === 0 || !content[i - 1].markdownOpts?.quoteLevel}
 				<!-- This is the first row of a quote group -->
 				<Quote rows={getQuoteGroup(i)} {decode} />

@@ -24,8 +24,16 @@ declare global {
       markdownOpts?: MarkdownOpts
     }
 
+    interface TableRowOpts {
+      tableId: number;
+      rowType: 'header' | 'separator' | 'data';
+      cells: NvimToken[][];
+      alignments: string[];
+    }
+
     interface MarkdownOpts {
       quoteLevel: number
+      table?: TableRowOpts
     }
 
     interface WindowContentRowMap {

@@ -38,4 +38,11 @@ Tests the complete syntax highlighting pipeline:
 
 - **Problem**: In Wails dev mode, `OnDomReady` fires for the internal webview before external browsers (like Playwright) connect. The initial events (layout, highlights, content) are missed.
 
+| foo | bar | baz | poo | boo |
+|-----|-----|-----|-----|-----|
+| 1   | 2   | 3   | 4   | 5   |
+| 11  | 22  | 33  | 44  | 55  |
+| a4  | b4  | c4  | d4  | e4  |
+
 - **Solution**: The frontend emits a `request-state` event on load. The backend responds by re-emitting the current highlights, layout, and content. The test then sends vim keystrokes (`:e tests/fixtures/test.go<CR>`) to open the test file, triggering fresh content-updated events.
+

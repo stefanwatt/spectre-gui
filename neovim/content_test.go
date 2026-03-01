@@ -182,3 +182,132 @@ func TestOptimizeRow_EmptyRow(t *testing.T) {
 		t.Errorf("got %d tokens, want 0", len(result))
 	}
 }
+
+func TestSplitTokensIntoCells_BasicTable(t *testing.T) {
+	tokens := []*Token{
+		{Text: "| Name | Age | City |", Classes: "fg-1", Highlight: 1},
+	}
+	cells := splitTokensIntoCells(tokens)
+
+	if len(cells) != 3 {
+		t.Fatalf("got %d cells, want 3", len(cells))
+	}
+	if cells[0][0].Text != "Name" {
+		t.Errorf("cell 0 text = %q, want %q", cells[0][0].Text, "Name")
+	}
+	if cells[1][0].Text != "Age" {
+		t.Errorf("cell 1 text = %q, want %q", cells[1][0].Text, "Age")
+	}
+	if cells[2][0].Text != "City" {
+		t.Errorf("cell 2 text = %q, want %q", cells[2][0].Text, "City")
+	}
+}
+
+func TestSplitTokensIntoCells_MultipleTokensPerCell(t *testing.T) {
+	// Simulates "| " with hl=1, "Name" with hl=2, " | " with hl=1, "Age" with hl=2, " |"
+	tokens := []*Token{
+		{Text: "| ", Classes: "fg-1", Highlight: 1},
+		{Text: "Name", Classes: "fg-2", Highlight: 2},
+		{Text: " | ", Classes: "fg-1", Highlight: 1},
+		{Text: "Age", Classes: "fg-2", Highlight: 2},
+		{Text: " |", Classes: "fg-1", Highlight: 1},
+	}
+	cells := splitTokensIntoCells(tokens)
+
+	if len(cells) != 2 {
+		t.Fatalf("got %d cells, want 2", len(cells))
+	}
+	if cells[0][0].Text != "Name" {
+		t.Errorf("cell 0 text = %q, want %q", cells[0][0].Text, "Name")
+	}
+	if cells[1][0].Text != "Age" {
+		t.Errorf("cell 1 text = %q, want %q", cells[1][0].Text, "Age")
+	}
+}
+
+func TestSplitTokensIntoCells_EmptyInput(t *testing.T) {
+	cells := splitTokensIntoCells([]*Token{})
+	if len(cells) != 0 {
+		t.Errorf("got %d cells, want 0", len(cells))
+	}
+}
+
+func TestSplitTokensIntoCells_BoxDrawing(t *testing.T) {
+	// Box-drawing pipes from render-markdown.nvim
+	tokens := []*Token{
+		{Text: "│ Name  │ Age │ City     │", Classes: "fg-1", Highlight: 1},
+	}
+	cells := splitTokensIntoCells(tokens)
+
+	if len(cells) != 3 {
+		t.Fatalf("got %d cells, want 3", len(cells))
+	}
+	if cells[0][0].Text != "Name" {
+		t.Errorf("cell 0 text = %q, want %q", cells[0][0].Text, "Name")
+	}
+	if cells[1][0].Text != "Age" {
+		t.Errorf("cell 1 text = %q, want %q", cells[1][0].Text, "Age")
+	}
+	if cells[2][0].Text != "City" {
+		t.Errorf("cell 2 text = %q, want %q", cells[2][0].Text, "City")
+	}
+}
+
+func TestIsSeparatorRow(t *testing.T) {
+	tests := []struct {
+		text string
+		want bool
+	}{
+		{"| --- | --- | --- |", true},
+		{"| :--- | :---: | ---: |", true},
+		{"| Name | Age |", false},
+		{"just text", false},
+		{"├───────┼─────┼──────────┤", true},
+	}
+	for _, tt := range tests {
+		tokens := []*Token{{Text: tt.text}}
+		got := isSeparatorRow(tokens)
+		if got != tt.want {
+			t.Errorf("isSeparatorRow(%q) = %v, want %v", tt.text, got, tt.want)
+		}
+	}
+}
+
+func TestBuildTableRowOpts_Header(t *testing.T) {
+	meta := &TableMeta{StartLine: 5, EndLine: 9, Alignments: []string{"left", "center"}}
+	tokens := []*Token{{Text: "| Name | Age |"}}
+
+	opts := buildTableRowOpts(meta, 5, tokens)
+
+	if opts.RowType != "header" {
+		t.Errorf("RowType = %q, want %q", opts.RowType, "header")
+	}
+	if opts.TableID != 5 {
+		t.Errorf("TableID = %d, want 5", opts.TableID)
+	}
+	if len(opts.Alignments) != 2 {
+		t.Fatalf("Alignments len = %d, want 2", len(opts.Alignments))
+	}
+}
+
+func TestBuildTableRowOpts_Separator(t *testing.T) {
+	meta := &TableMeta{StartLine: 5, EndLine: 9, Alignments: []string{"left"}}
+	tokens := []*Token{{Text: "| --- | --- |"}}
+
+	opts := buildTableRowOpts(meta, 6, tokens)
+
+	if opts.RowType != "separator" {
+		t.Errorf("RowType = %q, want %q", opts.RowType, "separator")
+	}
+}
+
+func TestBuildTableRowOpts_Data(t *testing.T) {
+	meta := &TableMeta{StartLine: 5, EndLine: 9, Alignments: []string{"left"}}
+	tokens := []*Token{{Text: "| Alice | 30 |"}}
+
+	opts := buildTableRowOpts(meta, 7, tokens)
+
+	if opts.RowType != "data" {
+		t.Errorf("RowType = %q, want %q", opts.RowType, "data")
+	}
+}

@@ -16,29 +16,31 @@ import (
 )
 
 type Screen struct {
-	margins       []int
-	Height        int //in number of cells
-	Width         int //in number of cells
-	topLine       int
-	botLine       int
-	curLine       int
-	lineCount     int
-	scrollDelta   float64
-	ctx           context.Context
-	Grids         map[int]*Grid
-	Highlights    map[int]*Highlight
-	Windows       map[int]*Window // Map of window IDs to Window objects
-	GridToWindow  map[int]int     // Map of grid IDs to window IDs
-	DefaultFg     int
-	DefaultBg     int
-	DefaultSp     int
-	ActiveGrid    int
-	ActiveWindow  int
-	Mode          string
-	PendingRender bool
-	highlightsMu  sync.RWMutex // Mutex for Highlights map
-	windowsMu     sync.RWMutex // Mutex for Windows map
-	layout        *GridLayout
+	margins         []int
+	Height          int //in number of cells
+	Width           int //in number of cells
+	topLine         int
+	botLine         int
+	curLine         int
+	lineCount       int
+	scrollDelta     float64
+	ctx             context.Context
+	Grids           map[int]*Grid
+	Highlights      map[int]*Highlight
+	Windows         map[int]*Window // Map of window IDs to Window objects
+	GridToWindow    map[int]int     // Map of grid IDs to window IDs
+	DefaultFg       int
+	DefaultBg       int
+	DefaultSp       int
+	ActiveGrid      int
+	ActiveWindow    int
+	Mode            string
+	PendingRender   bool
+	highlightsMu    sync.RWMutex // Mutex for Highlights map
+	windowsMu       sync.RWMutex // Mutex for Windows map
+	layout          *GridLayout
+	tableMetadata   map[int][]TableMeta // bufNr -> []TableMeta
+	tableMetadataMu sync.RWMutex
 }
 
 func NewScreen(ctx context.Context, cols int, rows int) *Screen {
@@ -71,6 +73,7 @@ func NewScreen(ctx context.Context, cols int, rows int) *Screen {
 		PendingRender: false,
 		margins:       make([]int, 4), // Initialize margins slice
 		layout:        NewGridLayout(),
+		tableMetadata: make(map[int][]TableMeta),
 	}
 }
 
@@ -901,10 +904,15 @@ func (s *Screen) render() {
 		grid := window.Grid
 		if !window.IsFloating() || window.ZIndex == 69420 {
 			filetype := ""
+			bufNr := 0
 			if window.Buffer != nil {
 				filetype = (*window.Buffer).Filetype
+				bufNr = (*window.Buffer).BufNr
 			}
-			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid, filetype))
+			if filetype == "markdown" {
+				utils.Log(fmt.Sprintf("render: winId=%d filetype=%s bufNr=%d", winId, filetype, bufNr))
+			}
+			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid, filetype, bufNr))
 		} else {
 			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.renderFloatingWindow(window))
 		}
@@ -982,10 +990,12 @@ func (s *Screen) EmitCurrentState() {
 			continue
 		}
 		filetype := ""
+		bufNr := 0
 		if window.Buffer != nil {
 			filetype = (*window.Buffer).Filetype
+			bufNr = (*window.Buffer).BufNr
 		}
-		Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid, filetype))
+		Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid, filetype, bufNr))
 	}
 }
 
@@ -1010,6 +1020,62 @@ func (s *Screen) mapWindowInfo(window *Window, winId int) map[string]interface{}
 	//NOTE: need hex encoding for some nerdfont stuff (e.g. completion window)
 	windowInfo["isHex"] = isHex(window)
 	return windowInfo
+}
+
+func (s *Screen) setTableMetadata(bufNr int, tables []TableMeta) {
+	s.tableMetadataMu.Lock()
+	defer s.tableMetadataMu.Unlock()
+	s.tableMetadata[bufNr] = tables
+}
+
+func (s *Screen) getTableMetaForLine(bufNr int, bufferLine int) *TableMeta {
+	if bufNr == 0 {
+		return nil
+	}
+	s.tableMetadataMu.RLock()
+	defer s.tableMetadataMu.RUnlock()
+	tables, exists := s.tableMetadata[bufNr]
+	if !exists {
+		return nil
+	}
+	for i := range tables {
+		// Extend range by 1 on each side to capture box-drawing border rows
+		// added by render-markdown plugins (e.g., ┌─┬─┐ and └─┴─┘)
+		if bufferLine >= tables[i].StartLine-1 && bufferLine < tables[i].EndLine+1 {
+			return &tables[i]
+		}
+	}
+	return nil
+}
+
+func parseMarkdownTables(tablesRaw []interface{}) []TableMeta {
+	var tables []TableMeta
+	for _, raw := range tablesRaw {
+		tableData, ok := raw.([]interface{})
+		if !ok || len(tableData) < 3 {
+			continue
+		}
+		startLine := utils.ReflectToInt(tableData[0])
+		endLine := utils.ReflectToInt(tableData[1])
+		alignmentsRaw, ok := tableData[2].([]interface{})
+		if !ok {
+			continue
+		}
+		alignments := make([]string, len(alignmentsRaw))
+		for i, a := range alignmentsRaw {
+			if s, ok := a.(string); ok {
+				alignments[i] = s
+			} else {
+				alignments[i] = "left"
+			}
+		}
+		tables = append(tables, TableMeta{
+			StartLine:  startLine,
+			EndLine:    endLine,
+			Alignments: alignments,
+		})
+	}
+	return tables
 }
 
 func (s *Screen) GetActiveWindow() *Window {

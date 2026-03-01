@@ -113,6 +113,21 @@ func StartListening(ctx context.Context) {
 			NvimScreen.closeTrek(windowIds)
 		})
 
+		NvimInstance.RegisterHandler("MarkdownTables", func(updates ...[]interface{}) {
+			for _, data := range updates {
+				if len(data) < 2 {
+					continue
+				}
+				bufNr := utils.ReflectToInt(data[0])
+				tablesRaw, ok := data[1].([]interface{})
+				if !ok {
+					continue
+				}
+				tables := parseMarkdownTables(tablesRaw)
+				NvimScreen.setTableMetadata(bufNr, tables)
+			}
+		})
+
 		opts := map[string]interface{}{
 			"rgb":            true,
 			"ext_linegrid":   true,
@@ -154,6 +169,11 @@ func StartListening(ctx context.Context) {
 		}
 
 		SetupKeymaps()
+
+		// Set up markdown table detection via treesitter
+		if err := NvimInstance.ExecLua(markdownTablesLua, nil, NvimInstance.ChannelID()); err != nil {
+			utils.Log(fmt.Sprintf("Error loading markdown tables Lua: %v", err))
+		}
 
 		if err := NvimInstance.Serve(); err != nil {
 			utils.Log(fmt.Sprintf("Neovim process terminated: %v\n%s", err, debug.Stack()))
