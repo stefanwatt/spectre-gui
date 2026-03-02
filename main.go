@@ -33,6 +33,11 @@ func deleteIfExists(path string) error {
 }
 
 func main() {
+	// WebKitGTK on Wayland uses DMABuf for hardware-accelerated rendering, but the
+	// DMABuf surface doesn't resize correctly when the compositor resizes the window,
+	// leaving transparent gaps. Disabling it forces WebKit to use a software surface
+	// that resizes properly.
+	os.Setenv("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
 	app := NewApp()
 	var opts Options
 	parser := flags.NewParser(&opts, flags.Default)

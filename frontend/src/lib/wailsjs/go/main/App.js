@@ -10,6 +10,10 @@ export function GetReplacementText(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['GetReplacementText'](arg1, arg2, arg3, arg4);
 }
 
+export function ReadLocalImage(arg1) {
+  return window['go']['main']['App']['ReadLocalImage'](arg1);
+}
+
 export function SendKey(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['SendKey'](arg1, arg2, arg3, arg4, arg5);
 }
