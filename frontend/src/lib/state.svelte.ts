@@ -5,6 +5,7 @@ import FindHelp from '$lib/picker/FindHelp.svelte';
 import FindBufferSymbols from '$lib/picker/FindBufferSymbols.svelte';
 import { registerKeymap } from './keymaps/keymap-service';
 import { ClosePreview } from '$lib/wailsjs/go/picker/Picker';
+import { SvelteMap } from 'svelte/reactivity';
 
 export let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
 export let layout = $state<App.NvimLayout>({
@@ -13,7 +14,7 @@ export let layout = $state<App.NvimLayout>({
   activeWindowId: 0,
   windows: []
 });
-export let windowContentRowMap = $state<App.WindowContentRowMap>({});
+export let windowContentRowMap = new SvelteMap<number, App.NvimRow[]>();
 
 
 export let pickers = $state([
@@ -47,15 +48,17 @@ export function getKeymapMode(): App.KeymapMode {
   return keymapMode
 }
 
+let _floatingWindows: App.FloatingWindow[] = $state.raw([]);
+export function getFloatingWindows() { return _floatingWindows; }
+export function setFloatingWindows(v: App.FloatingWindow[]) { _floatingWindows = v; }
+
 interface NestedState {
-  floatingWindows: App.FloatingWindow[];
   mode: App.VimMode;
   pickerResults: App.PickerResult[]
   activePicker?: App.Picker
   previewWindow?: App.FloatingWindow
 }
 export let nestedState: NestedState = $state({
-  floatingWindows: [],
   mode: 'normal',
   pickerResults: []
 })

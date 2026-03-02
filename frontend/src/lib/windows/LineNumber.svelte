@@ -1,18 +1,14 @@
 <script lang="ts">
 	let {
 		lineNumbers,
-		cursor,
+		cursorRow,
 		relativeLineNumbers,
-		relativeLineNumbersList,
 		index,
 		rangeEnd
 	}: {
 		lineNumbers: boolean;
 		relativeLineNumbers: boolean;
-		relativeLineNumbersList: {
-			[key: number]: number;
-		};
-		cursor?: { row: number; col: number };
+		cursorRow?: number;
 		index: number;
 		rangeEnd?: number;
 	} = $props();
@@ -25,21 +21,21 @@
 		>
 			{index}-{rangeEnd}
 		</span>
-	{:else if cursor && cursor.row === index}
+	{:else if cursorRow !== undefined && cursorRow === index}
 		<span
 			class:!pr-[2ch]={relativeLineNumbers}
-			class="w-[6ch] shrink-0 text-text cursor-row-{cursor.row} flex items-center justify-end pr-2 text-right"
+			class="w-[6ch] shrink-0 text-text cursor-row-{cursorRow} flex items-center justify-end pr-2 text-right"
 		>
-			{cursor.row}
+			{cursorRow}
 		</span>
 	{:else}
 		<span
-			class:!text-text={cursor?.row === index}
-			class:!pr-[1ch]={relativeLineNumbers && cursor?.row === index}
+			class:!text-text={cursorRow === index}
+			class:!pr-[1ch]={relativeLineNumbers && cursorRow === index}
 			class="flex w-[6ch] shrink-0 items-center justify-end pr-2 text-right text-surface1"
 		>
-			{#if relativeLineNumbers}
-				{relativeLineNumbersList[index]}
+			{#if relativeLineNumbers && cursorRow !== undefined}
+				{Math.abs(index - cursorRow)}
 			{:else}
 				{index}
 			{/if}

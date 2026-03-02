@@ -18,6 +18,7 @@ type Grid struct {
 	TopLine       int // first visible buffer line (0-indexed), from win_viewport
 	DirtyRows     []bool
 	OptimizedRows [][]*Cell
+	CachedTokens  [][]*Token // cached token slices for non-dirty rows
 	MarkdownOpts  map[int]*MarkdownOpts
 }
 

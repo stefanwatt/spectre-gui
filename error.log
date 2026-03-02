@@ -1,0 +1,619 @@
+fatal error: concurrent map read and map write
+
+goroutine 973 [running]:
+internal/runtime/maps.fatal({0x1eb8361?, 0x7fe07cb195c0?})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/panic.go:1046 +0x18
+nvim-gui/neovim.(*Screen).gridLine(0xc0001ec000, 0x2, 0xf, 0x0, {0xc000c0e070, 0x7, 0x7})
+        /home/stefan/Projects/nvim-gui/neovim/screen.go:349 +0x8a5
+nvim-gui/neovim.(*Screen).handleRedraw(0xc0001ec000, {0xc0003a4000, 0xb, 0xb})
+        /home/stefan/Projects/nvim-gui/neovim/screen.go:149 +0x32db
+nvim-gui/neovim.StartListening.func3.1({0xc0003a4000, 0xb, 0xb})
+        /home/stefan/Projects/nvim-gui/neovim/neovim.go:99 +0x35
+reflect.Value.call({0x1b55180, 0x248f380, 0x13}, {0x1e6e7b9, 0x9}, {0xc0004fc018, 0x1, 0x1})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/reflect/value.go:581 +0xe71
+reflect.Value.CallSlice({0x1b55180, 0x248f380, 0x13}, {0xc0004fc018, 0x1, 0x1})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/reflect/value.go:378 +0xb3
+github.com/neovim/go-client/msgpack/rpc.(*Endpoint).runNotifications(0xc000c161a0)
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/msgpack/rpc/rpc.go:677 +0xe3
+created by github.com/neovim/go-client/msgpack/rpc.(*Endpoint).Serve in goroutine 972
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/msgpack/rpc/rpc.go:192 +0x149
+
+goroutine 1 [runnable, locked to thread]:
+github.com/wailsapp/wails/v2/internal/frontend/desktop/linux._Cfunc_gtk_main()
+        _cgo_gotypes.go:1147 +0x3a
+github.com/wailsapp/wails/v2/internal/frontend/desktop/linux.(*Frontend).RunMainLoop(0xc000314c00)
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/frontend/desktop/linux/frontend.go:133 +0x14
+github.com/wailsapp/wails/v2/internal/app.(*App).Run(0xc0003900a0)
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/app/app_dev.go:33 +0x72
+github.com/wailsapp/wails/v2/pkg/application.(*Application).Run(0xc0002b4160)
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/pkg/application/application.go:73 +0x18a
+github.com/wailsapp/wails/v2.Run(0xc00015e180)
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/wails.go:14 +0x2f
+main.main()
+        /home/stefan/Projects/nvim-gui/main.go:66 +0xa16
+
+goroutine 38 [chan receive]:
+github.com/wailsapp/wails/v2/internal/signal.Start.func1()
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/signal/signal.go:31 +0x25
+created by github.com/wailsapp/wails/v2/internal/signal.Start in goroutine 1
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/signal/signal.go:30 +0xd6
+
+goroutine 24 [chan receive]:
+github.com/wailsapp/wails/v2/internal/frontend/desktop/linux.(*Frontend).startRequestProcessor(0xc000314c00)
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/frontend/desktop/linux/frontend.go:562 +0x36
+created by github.com/wailsapp/wails/v2/internal/frontend/desktop/linux.NewFrontend in goroutine 1
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/frontend/desktop/linux/frontend.go:189 +0xb1f
+
+goroutine 25 [chan receive]:
+github.com/wailsapp/wails/v2/internal/frontend/desktop/linux.(*Frontend).startMessageProcessor(0xc000314c00)
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/frontend/desktop/linux/frontend.go:221 +0x36
+created by github.com/wailsapp/wails/v2/internal/frontend/desktop/linux.NewFrontend in goroutine 1
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/frontend/desktop/linux/frontend.go:192 +0xb87
+
+goroutine 26 [chan receive]:
+github.com/wailsapp/wails/v2/internal/frontend/desktop/linux.(*Frontend).startBindingsMessageProcessor(0xc000314c00)
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/frontend/desktop/linux/frontend.go:227 +0x57
+created by github.com/wailsapp/wails/v2/internal/frontend/desktop/linux.NewFrontend in goroutine 1
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/frontend/desktop/linux/frontend.go:193 +0xbef
+
+goroutine 27 [chan receive]:
+github.com/wailsapp/wails/v2/internal/frontend/desktop/linux.(*Frontend).startSecondInstanceProcessor(0xc000314c00)
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/frontend/desktop/linux/frontend.go:573 +0x57
+created by github.com/wailsapp/wails/v2/internal/frontend/desktop/linux.NewFrontend in goroutine 1
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/frontend/desktop/linux/frontend.go:215 +0xe6f
+
+goroutine 29 [syscall]:
+os/signal.signal_recv()
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/sigqueue.go:152 +0x29
+os/signal.loop()
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/os/signal/signal_unix.go:23 +0x17
+created by os/signal.Notify.func1.1 in goroutine 1
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/os/signal/signal.go:152 +0x26
+
+goroutine 66 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe07ca0be00, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc00038c420, 0x72, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc00038c420, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Accept(0xc00038c400)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:613 +0x4e5
+net.(*netFD).accept(0xc00038c400)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/fd_unix.go:161 +0x69
+net.(*TCPListener).accept(0xc00038e180)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/tcpsock_posix.go:159 +0x65
+net.(*TCPListener).AcceptTCP(0xc00038e180)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/tcpsock.go:367 +0x67
+github.com/labstack/echo/v4.tcpKeepAliveListener.Accept({0xc00038e180})
+        /home/stefan/go/pkg/mod/github.com/labstack/echo/v4@v4.13.3/echo.go:988 +0x45
+net/http.(*Server).Serve(0xc0000ce100, {0x252ea80, 0xc000474018})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:3463 +0x48d
+github.com/labstack/echo/v4.(*Echo).Start(0xc0003ac008, {0xc00002e22a, 0xf})
+        /home/stefan/go/pkg/mod/github.com/labstack/echo/v4@v4.13.3/echo.go:685 +0x159
+github.com/wailsapp/wails/v2/internal/frontend/devserver.(*DevWebServer).Run.func3(0xc0003ac008, 0xc000262948)
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/frontend/devserver/devserver.go:123 +0x4e
+created by github.com/wailsapp/wails/v2/internal/frontend/devserver.(*DevWebServer).Run in goroutine 1
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/frontend/devserver/devserver.go:122 +0xe25
+
+goroutine 1149 [select]:
+net/http/httputil.(*ReverseProxy).handleUpgradeResponse.func1()
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:779 +0xd1
+created by net/http/httputil.(*ReverseProxy).handleUpgradeResponse in goroutine 1202
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:776 +0x4e5
+
+goroutine 32 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe07ca0bc00, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc00038d420, 0x72, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc00038d420, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc00038d400, {0xc000394000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+net.(*netFD).Read(0xc00038d400, {0xc000394000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/fd_posix.go:68 +0x73
+net.(*conn).Read(0xc000474038, {0xc000394000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:196 +0xa5
+net/http.(*connReader).Read(0xc00038e1c0, {0xc000394000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:812 +0x242
+bufio.(*Reader).fill(0xc0003b21e0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:113 +0x25a
+bufio.(*Reader).Peek(0xc0003b21e0, 0x4)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:152 +0x15b
+net/http.(*conn).serve(0xc0003a02d0, {0x252ed90, 0xc000390190})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:2145 +0x1f05
+created by net/http.(*Server).Serve in goroutine 66
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:3493 +0x9d0
+
+goroutine 12 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe07ca0b800, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc0002385a0, 0x72, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc0002385a0, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc000238580, {0xc00006b000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+net.(*netFD).Read(0xc000238580, {0xc00006b000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/fd_posix.go:68 +0x73
+net.(*conn).Read(0xc00011a378, {0xc00006b000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:196 +0xa5
+net/http.(*connReader).Read(0xc00038e480, {0xc00006b000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:812 +0x242
+bufio.(*Reader).fill(0xc0003b2600)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:113 +0x25a
+bufio.(*Reader).Peek(0xc0003b2600, 0x4)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:152 +0x15b
+net/http.(*conn).serve(0xc0001c66c0, {0x252ed90, 0xc0003905f0})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:2145 +0x1f05
+created by net/http.(*Server).Serve in goroutine 66
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:3493 +0x9d0
+
+goroutine 970 [select]:
+nvim-gui/neovim.StartListening({0x252ed58, 0xc00046cc60})
+        /home/stefan/Projects/nvim-gui/neovim/neovim.go:269 +0xaba
+created by main.(*App).mounted in goroutine 25
+        /home/stefan/Projects/nvim-gui/app.go:35 +0xe5
+
+goroutine 52 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe07ca0b400, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc00039a120, 0x72, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc00039a120, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc00039a100, {0xc0003ea000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+net.(*netFD).Read(0xc00039a100, {0xc0003ea000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/fd_posix.go:68 +0x73
+net.(*conn).Read(0xc00058e028, {0xc0003ea000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:196 +0xa5
+net/http.(*connReader).Read(0xc0001f40c0, {0xc0003ea000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:812 +0x242
+bufio.(*Reader).fill(0xc00006c300)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:113 +0x25a
+bufio.(*Reader).Peek(0xc00006c300, 0x4)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:152 +0x15b
+net/http.(*conn).serve(0xc0003961b0, {0x252ed90, 0xc0003d8050})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:2145 +0x1f05
+created by net/http.(*Server).Serve in goroutine 66
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:3493 +0x9d0
+
+goroutine 96 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe07ca0b200, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc000422820, 0x72, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc000422820, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc000422800, {0xc000377000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+net.(*netFD).Read(0xc000422800, {0xc000377000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/fd_posix.go:68 +0x73
+net.(*conn).Read(0xc000474060, {0xc000377000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:196 +0xa5
+net/http.(*connReader).Read(0xc00038e300, {0xc000377000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:812 +0x242
+bufio.(*Reader).fill(0xc00006c7e0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:113 +0x25a
+bufio.(*Reader).Peek(0xc00006c7e0, 0x4)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:152 +0x15b
+net/http.(*conn).serve(0xc0001c62d0, {0x252ed90, 0xc000390370})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:2145 +0x1f05
+created by net/http.(*Server).Serve in goroutine 66
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:3493 +0x9d0
+
+goroutine 107 [select]:
+nvim-gui/neovim.StartListening({0x252ed58, 0xc00046cc60})
+        /home/stefan/Projects/nvim-gui/neovim/neovim.go:269 +0xaba
+created by main.(*App).mounted in goroutine 25
+        /home/stefan/Projects/nvim-gui/app.go:35 +0xe5
+
+goroutine 108 [select]:
+os/exec.(*Cmd).watchCtx(0xc00015e300, 0xc0003b02a0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/os/exec/exec.go:789 +0xee
+created by os/exec.(*Cmd).Start in goroutine 107
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/os/exec/exec.go:775 +0x107f
+
+goroutine 109 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe07ca0e000, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc0003b2980, 0x72, 0x1)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc0003b2980, 0x1)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc0003b2960, {0xc000395000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+os.(*File).read(0xc000474048, {0xc000395000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/os/file_posix.go:29 +0x78
+os.(*File).Read(0xc000474048, {0xc000395000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/os/file.go:144 +0xcc
+bufio.(*Reader).fill(0xc0003b2a80)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:113 +0x25a
+bufio.(*Reader).ReadByte(0xc0003b2a80)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:273 +0xa5
+github.com/neovim/go-client/msgpack.(*Decoder).Unpack(0xc0003901e0)
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/msgpack/unpack.go:164 +0x87
+github.com/neovim/go-client/msgpack/rpc.(*Endpoint).Serve(0xc000350680)
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/msgpack/rpc/rpc.go:195 +0x186
+github.com/neovim/go-client/nvim.(*Nvim).Serve(0xc0000e22a0)
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/nvim/nvim.go:50 +0xac
+github.com/neovim/go-client/nvim.(*Nvim).startServe.func1()
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/nvim/nvim.go:56 +0x1c
+created by github.com/neovim/go-client/nvim.(*Nvim).startServe in goroutine 107
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/nvim/nvim.go:55 +0xa6
+
+goroutine 110 [runnable]:
+strings.(*Builder).WriteString(0xc0000f06e8, {0xc00016cbd0, 0x16})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/strings/builder.go:112 +0x187
+nvim-gui/neovim.emitHighlightCSS({0x252ed58, 0xc00046cc60})
+        /home/stefan/Projects/nvim-gui/neovim/highlight.go:115 +0x20c
+nvim-gui/neovim.(*Screen).hlAttrDefine(0xc0001ec000, {0xc00022a4d0, 0x3, 0x3})
+        /home/stefan/Projects/nvim-gui/neovim/screen.go:655 +0xa3d
+nvim-gui/neovim.(*Screen).handleRedraw(0xc0001ec000, {0xc0003a0750, 0x6, 0x6})
+        /home/stefan/Projects/nvim-gui/neovim/screen.go:190 +0x19e9
+nvim-gui/neovim.StartListening.func3.1({0xc0003a0750, 0x6, 0x6})
+        /home/stefan/Projects/nvim-gui/neovim/neovim.go:99 +0x35
+reflect.Value.call({0x1b55180, 0x248f380, 0x13}, {0x1e6e7b9, 0x9}, {0xc0004687b0, 0x1, 0x1})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/reflect/value.go:581 +0xe71
+reflect.Value.CallSlice({0x1b55180, 0x248f380, 0x13}, {0xc0004687b0, 0x1, 0x1})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/reflect/value.go:378 +0xb3
+github.com/neovim/go-client/msgpack/rpc.(*Endpoint).runNotifications(0xc000350680)
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/msgpack/rpc/rpc.go:677 +0xe3
+created by github.com/neovim/go-client/msgpack/rpc.(*Endpoint).Serve in goroutine 109
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/msgpack/rpc/rpc.go:192 +0x149
+
+goroutine 130 [sync.Mutex.Lock]:
+internal/sync.runtime_SemacquireMutex(0xc00039e460?, 0xa0?, 0x0?)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/sema.go:95 +0x25
+internal/sync.(*Mutex).lockSlow(0xc0000e22c8)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/sync/mutex.go:149 +0x24d
+internal/sync.(*Mutex).Lock(0xc0000e22c8)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/sync/mutex.go:70 +0x45
+sync.(*Mutex).Lock(0xc0000e22c8)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/sync/mutex.go:46 +0x1f
+github.com/neovim/go-client/nvim.(*Nvim).Serve(0xc0000e22a0)
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/nvim/nvim.go:48 +0x45
+nvim-gui/neovim.StartListening.func3()
+        /home/stefan/Projects/nvim-gui/neovim/neovim.go:260 +0xe37
+created by nvim-gui/neovim.StartListening in goroutine 107
+        /home/stefan/Projects/nvim-gui/neovim/neovim.go:91 +0xa1f
+
+goroutine 80 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe028427000, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc00023a120, 0x72, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc00023a120, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc00023a100, {0xc000c24000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+net.(*netFD).Read(0xc00023a100, {0xc000c24000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/fd_posix.go:68 +0x73
+net.(*conn).Read(0xc000610030, {0xc000c24000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:196 +0xa5
+net/http.(*connReader).Read(0xc0001fc140, {0xc000c24000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:812 +0x242
+bufio.(*Reader).fill(0xc0003b2f00)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:113 +0x25a
+bufio.(*Reader).Peek(0xc0003b2f00, 0x4)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:152 +0x15b
+net/http.(*conn).serve(0xc0003f83f0, {0x252ed90, 0xc0004a81e0})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:2145 +0x1f05
+created by net/http.(*Server).Serve in goroutine 66
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:3493 +0x9d0
+
+goroutine 971 [select]:
+os/exec.(*Cmd).watchCtx(0xc00015e480, 0xc00094e0e0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/os/exec/exec.go:789 +0xee
+created by os/exec.(*Cmd).Start in goroutine 970
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/os/exec/exec.go:775 +0x107f
+
+goroutine 1633 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe07ca0e400, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc000ae4720, 0x72, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc000ae4720, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc000ae4700, {0xc0003e2000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+net.(*netFD).Read(0xc000ae4700, {0xc0003e2000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/fd_posix.go:68 +0x73
+net.(*conn).Read(0xc000310050, {0xc0003e2000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:196 +0xa5
+io.copyBuffer({0x7fe028596058, 0xc0003d2000}, {0x252a300, 0xc000518000}, {0xc0003e2000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:429 +0x422
+io.Copy({0x7fe028596058, 0xc0003d2000}, {0x252a300, 0xc000518000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:388 +0x79
+net.genericWriteTo(0xc000310050, {0x7fe028596058, 0xc0003d2000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:796 +0x8d
+net.(*TCPConn).writeTo(0xc000310050, {0x7fe028596058, 0xc0003d2000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/tcpsock_posix.go:61 +0x113
+net.(*TCPConn).WriteTo(0xc000310050, {0x7fe028596058, 0xc0003d2000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/tcpsock.go:177 +0x8b
+io.copyBuffer({0x7fe028596058, 0xc0003d2000}, {0x252a2e0, 0xc000310050}, {0x0, 0x0, 0x0})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:411 +0x133
+io.Copy({0x7fe028596058, 0xc0003d2000}, {0x252a2e0, 0xc000310050})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:388 +0x79
+net/http/httputil.switchProtocolCopier.copyToBackend({{0x7fe0740c4880, 0xc000310050}, {0x7fe0740c48a8, 0xc0003d2000}}, 0xc00058c770)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:842 +0x113
+created by net/http/httputil.(*ReverseProxy).handleUpgradeResponse in goroutine 1623
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:807 +0xd0c
+
+goroutine 1565 [select]:
+net/http.(*persistConn).writeLoop(0xc000ab0120)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/transport.go:2600 +0x154
+created by net/http.(*Transport).dialConn in goroutine 1168
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/transport.go:1948 +0x322f
+
+goroutine 251 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe07ca0b000, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc000ae4820, 0x72, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc000ae4820, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc000ae4800, {0xc000aed000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+net.(*netFD).Read(0xc000ae4800, {0xc000aed000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/fd_posix.go:68 +0x73
+net.(*conn).Read(0xc000f3a018, {0xc000aed000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:196 +0xa5
+net/http.(*persistConn).Read(0xc000922ea0, {0xc000aed000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/transport.go:2125 +0x1dd
+bufio.(*Reader).fill(0xc00080aa80)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:113 +0x25a
+bufio.(*Reader).Peek(0xc00080aa80, 0x1)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:152 +0x15b
+net/http.(*persistConn).readLoop(0xc000922ea0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/transport.go:2278 +0x23c
+created by net/http.(*Transport).dialConn in goroutine 1587
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/transport.go:1947 +0x31c7
+
+goroutine 1564 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe0740c3600, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc0008304a0, 0x72, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc0008304a0, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc000830480, {0xc000d38000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+net.(*netFD).Read(0xc000830480, {0xc000d38000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/fd_posix.go:68 +0x73
+net.(*conn).Read(0xc000908070, {0xc000d38000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:196 +0xa5
+net/http.(*persistConn).Read(0xc000ab0120, {0xc000d38000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/transport.go:2125 +0x1dd
+bufio.(*Reader).fill(0xc0001db020)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:113 +0x25a
+bufio.(*Reader).Peek(0xc0001db020, 0x1)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:152 +0x15b
+net/http.(*persistConn).readLoop(0xc000ab0120)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/transport.go:2278 +0x23c
+created by net/http.(*Transport).dialConn in goroutine 1168
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/transport.go:1947 +0x31c7
+
+goroutine 1623 [chan receive]:
+net/http/httputil.(*ReverseProxy).handleUpgradeResponse(0xc000326c30, {0x252e9f0, 0xc00035a720}, 0xc000380b40, 0xc0001c6870)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:812 +0xe35
+net/http/httputil.(*ReverseProxy).ServeHTTP(0xc000326c30, {0x252e9f0, 0xc00035a720}, 0xc0003808c0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:508 +0x10c5
+github.com/wailsapp/wails/v2/internal/frontend/devserver.(*DevWebServer).Run.func2({0x25367c0, 0xc001004780})
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/frontend/devserver/devserver.go:113 +0xd4
+github.com/labstack/echo/v4.(*Echo).add.func1({0x25367c0, 0xc001004780})
+        /home/stefan/go/pkg/mod/github.com/labstack/echo/v4@v4.13.3/echo.go:581 +0x85
+github.com/labstack/echo/v4.(*Echo).ServeHTTP(0xc0003ac008, {0x252e210, 0xc0004280f0}, 0xc0003808c0)
+        /home/stefan/go/pkg/mod/github.com/labstack/echo/v4@v4.13.3/echo.go:668 +0x28e
+net/http.serverHandler.ServeHTTP({0xc0000ce100}, {0x252e210, 0xc0004280f0}, 0xc0003808c0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:3340 +0x257
+net/http.(*conn).serve(0xc0003a0510, {0x252ed90, 0xc0000fe000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:2109 +0x1ca5
+created by net/http.(*Server).Serve in goroutine 66
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:3493 +0x9d0
+
+goroutine 279 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe028426e00, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc00039a2a0, 0x72, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc00039a2a0, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc00039a280, {0xc000574000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+net.(*netFD).Read(0xc00039a280, {0xc000574000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/fd_posix.go:68 +0x73
+net.(*conn).Read(0xc000310038, {0xc000574000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:196 +0xa5
+net/http.(*connReader).Read(0xc000275440, {0xc000574000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:812 +0x242
+bufio.(*Reader).fill(0xc0001daf00)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:113 +0x25a
+bufio.(*Reader).Peek(0xc0001daf00, 0x4)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:152 +0x15b
+net/http.(*conn).serve(0xc0003a0480, {0x252ed90, 0xc0000fe0a0})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:2145 +0x1f05
+created by net/http.(*Server).Serve in goroutine 66
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:3493 +0x9d0
+
+goroutine 1632 [select]:
+net/http/httputil.(*ReverseProxy).handleUpgradeResponse.func1()
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:779 +0xd1
+created by net/http/httputil.(*ReverseProxy).handleUpgradeResponse in goroutine 1623
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:776 +0x4e5
+
+goroutine 1202 [chan receive]:
+net/http/httputil.(*ReverseProxy).handleUpgradeResponse(0xc000326c30, {0x252e9f0, 0xc000314f60}, 0xc0001cc8c0, 0xc000368120)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:812 +0xe35
+net/http/httputil.(*ReverseProxy).ServeHTTP(0xc000326c30, {0x252e9f0, 0xc000314f60}, 0xc0001cc640)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:508 +0x10c5
+github.com/wailsapp/wails/v2/internal/frontend/devserver.(*DevWebServer).Run.func2({0x25367c0, 0xc000c58820})
+        /home/stefan/go/pkg/mod/github.com/wailsapp/wails/v2@v2.11.0/internal/frontend/devserver/devserver.go:113 +0xd4
+github.com/labstack/echo/v4.(*Echo).add.func1({0x25367c0, 0xc000c58820})
+        /home/stefan/go/pkg/mod/github.com/labstack/echo/v4@v4.13.3/echo.go:581 +0x85
+github.com/labstack/echo/v4.(*Echo).ServeHTTP(0xc0003ac008, {0x252e210, 0xc0004282d0}, 0xc0001cc640)
+        /home/stefan/go/pkg/mod/github.com/labstack/echo/v4@v4.13.3/echo.go:668 +0x28e
+net/http.serverHandler.ServeHTTP({0xc0000ce100}, {0x252e210, 0xc0004282d0}, 0xc0001cc640)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:3340 +0x257
+net/http.(*conn).serve(0xc000396120, {0x252ed90, 0xc0002ba0f0})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:2109 +0x1ca5
+created by net/http.(*Server).Serve in goroutine 66
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/server.go:3493 +0x9d0
+
+goroutine 1151 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe0740c3a00, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc0007341a0, 0x72, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc0007341a0, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc000734180, {0xc000800000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+net.(*netFD).Read(0xc000734180, {0xc000800000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/fd_posix.go:68 +0x73
+net.(*conn).Read(0xc000518040, {0xc000800000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:196 +0xa5
+net/http.(*readWriteCloserBody).Read(0xc000d90018, {0xc000800000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/transport.go:2578 +0x1d5
+io.copyBuffer({0x252a340, 0xc0004740d8}, {0x7fe0740c48d0, 0xc000d90018}, {0xc000800000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:429 +0x422
+io.Copy({0x252a340, 0xc0004740d8}, {0x7fe0740c48d0, 0xc000d90018})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:388 +0x79
+net.genericReadFrom(0xc0004740e0, {0x7fe0740c48d0, 0xc000d90018})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:772 +0x8a
+net.(*TCPConn).readFrom(0xc0004740e0, {0x7fe0740c48d0, 0xc000d90018})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/tcpsock_posix.go:54 +0x1d4
+net.(*TCPConn).ReadFrom(0xc0004740e0, {0x7fe0740c48d0, 0xc000d90018})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/tcpsock.go:165 +0x8b
+io.copyBuffer({0x7fe0740c4840, 0xc0004740e0}, {0x7fe0740c48d0, 0xc000d90018}, {0x0, 0x0, 0x0})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:415 +0x25a
+io.Copy({0x7fe0740c4840, 0xc0004740e0}, {0x7fe0740c48d0, 0xc000d90018})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:388 +0x79
+net/http/httputil.switchProtocolCopier.copyFromBackend({{0x7fe0740c4880, 0xc0004740e0}, {0x7fe0740c48a8, 0xc000d90018}}, 0xc00039e850)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:827 +0x113
+created by net/http/httputil.(*ReverseProxy).handleUpgradeResponse in goroutine 1202
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:808 +0xe17
+
+goroutine 1640 [sleep]:
+time.Sleep(0x4c4b40)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/time.go:363 +0x13c
+nvim-gui/neovim.(*Screen).scheduleRender.func1()
+        /home/stefan/Projects/nvim-gui/neovim/screen.go:907 +0x25
+created by nvim-gui/neovim.(*Screen).scheduleRender in goroutine 110
+        /home/stefan/Projects/nvim-gui/neovim/screen.go:905 +0x7c
+
+goroutine 252 [select]:
+net/http.(*persistConn).writeLoop(0xc000922ea0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/transport.go:2600 +0x154
+created by net/http.(*Transport).dialConn in goroutine 1587
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/transport.go:1948 +0x322f
+
+goroutine 1150 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe028594800, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc00023aaa0, 0x72, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc00023aaa0, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc00023aa80, {0xc000896000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+net.(*netFD).Read(0xc00023aa80, {0xc000896000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/fd_posix.go:68 +0x73
+net.(*conn).Read(0xc0004740e0, {0xc000896000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:196 +0xa5
+io.copyBuffer({0x7fe028596058, 0xc000d90018}, {0x252a300, 0xc000474130}, {0xc000896000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:429 +0x422
+io.Copy({0x7fe028596058, 0xc000d90018}, {0x252a300, 0xc000474130})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:388 +0x79
+net.genericWriteTo(0xc0004740e0, {0x7fe028596058, 0xc000d90018})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:796 +0x8d
+net.(*TCPConn).writeTo(0xc0004740e0, {0x7fe028596058, 0xc000d90018})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/tcpsock_posix.go:61 +0x113
+net.(*TCPConn).WriteTo(0xc0004740e0, {0x7fe028596058, 0xc000d90018})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/tcpsock.go:177 +0x8b
+io.copyBuffer({0x7fe028596058, 0xc000d90018}, {0x252a2e0, 0xc0004740e0}, {0x0, 0x0, 0x0})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:411 +0x133
+io.Copy({0x7fe028596058, 0xc000d90018}, {0x252a2e0, 0xc0004740e0})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:388 +0x79
+net/http/httputil.switchProtocolCopier.copyToBackend({{0x7fe0740c4880, 0xc0004740e0}, {0x7fe0740c48a8, 0xc000d90018}}, 0xc00039e850)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:842 +0x113
+created by net/http/httputil.(*ReverseProxy).handleUpgradeResponse in goroutine 1202
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:807 +0xd0c
+
+goroutine 972 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe028426c00, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc00080a1a0, 0x72, 0x1)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc00080a1a0, 0x1)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc00080a180, {0xc0004cb000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+os.(*File).read(0xc000c00060, {0xc0004cb000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/os/file_posix.go:29 +0x78
+os.(*File).Read(0xc000c00060, {0xc0004cb000, 0x1000, 0x1000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/os/file.go:144 +0xcc
+bufio.(*Reader).fill(0xc00080a2a0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:113 +0x25a
+bufio.(*Reader).ReadByte(0xc00080a2a0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/bufio/bufio.go:273 +0xa5
+github.com/neovim/go-client/msgpack.(*Decoder).Unpack(0xc000326370)
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/msgpack/unpack.go:164 +0x87
+github.com/neovim/go-client/msgpack/rpc.(*Endpoint).Serve(0xc000c161a0)
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/msgpack/rpc/rpc.go:195 +0x186
+github.com/neovim/go-client/nvim.(*Nvim).Serve(0xc00069b8f0)
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/nvim/nvim.go:50 +0xac
+github.com/neovim/go-client/nvim.(*Nvim).startServe.func1()
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/nvim/nvim.go:56 +0x1c
+created by github.com/neovim/go-client/nvim.(*Nvim).startServe in goroutine 970
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/nvim/nvim.go:55 +0xa6
+
+goroutine 992 [chan receive]:
+github.com/neovim/go-client/msgpack/rpc.(*Endpoint).Call(0xc000c161a0, {0x1e79b37, 0xd}, {0x1b37f60, 0xc00058e080}, {0xc000680ca0, 0x2, 0x2})
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/msgpack/rpc/rpc.go:299 +0xed
+github.com/neovim/go-client/nvim.(*Nvim).call(0xc00069b8f0, {0x1e79b37, 0xd}, {0x1b37f60, 0xc00058e080}, {0xc000680ca0, 0x2, 0x2})
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/nvim/nvim.go:381 +0xa7
+github.com/neovim/go-client/nvim.(*Nvim).ExecLua(0xc00069b8f0, {0x1ecb038, 0x33}, {0x1b37f60, 0xc00058e080}, {0x37c4920, 0x0, 0x0})
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/nvim/nvim.go:625 +0x1ab
+nvim-gui/neovim.readColorColumn(0xc0001ec000)
+        /home/stefan/Projects/nvim-gui/neovim/neovim.go:308 +0x4b3
+nvim-gui/neovim.StartListening.func3()
+        /home/stefan/Projects/nvim-gui/neovim/neovim.go:230 +0x77e
+created by nvim-gui/neovim.StartListening in goroutine 970
+        /home/stefan/Projects/nvim-gui/neovim/neovim.go:91 +0xa1f
+
+goroutine 1634 [IO wait]:
+internal/poll.runtime_pollWait(0x7fe07ca0dc00, 0x72)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/runtime/netpoll.go:351 +0x3c
+internal/poll.(*pollDesc).wait(0xc000ae48a0, 0x72, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:84 +0x7a
+internal/poll.(*pollDesc).waitRead(0xc000ae48a0, 0x0)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_poll_runtime.go:89 +0x31
+internal/poll.(*FD).Read(0xc000ae4880, {0xc000336000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/internal/poll/fd_unix.go:165 +0x3da
+net.(*netFD).Read(0xc000ae4880, {0xc000336000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/fd_posix.go:68 +0x73
+net.(*conn).Read(0xc000310098, {0xc000336000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:196 +0xa5
+net/http.(*readWriteCloserBody).Read(0xc0003d2000, {0xc000336000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/transport.go:2578 +0x1d5
+io.copyBuffer({0x252a340, 0xc0003100a0}, {0x7fe0740c48d0, 0xc0003d2000}, {0xc000336000, 0x8000, 0x8000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:429 +0x422
+io.Copy({0x252a340, 0xc0003100a0}, {0x7fe0740c48d0, 0xc0003d2000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:388 +0x79
+net.genericReadFrom(0xc000310050, {0x7fe0740c48d0, 0xc0003d2000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/net.go:772 +0x8a
+net.(*TCPConn).readFrom(0xc000310050, {0x7fe0740c48d0, 0xc0003d2000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/tcpsock_posix.go:54 +0x1d4
+net.(*TCPConn).ReadFrom(0xc000310050, {0x7fe0740c48d0, 0xc0003d2000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/tcpsock.go:165 +0x8b
+io.copyBuffer({0x7fe0740c4840, 0xc000310050}, {0x7fe0740c48d0, 0xc0003d2000}, {0x0, 0x0, 0x0})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:415 +0x25a
+io.Copy({0x7fe0740c4840, 0xc000310050}, {0x7fe0740c48d0, 0xc0003d2000})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/io/io.go:388 +0x79
+net/http/httputil.switchProtocolCopier.copyFromBackend({{0x7fe0740c4880, 0xc000310050}, {0x7fe0740c48a8, 0xc0003d2000}}, 0xc00058c770)
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:827 +0x113
+created by net/http/httputil.(*ReverseProxy).handleUpgradeResponse in goroutine 1623
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/net/http/httputil/reverseproxy.go:808 +0xe17

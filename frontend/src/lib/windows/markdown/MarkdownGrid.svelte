@@ -17,19 +17,6 @@
 		});
 	});
 
-	function computeRelativeLineNumbers() {
-		if (!content || !cursor || !relativeLineNumbers || cursor.row === undefined) return [];
-		const numbers = {};
-		for (const row of content) {
-			const relNum = row.index - cursor.row;
-			//@ts-ignore
-			numbers[row.index] = Math.abs(row.index === cursor.row ? row.index : relNum);
-		}
-		return numbers;
-	}
-
-	let relativeLineNumbersList: { [key: number]: number } = $derived(computeRelativeLineNumbers());
-
 	function findQuoteGroups() {
 		if (!content) return [];
 
@@ -130,23 +117,35 @@
 
 	let rowMeta: RowMeta[] = $derived.by(() => {
 		const c = content || [];
+
+		// Build index→group maps for O(1) lookup instead of O(G) .find() per row
+		const tableMap = new Map<number, typeof tableGroups[0]>();
+		for (const g of tableGroups) {
+			for (let i = g.start; i <= g.end; i++) tableMap.set(i, g);
+		}
+		const codeMap = new Map<number, typeof codeBlockGroups[0]>();
+		for (const g of codeBlockGroups) {
+			for (let i = g.start; i <= g.end; i++) codeMap.set(i, g);
+		}
+		const quoteMap = new Map<number, typeof quoteGroups[0]>();
+		for (const g of quoteGroups) {
+			for (let i = g.start; i <= g.end; i++) quoteMap.set(i, g);
+		}
+
 		return c.map((row, i) => {
-			const tableG = tableGroups.find((g) => i >= g.start && i <= g.end);
+			const tableG = tableMap.get(i);
 			if (tableG) {
-				const isFirst = tableG.start === i;
-				if (!isFirst) return { skip: true } as RowMeta;
+				if (tableG.start !== i) return { skip: true } as RowMeta;
 				return { skip: false, kind: 'table', isFirst: true, rows: c.slice(tableG.start, tableG.end + 1), groupEndIndex: c[tableG.end].index } as RowMeta;
 			}
-			const codeG = codeBlockGroups.find((g) => i >= g.start && i <= g.end);
+			const codeG = codeMap.get(i);
 			if (codeG) {
-				const isFirst = codeG.start === i;
-				if (!isFirst) return { skip: true } as RowMeta;
+				if (codeG.start !== i) return { skip: true } as RowMeta;
 				return { skip: false, kind: 'code', isFirst: true, rows: c.slice(codeG.start, codeG.end + 1), groupEndIndex: c[codeG.end].index } as RowMeta;
 			}
-			const quoteG = quoteGroups.find((g) => i >= g.start && i <= g.end);
+			const quoteG = quoteMap.get(i);
 			if (quoteG) {
-				const isFirst = quoteG.start === i;
-				if (!isFirst) return { skip: false, kind: 'quote', isFirst: false } as RowMeta;
+				if (quoteG.start !== i) return { skip: false, kind: 'quote', isFirst: false } as RowMeta;
 				return { skip: false, kind: 'quote', isFirst: true, rows: c.slice(quoteG.start, quoteG.end + 1) } as RowMeta;
 			}
 			if (row.markdownOpts?.image) return { skip: false, kind: 'image' } as RowMeta;
@@ -162,8 +161,7 @@
 			<LineNumber
 				{lineNumbers}
 				{relativeLineNumbers}
-				{relativeLineNumbersList}
-				{cursor}
+				cursorRow={cursor?.row}
 				index={row.index}
 				rangeEnd={meta.kind === 'table' && meta.isFirst ? meta.groupEndIndex : meta.kind === 'code' && meta.isFirst ? meta.groupEndIndex : undefined}
 			/>
