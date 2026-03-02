@@ -312,17 +312,43 @@ end
 
 local group = vim.api.nvim_create_augroup('NvimGuiMarkdownTables', { clear = true })
 
-vim.api.nvim_create_autocmd({ 'BufEnter', 'TextChanged', 'TextChangedI', 'InsertLeave' }, {
+local debounce_timers = {}
+local function send_all(bufnr)
+  disable_markdown_renderers()
+  send_tables(bufnr)
+  send_images(bufnr)
+  send_headings(bufnr)
+  send_tasks(bufnr)
+  send_codeblocks(bufnr)
+  send_inline_code(bufnr)
+end
+
+-- BufEnter and InsertLeave fire immediately (structural changes on mode switch or file open)
+vim.api.nvim_create_autocmd({ 'BufEnter', 'InsertLeave' }, {
   group = group,
   pattern = '*.md',
   callback = function(ev)
-    disable_markdown_renderers()
-    send_tables(ev.buf)
-    send_images(ev.buf)
-    send_headings(ev.buf)
-    send_tasks(ev.buf)
-    send_codeblocks(ev.buf)
-    send_inline_code(ev.buf)
+    local t = debounce_timers[ev.buf]
+    if t then t:stop(); t:close(); debounce_timers[ev.buf] = nil end
+    send_all(ev.buf)
+  end,
+})
+
+-- TextChanged/TextChangedI are debounced: only parse after 250ms of no typing
+vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI' }, {
+  group = group,
+  pattern = '*.md',
+  callback = function(ev)
+    local bufnr = ev.buf
+    local t = debounce_timers[bufnr]
+    if t then t:stop(); t:close() end
+    local timer = vim.loop.new_timer()
+    debounce_timers[bufnr] = timer
+    timer:start(250, 0, vim.schedule_wrap(function()
+      timer:close()
+      debounce_timers[bufnr] = nil
+      send_all(bufnr)
+    end))
   end,
 })
 
