@@ -1,15 +1,14 @@
 import { OpenFile } from '$lib/wailsjs/go/picker/Picker';
 import * as runtime from '$lib/wailsjs/runtime/runtime';
-import { windowContentRowMap, layout, cursor, pickers, cmdline, nestedState } from "$lib/state.svelte"
+import { windowContentRowMap, layout, cursor, pickers, cmdline, nestedState, getFloatingWindows, setFloatingWindows } from "$lib/state.svelte"
 import {
   state as liveGrepState
 } from '$lib/picker/live-grep-results/results.service.svelte';
-import { handleKeypress } from '$lib/keymaps/keymap-service';
+
 
 export async function init() {
 }
 export function startListening() {
-  window.addEventListener('keydown', handleKeypress);
   window.addEventListener('resize', function () {
     runtime.EventsEmit('resize');
   });
@@ -78,7 +77,6 @@ export function startListening() {
   });
 
   runtime.EventsOn('layout-updated', (updatedLayout: App.NvimLayout) => {
-    console.log('layout updates', updatedLayout)
     layout.cols = updatedLayout.cols;
     layout.rows = updatedLayout.rows;
     layout.activeWindowId = updatedLayout?.activeWindowId;
@@ -86,8 +84,15 @@ export function startListening() {
   });
 
   runtime.EventsOn('content-updated', (winId: number, updatedContent: App.NvimRow[]) => {
-    console.log("content-updated for winId=" + winId, updatedContent)
-    windowContentRowMap[winId] = updatedContent;
+    const existing = windowContentRowMap.get(winId);
+    if (existing && existing.length === updatedContent.length) {
+      for (let i = 0; i < updatedContent.length; i++) {
+        if (!updatedContent[i].dirty && existing[i] && existing[i].index === updatedContent[i].index) {
+          updatedContent[i] = existing[i];
+        }
+      }
+    }
+    windowContentRowMap.set(winId, updatedContent);
   });
 
   runtime.EventsOn(
@@ -107,7 +112,7 @@ export function startListening() {
   });
 
   runtime.EventsOn('floating_windows', (windows: App.FloatingWindow[]) => {
-    nestedState.floatingWindows = windows;
+    setFloatingWindows(windows);
   });
 
   runtime.EventsOn('preview-window', (updatedPreviewWindow: App.FloatingWindow) => {
@@ -121,10 +126,10 @@ export function startListening() {
   })
 
   runtime.EventsOn('floating_window_closed', (winId: number) => {
-    nestedState.floatingWindows = nestedState.floatingWindows.filter((win) => win.id !== winId);
+    setFloatingWindows(getFloatingWindows().filter((win) => win.id !== winId));
   });
 
   runtime.EventsOn('hide-window', (winId: number) => {
-    delete windowContentRowMap[winId];
+    windowContentRowMap.delete(winId);
   });
 }

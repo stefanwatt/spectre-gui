@@ -294,6 +294,14 @@ func (s *Screen) gridScroll(gridId int, top int, bot int, left int, right int, r
 			grid.DirtyRows[r] = true
 		}
 	}
+	// Mark the window dirty so render() emits content-updated
+	if winId, exists := s.GridToWindow[gridId]; exists {
+		s.windowsMu.RLock()
+		if window, exists := s.Windows[winId]; exists {
+			window.Dirty = true
+		}
+		s.windowsMu.RUnlock()
+	}
 }
 
 func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
@@ -346,10 +354,12 @@ func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
 				}
 
 				// Ensure hl is valid
+				s.highlightsMu.RLock()
 				if _, exists := s.Highlights[hl]; !exists {
 					hl = 0 // Default to 0 if the highlight ID doesn't exist
 				}
 				highlight := s.Highlights[hl]
+				s.highlightsMu.RUnlock()
 				hlStr := mapClassesString(highlight.getClasses())
 				effectiveHlIdsMu.Lock()
 				effectiveHlId, existsHlId := effectiveHlIds[hlStr]
@@ -429,7 +439,17 @@ func (s *Screen) handleWinViewport(args []interface{}) {
 
 		// Store topline on the grid for line number calculation
 		if grid, exists := s.Grids[gridId]; exists {
-			grid.TopLine = topLine
+			if grid.TopLine != topLine {
+				grid.TopLine = topLine
+				// TopLine change means line numbers shift — mark window dirty
+				if winId, exists := s.GridToWindow[gridId]; exists {
+					s.windowsMu.RLock()
+					if window, exists := s.Windows[winId]; exists {
+						window.Dirty = true
+					}
+					s.windowsMu.RUnlock()
+				}
+			}
 		}
 
 		// Track on screen for the active grid
@@ -518,6 +538,7 @@ func (s *Screen) gridResize(gridId int, width int, height int) {
 		if window, exists := s.Windows[winId]; exists {
 			window.Width = width
 			window.Height = height
+			window.Dirty = true
 
 			// If this is a small 1x1 window, it's probably not a completion window
 			if width == 1 && height == 1 {
@@ -530,6 +551,7 @@ func (s *Screen) gridResize(gridId int, width int, height int) {
 	s.windowsMu.RUnlock()
 	grid.DirtyRows = make([]bool, height)
 	grid.OptimizedRows = make([][]*Cell, height)
+	grid.CachedTokens = make([][]*Token, height)
 	for i := range grid.DirtyRows {
 		grid.DirtyRows[i] = true
 	}
@@ -555,6 +577,14 @@ func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
 	if previousRow != row && previousRow >= 0 && previousRow < len(grid.DirtyRows) {
 		grid.DirtyRows[previousRow] = true
 	}
+	// Mark the window dirty so render() emits content-updated
+	if winId, exists := s.GridToWindow[gridId]; exists {
+		s.windowsMu.RLock()
+		if window, exists := s.Windows[winId]; exists {
+			window.Dirty = true
+		}
+		s.windowsMu.RUnlock()
+	}
 }
 
 func (s *Screen) defaultColorsSet(fg int, bg int, sp int) {
@@ -577,12 +607,15 @@ func (s *Screen) defaultColorsSet(fg int, bg int, sp int) {
 	}
 
 	// Update default highlight
+	s.highlightsMu.Lock()
 	s.Highlights[0] = &Highlight{
 		Foreground: s.DefaultFg,
 		Background: s.DefaultBg,
 		Special:    s.DefaultSp,
 	}
+	s.highlightsMu.Unlock()
 
+	s.markAllWindowsDirty()
 	s.scheduleRender()
 }
 
@@ -653,6 +686,7 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 	}
 
 	emitHighlightCSS(s.ctx)
+	s.markAllWindowsDirty()
 	s.scheduleRender()
 }
 
@@ -796,6 +830,7 @@ func (s *Screen) winPos(args []interface{}) {
 	window.StartRow = row
 	window.StartCol = col
 	window.Hidden = false
+	window.Dirty = true
 	// Line numbers are rendered by the frontend — neovim's gutter is disabled
 	window.lineNumbers = true
 	window.relativeLineNumbers = true
@@ -883,6 +918,7 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	window.StartCol = int(anchorCol)
 	window.Focusable = focusable
 	window.ZIndex = zIndex
+	window.Dirty = true
 
 	// Check if this might be a completion window
 	// Completion windows are typically floating windows with specific characteristics
@@ -896,6 +932,14 @@ func (s *Screen) winFloatPos(args []interface{}) {
 
 	utils.Log(fmt.Sprintf("Floating window %d anchored at grid %d (%f,%f) with z-index %d",
 		winId, anchorGrid, anchorRow, anchorCol, zIndex))
+}
+
+func (s *Screen) markAllWindowsDirty() {
+	s.windowsMu.RLock()
+	for _, window := range s.Windows {
+		window.Dirty = true
+	}
+	s.windowsMu.RUnlock()
 }
 
 func (s *Screen) scheduleRender() {
@@ -917,6 +961,9 @@ func (s *Screen) render() {
 
 	for winId, window := range s.Windows {
 		if window.Hidden {
+			continue
+		}
+		if !window.Dirty {
 			continue
 		}
 		window.Dirty = false
@@ -963,6 +1010,18 @@ func (s *Screen) EmitFloatingWindows() {
 	s.windowsMu.RLock()
 	defer s.windowsMu.RUnlock()
 
+	// Only emit if any floating window is dirty (newly created/updated)
+	hasNewFloating := false
+	for _, window := range s.Windows {
+		if window.IsFloating() && window.ZIndex != 69420 && window.Dirty {
+			hasNewFloating = true
+			break
+		}
+	}
+	if !hasNewFloating {
+		return
+	}
+
 	var floatingWindows []map[string]interface{}
 
 	for winId, window := range s.Windows {
@@ -970,20 +1029,18 @@ func (s *Screen) EmitFloatingWindows() {
 			continue
 		}
 		if window.ZIndex == 69420 {
-			previeWindow := s.mapWindowInfo(window, winId)
-			Runtime.EventsEmit(s.ctx, "preview-window", previeWindow)
+			if window.Dirty {
+				previewWindow := s.mapWindowInfo(window, winId)
+				Runtime.EventsEmit(s.ctx, "preview-window", previewWindow)
+			}
 			continue
 		}
 		// Get the associated grid
 		_, exists := s.Grids[window.Grid.ID]
 		if !exists {
-			utils.Log(fmt.Sprintf("emitfloat got no grid for %d", window.Grid.ID))
 			continue
-		} else {
-			utils.Log(fmt.Sprintf("emitfloat found grid for %d", window.Grid.ID))
 		}
 		windowInfo := s.mapWindowInfo(window, winId)
-		s.Windows[winId].Dirty = true
 		floatingWindows = append(floatingWindows, windowInfo)
 	}
 

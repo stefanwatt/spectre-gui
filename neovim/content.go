@@ -75,6 +75,7 @@ type ContentRow struct {
 	Index        int           `json:"index" msgpack:"row"` // basically the line number
 	Tokens       []*Token      `json:"tokens" msgpack:"tokens"`
 	MarkdownOpts *MarkdownOpts `json:"markdownOpts"`
+	Dirty        bool          `json:"dirty,omitempty"`
 }
 
 func (cr *ContentRow) ToString() string {
@@ -116,6 +117,10 @@ func MapTokens(cells []*Cell) []*Token {
 // When the cursor falls within a table, table rendering is suppressed (conceal/reveal).
 func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine int) []ContentRow {
 	contentRows := make([]ContentRow, grid.Height)
+	// Ensure CachedTokens slice exists
+	if len(grid.CachedTokens) != grid.Height {
+		grid.CachedTokens = make([][]*Token, grid.Height)
+	}
 	for row := 0; row < grid.Height; row++ {
 		// TODO: handle folds — folded lines cause line numbers to jump,
 		// topline+row won't be correct when folds are present.
@@ -128,7 +133,9 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 			tokens := MapTokens(cells)
 			contentRows[row].Tokens = tokens
 			contentRows[row].Index = lineNumber
+			contentRows[row].Dirty = true
 			grid.OptimizedRows[row] = cells
+			grid.CachedTokens[row] = tokens
 			grid.DirtyRows[row] = false
 
 			if filetype == "markdown" {
@@ -163,7 +170,12 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 				grid.MarkdownOpts[row] = markdownOpts
 			}
 		} else {
-			contentRows[row].Tokens = MapTokens(grid.OptimizedRows[row])
+			// Reuse cached tokens for non-dirty rows (avoids allocating new Token objects)
+			if grid.CachedTokens[row] != nil {
+				contentRows[row].Tokens = grid.CachedTokens[row]
+			} else {
+				contentRows[row].Tokens = MapTokens(grid.OptimizedRows[row])
+			}
 			contentRows[row].Index = lineNumber
 			if filetype == "markdown" {
 				// Must recompute table opts even for non-dirty rows because TopLine changes on scroll

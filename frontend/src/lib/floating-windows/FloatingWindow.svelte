@@ -7,14 +7,16 @@
 		left: string;
 	}
 
+	import type { SvelteMap } from 'svelte/reactivity';
+
 	interface FloatingWindowProps {
 		win: App.FloatingWindow;
-		windowContentRowMap: App.WindowContentRowMap;
+		windowContentRowMap: SvelteMap<number, App.NvimRow[]>;
 		anchorWindowContent: App.NvimRow[];
 	}
 	let { win, windowContentRowMap, anchorWindowContent }: FloatingWindowProps = $props();
 
-	let content = $derived(windowContentRowMap[win.id]);
+	let content = $derived(windowContentRowMap.get(win.id));
 
 	// Map neovim grid row → buffer line number via the anchor window's content rows.
 	// This accounts for markdown rich elements that render at variable heights.

@@ -105,7 +105,7 @@
 	});
 	let scrollContainer: HTMLElement;
 	let previewContent = $derived(
-		nestedState.previewWindow && windowContentRowMap[nestedState.previewWindow.id]
+		nestedState.previewWindow && windowContentRowMap.get(nestedState.previewWindow.id)
 	);
 </script>
 

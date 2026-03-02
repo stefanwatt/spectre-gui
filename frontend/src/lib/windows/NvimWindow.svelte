@@ -2,12 +2,14 @@
 	import Grid from './Grid.svelte';
 	import MarkdownGrid from './markdown/MarkdownGrid.svelte';
 
+	import type { SvelteMap } from 'svelte/reactivity';
+
 	interface NvimWindowProps {
 		win: App.NvimWindow;
-		windowContentRowMap: App.WindowContentRowMap;
+		windowContentRowMap: SvelteMap<number, App.NvimRow[]>;
 	}
 	let { win, windowContentRowMap }: NvimWindowProps = $props();
-	let content = $derived(windowContentRowMap?.[win.id] ?? []);
+	let content = $derived(windowContentRowMap.get(win.id) ?? []);
 </script>
 
 <div class="relative h-full">

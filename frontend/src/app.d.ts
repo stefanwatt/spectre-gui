@@ -22,6 +22,7 @@ declare global {
       index: number;
       tokens: NvimToken[]
       markdownOpts?: MarkdownOpts
+      dirty?: boolean
     }
 
     interface TableRowOpts {
@@ -53,9 +54,9 @@ declare global {
       codeBlock?: CodeBlockOpts
     }
 
-    interface WindowContentRowMap {
-      [key: number]: NvimRow[];
-    }
+    // WindowContentRowMap is now SvelteMap<number, NvimRow[]> - see state.svelte.ts
+    // Kept as alias for any remaining references
+    type WindowContentRowMap = import('svelte/reactivity').SvelteMap<number, NvimRow[]>;
     interface NvimContent {
       winId: number
       content: NvimToken[][]
