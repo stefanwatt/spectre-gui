@@ -341,12 +341,14 @@ vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI' }, {
   callback = function(ev)
     local bufnr = ev.buf
     local t = debounce_timers[bufnr]
-    if t then t:stop(); t:close() end
+    if t then t:stop(); pcall(function() t:close() end) end
     local timer = vim.loop.new_timer()
     debounce_timers[bufnr] = timer
     timer:start(250, 0, vim.schedule_wrap(function()
-      timer:close()
+      -- Guard: another keystroke may have replaced or already closed this timer
+      if debounce_timers[bufnr] ~= timer then return end
       debounce_timers[bufnr] = nil
+      pcall(function() timer:close() end)
       send_all(bufnr)
     end))
   end,

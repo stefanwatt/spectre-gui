@@ -134,30 +134,16 @@
 
 		return c.map((row, i) => {
 			const tableG = tableMap.get(i);
-		// Build O(1) index maps instead of O(N) .find() per row
-		const tableByIdx = new Map<number, typeof tableGroups[0]>();
-		for (const g of tableGroups) for (let i = g.start; i <= g.end; i++) tableByIdx.set(i, g);
-
-		const codeByIdx = new Map<number, typeof codeBlockGroups[0]>();
-		for (const g of codeBlockGroups) for (let i = g.start; i <= g.end; i++) codeByIdx.set(i, g);
-
-		const quoteByIdx = new Map<number, typeof quoteGroups[0]>();
-		for (const g of quoteGroups) for (let i = g.start; i <= g.end; i++) quoteByIdx.set(i, g);
-
-		return c.map((row, i) => {
-			const tableG = tableByIdx.get(i);
 			if (tableG) {
 				if (tableG.start !== i) return { skip: true } as RowMeta;
 				return { skip: false, kind: 'table', isFirst: true, rows: c.slice(tableG.start, tableG.end + 1), groupEndIndex: c[tableG.end].index } as RowMeta;
 			}
 			const codeG = codeMap.get(i);
-			const codeG = codeByIdx.get(i);
 			if (codeG) {
 				if (codeG.start !== i) return { skip: true } as RowMeta;
 				return { skip: false, kind: 'code', isFirst: true, rows: c.slice(codeG.start, codeG.end + 1), groupEndIndex: c[codeG.end].index } as RowMeta;
 			}
 			const quoteG = quoteMap.get(i);
-			const quoteG = quoteByIdx.get(i);
 			if (quoteG) {
 				if (quoteG.start !== i) return { skip: false, kind: 'quote', isFirst: false } as RowMeta;
 				return { skip: false, kind: 'quote', isFirst: true, rows: c.slice(quoteG.start, quoteG.end + 1) } as RowMeta;

@@ -15,6 +15,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
 )
 
+
 //go:embed all:frontend/build
 var assets embed.FS
 
