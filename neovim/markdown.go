@@ -145,8 +145,12 @@ local function get_image_metadata(bufnr)
             end
             -- Resolve relative local paths
             if url ~= '' and not url:match('^https?://') then
-              local resolved = vim.fn.resolve(buf_dir .. '/' .. url)
-              url = resolved
+              if url:sub(1, 2) == '~/' then
+                url = vim.fn.expand('~') .. url:sub(2)
+              elseif url:sub(1, 1) ~= '/' then
+                url = buf_dir .. '/' .. url
+              end
+              url = vim.fn.resolve(url)
             end
             if url ~= '' then
               table.insert(images, { start_row, url, alt })

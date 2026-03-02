@@ -118,12 +118,12 @@ func (s *Screen) CalculateGridLayout() {
 
 	windowAPIsChanged := false
 	if len(s.layout.Windows) == len(windowAPIs) {
-		// for i, windowAPI := range windowAPIs {
-		// 	if !s.layout.Windows[i].Equal(windowAPI) {
-		// 		windowAPIsChanged = true
-		// 		break
-		// 	}
-		// }
+		for i, windowAPI := range windowAPIs {
+			if s.layout.Windows[i].Filepath != windowAPI.Filepath {
+				windowAPIsChanged = true
+				break
+			}
+		}
 	} else {
 		windowAPIsChanged = true
 	}

@@ -6,6 +6,7 @@
 	import Table from './Table.svelte';
 	import CodeBlock from './CodeBlock.svelte';
 	import MarkdownToken from './MarkdownToken.svelte';
+	import LocalImage from './LocalImage.svelte';
 	let { content, decode, cursor, lineNumbers, relativeLineNumbers, cursorLineColor }: App.GridProps = $props();
 
 	$effect(() => {
@@ -207,7 +208,7 @@
 						<img src="https://placehold.co/600x400?text=placeholder" alt={row.markdownOpts.image.altText}
 							class="max-w-full flex-1 min-h-0 object-contain" />
 					{:else}
-						<img src={row.markdownOpts.image.url} alt={row.markdownOpts.image.altText}
+						<LocalImage url={row.markdownOpts.image.url} altText={row.markdownOpts.image.altText}
 							class="max-w-full h-full object-contain" />
 					{/if}
 				</div>

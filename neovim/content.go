@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+var quoteRe = regexp.MustCompile(`^(\s*>)+`)
+
 type Token struct {
 	Text      string `json:"text" msgpack:"text"`
 	Classes   string `json:"classes" msgpack:"classes"`
@@ -228,8 +230,7 @@ func applyInlineCodeClass(tokens []*Token, ranges []ColRange) {
 func getMarkdownOpts(contentRow ContentRow) *MarkdownOpts {
 	text := contentRow.ToString()
 	count := 0
-	re := regexp.MustCompile(`^(\s*>)+`)
-	match := re.FindString(text)
+	match := quoteRe.FindString(text)
 	for _, r := range match {
 		if r == '>' {
 			count++
