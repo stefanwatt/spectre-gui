@@ -477,6 +477,8 @@ func (g *Grid) toHex() []ContentRow {
 	newContentRows := make([]ContentRow, len(g.Cells))
 	for i, row := range g.Cells {
 		newContentRows[i].Tokens = make([]*Token, len(row))
+		newContentRows[i].Dirty = g.DirtyRows[i]
+		g.DirtyRows[i] = false
 		for j, cell := range row {
 			newToken := &Token{}
 			var hexChar string
