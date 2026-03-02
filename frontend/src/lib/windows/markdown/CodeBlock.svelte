@@ -16,11 +16,6 @@
 			cursorRow >= rows[0].index &&
 			cursorRow <= rows[rows.length - 1].index
 	);
-	$effect(() => {
-		console.log('CodeBlock rows:', rows.length, 'innerRows:', innerRows.length);
-		console.log('CodeBlock all rows:', rows.map(r => ({ index: r.index, pos: r.markdownOpts?.codeBlock?.position, text: r.tokens.map(t => t.text).join('') })));
-		console.log('CodeBlock innerRows:', innerRows.map(r => ({ index: r.index, text: r.tokens.map(t => t.text).join('') })));
-	});
 </script>
 
 <div class="mockup-code">

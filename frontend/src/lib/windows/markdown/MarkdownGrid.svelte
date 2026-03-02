@@ -11,10 +11,9 @@
 
 	$effect(() => {
 		if (!cursor?.row && cursor?.row !== 0) return;
-		const _ = content;
+		const row = cursor.row;
 		tick().then(() => {
-			const el = document.getElementById(`row-${cursor.row}`);
-			el?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+			document.getElementById(`row-${row}`)?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
 		});
 	});
 
@@ -118,70 +117,47 @@
 	let tableGroups = $derived(findTableGroups());
 	let codeBlockGroups = $derived(findCodeBlockGroups());
 
-	function isInQuoteGroup(index: number): boolean {
-		return quoteGroups.some((g) => index >= g.start && index <= g.end);
-	}
+	type RowMeta =
+		| { skip: true }
+		| { skip: false; kind: 'table'; isFirst: true; rows: App.NvimRow[]; groupEndIndex: number }
+		| { skip: false; kind: 'table'; isFirst: false }
+		| { skip: false; kind: 'code'; isFirst: true; rows: App.NvimRow[]; groupEndIndex: number }
+		| { skip: false; kind: 'code'; isFirst: false }
+		| { skip: false; kind: 'quote'; isFirst: true; rows: App.NvimRow[] }
+		| { skip: false; kind: 'quote'; isFirst: false }
+		| { skip: false; kind: 'image' }
+		| { skip: false; kind: 'plain' };
 
-	function isFirstOfQuoteGroup(index: number): boolean {
-		return quoteGroups.some((g) => g.start === index);
-	}
-
-	function getQuoteGroup(index: number): App.NvimRow[] {
-		if (!content) return [];
-		const group = quoteGroups.find((group) => index >= group.start && index <= group.end);
-		if (!group) return [];
-		return content.slice(group.start, group.end + 1);
-	}
-
-	function isInTableGroup(index: number): boolean {
-		return tableGroups.some((g) => index >= g.start && index <= g.end);
-	}
-
-	function isFirstOfTableGroup(index: number): boolean {
-		return tableGroups.some((g) => g.start === index);
-	}
-
-	function getTableGroup(index: number): App.NvimRow[] | null {
-		if (!content) return null;
-		const group = tableGroups.find((g) => index >= g.start && index <= g.end);
-		if (!group) return null;
-		return content.slice(group.start, group.end + 1);
-	}
-
-	function getTableGroupEndIndex(index: number): number | undefined {
-		if (!content) return undefined;
-		const group = tableGroups.find((g) => g.start === index);
-		if (!group) return undefined;
-		return content[group.end].index;
-	}
-
-	function isInCodeBlockGroup(index: number): boolean {
-		return codeBlockGroups.some((g) => index >= g.start && index <= g.end);
-	}
-
-	function isFirstOfCodeBlockGroup(index: number): boolean {
-		return codeBlockGroups.some((g) => g.start === index);
-	}
-
-	function getCodeBlockGroup(index: number): App.NvimRow[] {
-		if (!content) return [];
-		const group = codeBlockGroups.find((g) => index >= g.start && index <= g.end);
-		if (!group) return [];
-		return content.slice(group.start, group.end + 1);
-	}
-
-	function getCodeBlockGroupEndIndex(index: number): number | undefined {
-		if (!content) return undefined;
-		const group = codeBlockGroups.find((g) => g.start === index);
-		if (!group) return undefined;
-		return content[group.end].index;
-	}
+	let rowMeta: RowMeta[] = $derived.by(() => {
+		const c = content || [];
+		return c.map((row, i) => {
+			const tableG = tableGroups.find((g) => i >= g.start && i <= g.end);
+			if (tableG) {
+				const isFirst = tableG.start === i;
+				if (!isFirst) return { skip: true } as RowMeta;
+				return { skip: false, kind: 'table', isFirst: true, rows: c.slice(tableG.start, tableG.end + 1), groupEndIndex: c[tableG.end].index } as RowMeta;
+			}
+			const codeG = codeBlockGroups.find((g) => i >= g.start && i <= g.end);
+			if (codeG) {
+				const isFirst = codeG.start === i;
+				if (!isFirst) return { skip: true } as RowMeta;
+				return { skip: false, kind: 'code', isFirst: true, rows: c.slice(codeG.start, codeG.end + 1), groupEndIndex: c[codeG.end].index } as RowMeta;
+			}
+			const quoteG = quoteGroups.find((g) => i >= g.start && i <= g.end);
+			if (quoteG) {
+				const isFirst = quoteG.start === i;
+				if (!isFirst) return { skip: false, kind: 'quote', isFirst: false } as RowMeta;
+				return { skip: false, kind: 'quote', isFirst: true, rows: c.slice(quoteG.start, quoteG.end + 1) } as RowMeta;
+			}
+			if (row.markdownOpts?.image) return { skip: false, kind: 'image' } as RowMeta;
+			return { skip: false, kind: 'plain' } as RowMeta;
+		});
+	});
 </script>
 
 {#each content || [] as row, i (row.index)}
-	{#if (isInTableGroup(i) && !isFirstOfTableGroup(i)) || (isInCodeBlockGroup(i) && !isFirstOfCodeBlockGroup(i))}
-		<!-- skip non-first grouped rows, they're rendered by Table/CodeBlock component -->
-	{:else}
+	{@const meta = rowMeta[i]}
+	{#if meta && !meta.skip}
 		<div id="row-{row.index}" class="flex overflow-hidden whitespace-pre leading-none" style={row.index === cursor?.row && cursorLineColor ? `background: ${cursorLineColor}` : ''}>
 			<LineNumber
 				{lineNumbers}
@@ -189,33 +165,31 @@
 				{relativeLineNumbersList}
 				{cursor}
 				index={row.index}
-				rangeEnd={isInTableGroup(i) ? getTableGroupEndIndex(i) : isInCodeBlockGroup(i) ? getCodeBlockGroupEndIndex(i) : undefined}
+				rangeEnd={meta.kind === 'table' && meta.isFirst ? meta.groupEndIndex : meta.kind === 'code' && meta.isFirst ? meta.groupEndIndex : undefined}
 			/>
 
-			{#if isInTableGroup(i)}
-				<Table rows={getTableGroup(i) ?? []} {decode} cursorRow={cursor?.row} />
-			{:else if isInCodeBlockGroup(i)}
+			{#if meta.kind === 'table' && meta.isFirst}
+				<Table rows={meta.rows} {decode} cursorRow={cursor?.row} />
+			{:else if meta.kind === 'code' && meta.isFirst}
 				<div class="mx-6">
-				<CodeBlock rows={getCodeBlockGroup(i)} {decode} cursorRow={cursor?.row} />
+				<CodeBlock rows={meta.rows} {decode} cursorRow={cursor?.row} />
 				</div>
-			{:else if row.markdownOpts?.image}
+			{:else if meta.kind === 'image'}
 				{@const cursorOnImage = cursor?.row === row.index}
 				<div class="h-96 w-full overflow-hidden flex flex-col">
 					{#if cursorOnImage}
 						<div class="whitespace-pre leading-none">
-							{#each row.tokens as token, ti (ti)}<MarkdownToken {token} {decode} />{/each}
+							{#each row.tokens as token, ti (ti)}<MarkdownToken {token} {decode} extraClasses="" />{/each}
 						</div>
-						<img src="https://placehold.co/600x400?text=placeholder" alt={row.markdownOpts.image.altText}
+						<img src="https://placehold.co/600x400?text=placeholder" alt={row.markdownOpts?.image?.altText}
 							class="max-w-full flex-1 min-h-0 object-contain" />
 					{:else}
-						<LocalImage url={row.markdownOpts.image.url} altText={row.markdownOpts.image.altText}
+						<LocalImage url={row.markdownOpts?.image?.url ?? ''} altText={row.markdownOpts?.image?.altText ?? ''}
 							class="max-w-full h-full object-contain" />
 					{/if}
 				</div>
-			{:else if isInQuoteGroup(i)}
-				{#if isFirstOfQuoteGroup(i)}
-					<Quote rows={getQuoteGroup(i)} {decode} cursorRow={cursor?.row} />
-				{/if}
+			{:else if meta.kind === 'quote' && meta.isFirst}
+				<Quote rows={meta.rows} {decode} cursorRow={cursor?.row} />
 			{:else}
 				<MarkdownRow {row} {decode} cursorOnRow={cursor?.row === row.index} />
 			{/if}

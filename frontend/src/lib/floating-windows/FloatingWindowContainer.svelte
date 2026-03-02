@@ -13,8 +13,9 @@
 	let filteredFloatingWindows = $derived(
 		floatingWindows.filter((fw) => fw.anchorWindow === anchorWindow)
 	);
+	let anchorWindowContent = $derived(windowContentRowMap[anchorWindow] ?? []);
 </script>
 
 {#each filteredFloatingWindows as floatingWin (floatingWin.id)}
-	<FloatingWindow win={floatingWin} {windowContentRowMap} />
+	<FloatingWindow win={floatingWin} {windowContentRowMap} {anchorWindowContent} />
 {/each}
