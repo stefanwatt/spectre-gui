@@ -985,6 +985,10 @@ func (s *Screen) render() {
 			}
 			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid, filetype, bufNr, cursorLine))
 		} else {
+			// Skip rendering blink-cmp floating windows (handled by native completion menu)
+			if window.Buffer != nil && (*window.Buffer).Filetype == "blink-cmp-menu" {
+				continue
+			}
 			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.renderFloatingWindow(window))
 		}
 	}
@@ -1026,6 +1030,10 @@ func (s *Screen) EmitFloatingWindows() {
 
 	for winId, window := range s.Windows {
 		if !window.IsFloating() {
+			continue
+		}
+		// Skip blink-cmp windows -- handled by native completion menu
+		if window.Buffer != nil && (*window.Buffer).Filetype == "blink-cmp-menu" {
 			continue
 		}
 		if window.ZIndex == 69420 {

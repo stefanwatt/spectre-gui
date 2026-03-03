@@ -212,6 +212,28 @@ declare global {
       filetype: string
     }
 
+    interface CompletionItem {
+      label: string;
+      kind: string;        // "Function", "Variable", "Keyword", etc.
+      detail: string;      // type signature
+      source: string;      // "lsp", "buffer", "path"
+      deprecated: boolean;
+      sourceName: string;  // "LSP", "Buffer", "Path"
+    }
+
+    interface CompletionState {
+      visible: boolean;
+      items: CompletionItem[];
+      selectedIndex: number;  // -1 if none selected (1-indexed to match blink.cmp)
+      col: number;            // cursor col at trigger for positioning
+    }
+
+    interface CompletionDocumentation {
+      text: string;   // documentation text
+      kind: string;   // "markdown" or "plaintext"
+      detail: string; // item detail (type signature)
+    }
+
     type NamedKey =
       | 'Unidentified'
       | 'Alt'

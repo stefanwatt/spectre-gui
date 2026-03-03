@@ -1,6 +1,6 @@
 import { OpenFile } from '$lib/wailsjs/go/picker/Picker';
 import * as runtime from '$lib/wailsjs/runtime/runtime';
-import { windowContentRowMap, layout, cursor, pickers, cmdline, nestedState, getFloatingWindows, setFloatingWindows } from "$lib/state.svelte"
+import { windowContentRowMap, layout, cursor, pickers, cmdline, nestedState, getFloatingWindows, setFloatingWindows, completion, setCompletionDocumentation } from "$lib/state.svelte"
 import {
   state as liveGrepState
 } from '$lib/picker/live-grep-results/results.service.svelte';
@@ -131,5 +131,34 @@ export function startListening() {
 
   runtime.EventsOn('hide-window', (winId: number) => {
     windowContentRowMap.delete(winId);
+  });
+
+  runtime.EventsOn('completion-show', (state: { items: App.CompletionItem[], selectedIndex: number, col: number }) => {
+    completion.visible = true;
+    completion.items = state.items;
+    completion.selectedIndex = state.selectedIndex;
+    completion.col = state.col;
+  });
+
+  runtime.EventsOn('completion-hide', () => {
+    completion.visible = false;
+    completion.items = [];
+    completion.selectedIndex = -1;
+    setCompletionDocumentation(null);
+  });
+
+  runtime.EventsOn('completion-select', (idx: number) => {
+    completion.selectedIndex = idx;
+  });
+
+  runtime.EventsOn('completion-documentation', (doc: App.CompletionDocumentation) => {
+    console.log('[completion-documentation]', {
+      hasText: !!doc?.text,
+      textLength: doc?.text?.length || 0,
+      kind: doc?.kind,
+      hasDetail: !!doc?.detail,
+      detailLength: doc?.detail?.length || 0
+    });
+    setCompletionDocumentation(doc && (doc.text || doc.detail) ? doc : null);
   });
 }

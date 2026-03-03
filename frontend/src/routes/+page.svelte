@@ -4,7 +4,8 @@
 	import CmdLine from './cmdline/CmdLine.svelte';
 	import FloatingWindowContainer from '$lib/floating-windows/FloatingWindowContainer.svelte';
 	import NvimWindow from '$lib/windows/NvimWindow.svelte';
-	import { cmdline, windowContentRowMap, layout, cursor, nestedState, getFloatingWindows } from '$lib/state.svelte';
+	import CompletionMenu from '$lib/completion/CompletionMenu.svelte';
+	import { cmdline, windowContentRowMap, layout, cursor, nestedState, getFloatingWindows, completion } from '$lib/state.svelte';
 	import { init, startListening } from '$lib/runtime-events-service';
 	import { handleKeypress, registerKeymap } from '$lib/keymaps/keymap-service';
 	import { keymaps as liveGrepKeymaps } from '$lib/keymaps/live-grep';
@@ -70,6 +71,9 @@
 							{windowContentRowMap}
 							anchorWindow={win.id}
 						/>
+						{#if layout.activeWindowId === win.id}
+							<CompletionMenu {completion} />
+						{/if}
 					</div>
 				{/each}
 			</div>
