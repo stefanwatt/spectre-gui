@@ -141,12 +141,9 @@ local function setup_completion_bridge()
     -- Get the currently selected item directly from the list
     local selected_item = list.get_selected_item()
     if not selected_item then
-      print('[nvim-gui] No selected item')
       vim.rpcnotify(channel, 'CompletionDocumentation', {'', 'plaintext', ''})
       return
     end
-
-    print(string.format('[nvim-gui] Selected item: %s', selected_item.label or 'nil'))
 
     -- Resolve the item to get documentation (if not already resolved)
     local ok_sources, sources = pcall(require, 'blink.cmp.sources.lib')
@@ -160,25 +157,16 @@ local function setup_completion_bridge()
           if type(resolved_item.documentation) == 'string' then
             doc_text = resolved_item.documentation
             doc_kind = 'plaintext'
-            print(string.format('[nvim-gui] Found string doc, length: %d', #doc_text))
           elseif type(resolved_item.documentation) == 'table' then
             doc_text = resolved_item.documentation.value or ''
             doc_kind = resolved_item.documentation.kind or 'plaintext'
-            print(string.format('[nvim-gui] Found table doc, kind: %s, length: %d', doc_kind, #doc_text))
           end
-        else
-          print('[nvim-gui] No documentation field after resolve')
         end
 
         local detail = resolved_item.detail or ''
-        if detail ~= '' then
-          print(string.format('[nvim-gui] Found detail: %s', detail:sub(1, 50)))
-        end
-
         vim.rpcnotify(channel, 'CompletionDocumentation', {doc_text, doc_kind, detail})
       end)
     else
-      print('[nvim-gui] Could not resolve item')
       -- Still send what we have without resolving
       local doc_text = ''
       local doc_kind = 'plaintext'
@@ -202,29 +190,8 @@ local function setup_completion_bridge()
     vim.rpcnotify(channel, 'CompletionSelect', {data.idx or -1})
 
     -- Check documentation multiple times to catch async resolve
-    vim.defer_fn(send_documentation, 10)
     vim.defer_fn(send_documentation, 50)
-    vim.defer_fn(send_documentation, 150)
-    vim.defer_fn(send_documentation, 300)
-  end)
-
-  -- Watch for documentation buffer updates
-  local doc_watch_timer = nil
-  list.show_emitter:on(function()
-    -- Start watching when completion is shown
-    if doc_watch_timer then
-      doc_watch_timer:stop()
-    end
-    doc_watch_timer = vim.loop.new_timer()
-    doc_watch_timer:start(100, 100, vim.schedule_wrap(send_documentation))
-  end)
-
-  list.hide_emitter:on(function()
-    -- Stop watching when completion is hidden
-    if doc_watch_timer then
-      doc_watch_timer:stop()
-      doc_watch_timer = nil
-    end
+    vim.defer_fn(send_documentation, 200)
   end)
 
   return true
