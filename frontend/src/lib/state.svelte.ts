@@ -44,6 +44,17 @@ export type PickerKeymapMode = typeof pickers[number]['keymapMode'];
 export let cmdline = $state<App.CmdLine>({
   visible: false
 });
+
+export let completion = $state<App.CompletionState>({
+  visible: false,
+  items: [],
+  selectedIndex: -1,
+  col: 0,
+});
+
+let _completionDocumentation = $state<App.CompletionDocumentation | null>(null);
+export function getCompletionDocumentation() { return _completionDocumentation; }
+export function setCompletionDocumentation(v: App.CompletionDocumentation | null) { _completionDocumentation = v; }
 export function getKeymapMode(): App.KeymapMode {
   return keymapMode
 }

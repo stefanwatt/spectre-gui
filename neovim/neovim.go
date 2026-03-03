@@ -207,6 +207,65 @@ func StartListening(ctx context.Context) {
 			}
 		})
 
+		NvimInstance.RegisterHandler("CompletionShow", func(updates ...[]interface{}) {
+			for _, data := range updates {
+				if len(data) < 3 {
+					continue
+				}
+				itemsRaw, ok := data[0].([]interface{})
+				if !ok {
+					continue
+				}
+				selectedIdx := utils.ReflectToInt(data[1])
+				col := utils.ReflectToInt(data[2])
+
+				items := parseCompletionItems(itemsRaw)
+				state := CompletionState{
+					Items:         items,
+					SelectedIndex: selectedIdx,
+					Col:           col,
+				}
+				Runtime.EventsEmit(NvimScreen.ctx, "completion-show", state)
+			}
+		})
+
+		NvimInstance.RegisterHandler("CompletionHide", func(updates ...[]interface{}) {
+			Runtime.EventsEmit(NvimScreen.ctx, "completion-hide")
+		})
+
+		NvimInstance.RegisterHandler("CompletionSelect", func(updates ...[]interface{}) {
+			for _, data := range updates {
+				if len(data) < 1 {
+					continue
+				}
+				idx := utils.ReflectToInt(data[0])
+				Runtime.EventsEmit(NvimScreen.ctx, "completion-select", idx)
+			}
+		})
+
+		NvimInstance.RegisterHandler("CompletionDocumentation", func(updates ...[]interface{}) {
+			for _, data := range updates {
+				if len(data) < 3 {
+					utils.Log("CompletionDocumentation: insufficient data")
+					continue
+				}
+				docText, _ := data[0].(string)
+				docKind, _ := data[1].(string)
+				detail, _ := data[2].(string)
+
+				doc := CompletionDocumentation{
+					Text:   docText,
+					Kind:   docKind,
+					Detail: detail,
+				}
+
+				utils.Log(fmt.Sprintf("CompletionDocumentation: text_len=%d, kind=%s, detail_len=%d",
+					len(docText), docKind, len(detail)))
+
+				Runtime.EventsEmit(NvimScreen.ctx, "completion-documentation", doc)
+			}
+		})
+
 		opts := map[string]interface{}{
 			"rgb":            true,
 			"ext_linegrid":   true,
@@ -255,6 +314,11 @@ func StartListening(ctx context.Context) {
 		// Set up markdown table detection via treesitter
 		if err := NvimInstance.ExecLua(markdownTablesLua, nil, NvimInstance.ChannelID()); err != nil {
 			utils.Log(fmt.Sprintf("Error loading markdown tables Lua: %v", err))
+		}
+
+		// Set up completion bridge for blink.cmp
+		if err := NvimInstance.ExecLua(completionLua, nil, NvimInstance.ChannelID()); err != nil {
+			utils.Log(fmt.Sprintf("Error loading completion Lua: %v", err))
 		}
 
 		if err := NvimInstance.Serve(); err != nil {
