@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type Highlight struct {
@@ -122,5 +120,7 @@ func emitHighlightCSS(ctx context.Context) {
 	}
 	bgColorClassesMu.Unlock()
 
-	Runtime.EventsEmit(ctx, "highlight-css", cssBuilder.String())
+	if NvimScreen != nil {
+		NvimScreen.emitEvent("highlight-css", cssBuilder.String())
+	}
 }

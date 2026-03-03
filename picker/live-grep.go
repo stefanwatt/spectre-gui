@@ -8,11 +8,14 @@ import (
 	"nvim-gui/picker/highlighting"
 	"nvim-gui/picker/match"
 	"nvim-gui/utils"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type LiveGrepPicker struct {
 	searchContext SearchContext
 	Ctx           context.Context
+	App           *application.App
 	State         LiveGrepPickerState
 }
 
@@ -48,6 +51,11 @@ func NewLiveGrepPicker() *LiveGrepPicker {
 			TotalFiles:   0,
 		},
 	}
+}
+
+func (lgp *LiveGrepPicker) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	lgp.Ctx = ctx
+	return nil
 }
 
 type SearchContext struct {

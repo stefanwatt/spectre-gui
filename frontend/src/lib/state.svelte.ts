@@ -4,7 +4,7 @@ import FindReferences from '$lib/picker/FindReferences.svelte';
 import FindHelp from '$lib/picker/FindHelp.svelte';
 import FindBufferSymbols from '$lib/picker/FindBufferSymbols.svelte';
 import { registerKeymap } from './keymaps/keymap-service';
-import { ClosePreview } from '$lib/wailsjs/go/picker/Picker';
+import { ClosePreview } from '@bindings/nvim-gui/picker/picker.js';
 import { SvelteMap } from 'svelte/reactivity';
 
 export let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });

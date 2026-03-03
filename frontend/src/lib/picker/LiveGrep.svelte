@@ -5,7 +5,7 @@
 		search
 	} from '$lib/picker/live-grep-results/results.service.svelte';
 	import { onMount } from 'svelte';
-	import { GetLiveGrepOpts } from '$lib/wailsjs/go/picker/LiveGrepPicker';
+	import { GetLiveGrepOpts } from '@bindings/nvim-gui/picker/livegreppicker.js';
 	import SearchForm from '$lib/form/Search.svelte';
 
 	let state = $state<App.LiveGrepOpts>();

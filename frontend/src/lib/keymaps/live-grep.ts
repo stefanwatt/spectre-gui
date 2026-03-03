@@ -4,9 +4,9 @@ import {
   cursorToPrevMatch,
   state
 } from '$lib/picker/live-grep-results/results.service.svelte';
-import { SendKey, CreateQuickfixList } from '$lib/wailsjs/go/main/App';
-import { OpenFile } from '$lib/wailsjs/go/picker/Picker'
-import { GetLiveGrepOpts, GetNextPage, GetPrevPage } from '$lib/wailsjs/go/picker/LiveGrepPicker'
+import { SendKey, CreateQuickfixList } from '@bindings/nvim-gui/app.js';
+import { OpenFile } from '@bindings/nvim-gui/picker/picker.js'
+import { GetLiveGrepOpts, GetNextPage, GetPrevPage } from '@bindings/nvim-gui/picker/livegreppicker.js'
 
 function sendKey(e: KeyboardEvent) {
   e.preventDefault()
@@ -19,13 +19,10 @@ export const keymaps: App.Keymap[] = [
     mode: 'live-grep',
     mods: [],
     action: async () => {
-      const runtime = await import('$lib/wailsjs/runtime/runtime');
       const selectedMatch = state.selectedMatch
       if (!selectedMatch) return
-      if (runtime) {
-        OpenFile(selectedMatch.AbsolutePath, selectedMatch.Row, selectedMatch.Col);
-        nestedState.activePicker = undefined
-      }
+      OpenFile(selectedMatch.AbsolutePath, selectedMatch.Row, selectedMatch.Col);
+      nestedState.activePicker = undefined
     }
   },
   {

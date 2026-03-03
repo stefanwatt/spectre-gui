@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"strings"
 
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 var (
@@ -41,6 +41,7 @@ type PickerResult struct {
 type Picker struct {
 	undoStack undo.UndoStack
 	Ctx       context.Context
+	App       *application.App
 	cwd       *string
 }
 
@@ -48,6 +49,11 @@ func NewPicker() *Picker {
 	return &Picker{
 		undoStack: undo.UndoStack{},
 	}
+}
+
+func (p *Picker) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	p.Ctx = ctx
+	return nil
 }
 
 func (p *Picker) FindFiles(query string) []*PickerResult {
@@ -86,7 +92,12 @@ func (p *Picker) OpenFile(path string, row int, col int) {
 	if err != nil {
 		utils.Log(err.Error())
 	}
-	Runtime.EventsEmit(p.Ctx, "hide-live-rep")
+	if p.App != nil {
+		p.App.Event.Emit("hide-live-rep", struct{}{})
+	}
+	if p.App != nil {
+		p.App.Event.Emit("hide-live-rep", struct{}{})
+	}
 }
 
 func assert(assertion bool, message string) {

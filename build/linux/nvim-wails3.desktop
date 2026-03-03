@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=nvim-wails3
+Exec=nvim-wails3
+Icon=nvim-wails3
+Categories=Development;
+Terminal=false
+Keywords=wails
+Version=1.0
+StartupNotify=false

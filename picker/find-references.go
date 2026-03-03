@@ -1,12 +1,15 @@
 package picker
 
 import (
+	"context"
 	"fmt"
 	"nvim-gui/neovim"
 	"nvim-gui/utils"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type LspReferencesPicker struct {
@@ -23,6 +26,10 @@ func NewReferencesPicker() *LspReferencesPicker {
 		Filepath:   "",
 		References: []*neovim.LspReferenceItem{},
 	}
+}
+
+func (rp *LspReferencesPicker) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	return nil
 }
 
 func (rp *LspReferencesPicker) FindReferences(query string) []*PickerResult {

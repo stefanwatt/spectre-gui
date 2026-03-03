@@ -10,34 +10,42 @@ import (
 
 	"nvim-gui/neovim"
 	"nvim-gui/utils"
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-var ctx context.Context
-
 type App struct {
-	ctx              context.Context
-	File             string
+	ctx context.Context
+	App *application.App
 }
 
 func NewApp() *App {
-	return &App{
+	return &App{}
+}
+
+func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	a.ctx = ctx
+	utils.SetupLog()
+
+	// Start neovim after app is ready
+	go neovim.StartListening(ctx)
+
+	return nil
+}
+
+// OnResize handles window resize events from the frontend
+func (a *App) OnResize(width, height int) {
+	rows, cols := neovim.CalculateGridSize(width, height)
+	if neovim.NvimScreen != nil {
+		neovim.NvimScreen.Resize(cols, rows)
 	}
 }
 
-func (a *App) mounted(ctx context.Context) {
-	// Force WebKit to recalculate its viewport with the compositor-allocated size.
-	// On Wayland (e.g. Sway), the WM assigns the final window dimensions asynchronously,
-	// so WebKit may initialize with the GTK default size. Re-setting the size after DOM
-	// ready triggers gtk_window_resize and causes WebKit to update its viewport.
-	w, h := Runtime.WindowGetSize(ctx)
-	Runtime.WindowSetSize(ctx, w, h)
-	go neovim.StartListening(a.ctx)
-}
-
-func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
-	utils.SetupLog()
+// RequestState triggers emission of current state to frontend
+func (a *App) RequestState() {
+	if neovim.NvimScreen != nil {
+		neovim.NvimScreen.EmitCurrentState()
+	}
 }
 
 // ReadLocalImage decodes a base64-encoded local file path and returns it as a data URL.

@@ -3,8 +3,6 @@ package neovim
 import (
 	"fmt"
 	"nvim-gui/utils"
-
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type Cursor struct {
@@ -42,7 +40,7 @@ func (s *Screen) UpdateCursor() {
 				Col:            uint64(windowCursor[1]),
 				ActiveWindowId: s.ActiveWindow,
 			}
-			Runtime.EventsEmit(s.ctx, "cursor-changed", cursorMoveEvent)
+			s.emitEvent("cursor-changed", cursorMoveEvent)
 		}
 	} else {
 		utils.Log(fmt.Sprintf("UpdateCursor could not get nvimWindow\nerror:%s", err.Error()))

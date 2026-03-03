@@ -20,7 +20,7 @@ func assert(assertion bool, message string) {
 	}
 }
 
-//TODO: i reintroduced the bug when cursor is at the end of the replace field for example
+// TODO: i reintroduced the bug when cursor is at the end of the replace field for example
 func HandleSubstituteJump(optionalData ...interface{}) {
 	utils.Log("HandleSubstituteJump")
 	var cmdlineContentRes interface{}

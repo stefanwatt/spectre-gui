@@ -5,11 +5,15 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
+		"build:dev": "vite build --minify false --mode development",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
 		"lint": "prettier --check .",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"test:unit": "vitest",
+		"test": "npm run test:unit -- --run && npm run test:e2e",
+		"test:e2e": "playwright test"
 	},
 	"devDependencies": {
 		"@catppuccin/tailwindcss": "^0.1.6",
@@ -31,6 +35,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@wailsio/runtime": "^3.0.0-alpha.79",
 		"marked": "^15.0.7",
 		"svelte-exmarkdown": "^5.0.0",
 		"vscode-icons-js": "^11.6.1"

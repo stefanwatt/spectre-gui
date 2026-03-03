@@ -1,5 +1,5 @@
-import { SendKey, Paste } from '$lib/wailsjs/go/main/App';
-import { ClipboardGetText } from '$lib/wailsjs/runtime/runtime';
+import { SendKey, Paste } from '@bindings/nvim-gui/app.js';
+import { Clipboard } from '@wailsio/runtime';
 import { getKeymapMode } from "$lib/state.svelte"
 
 let activeKeymaps = new Map<string, App.Keymap>()
@@ -26,7 +26,7 @@ export function handleKeypress(event: KeyboardEvent) {
   if (pickerModes.includes(keymapMode)) return
   event.preventDefault();
   if (event.ctrlKey && event.shiftKey && event.key === 'V') {
-    ClipboardGetText().then(text => Paste(text));
+    Clipboard.Text().then((text: string) => Paste(text));
     return;
   }
   SendKey(event.key, event.ctrlKey, event.altKey, event.shiftKey, keymapMode);

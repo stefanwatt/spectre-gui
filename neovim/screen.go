@@ -13,52 +13,62 @@ import (
 
 	"github.com/akiyosi/goneovim/util"
 	"github.com/neovim/go-client/nvim"
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type Screen struct {
-	margins         []int
-	Height          int //in number of cells
-	Width           int //in number of cells
-	topLine         int
-	botLine         int
-	curLine         int
-	lineCount       int
-	scrollDelta     float64
-	ctx             context.Context
-	Grids           map[int]*Grid
-	Highlights      map[int]*Highlight
-	Windows         map[int]*Window // Map of window IDs to Window objects
-	GridToWindow    map[int]int     // Map of grid IDs to window IDs
-	DefaultFg       int
-	DefaultBg       int
-	DefaultSp       int
-	ActiveGrid      int
-	ActiveWindow    int
-	Mode            string
-	PendingRender   bool
-	highlightsMu    sync.RWMutex // Mutex for Highlights map
-	windowsMu       sync.RWMutex // Mutex for Windows map
-	layout          *GridLayout
-	tableMetadata   map[int][]TableMeta // bufNr -> []TableMeta
-	tableMetadataMu sync.RWMutex
-	imageMetadata     map[int][]ImageMeta   // bufNr -> []ImageMeta
-	imageMetadataMu   sync.RWMutex
-	headingMetadata   map[int]map[int]int // bufNr -> line -> heading level
-	headingMetadataMu sync.RWMutex
-	taskMetadata        map[int]map[int]bool // bufNr -> line -> checked
-	taskMetadataMu      sync.RWMutex
-	codeBlockMetadata   map[int][]CodeBlockMeta // bufNr -> []CodeBlockMeta
-	codeBlockMetadataMu sync.RWMutex
+	margins              []int
+	Height               int //in number of cells
+	Width                int //in number of cells
+	topLine              int
+	botLine              int
+	curLine              int
+	lineCount            int
+	scrollDelta          float64
+	ctx                  context.Context
+	app                  *application.App // Reference to Wails app for event emission
+	Grids                map[int]*Grid
+	Highlights           map[int]*Highlight
+	Windows              map[int]*Window // Map of window IDs to Window objects
+	GridToWindow         map[int]int     // Map of grid IDs to window IDs
+	DefaultFg            int
+	DefaultBg            int
+	DefaultSp            int
+	ActiveGrid           int
+	ActiveWindow         int
+	Mode                 string
+	PendingRender        bool
+	highlightsMu         sync.RWMutex // Mutex for Highlights map
+	windowsMu            sync.RWMutex // Mutex for Windows map
+	layout               *GridLayout
+	tableMetadata        map[int][]TableMeta // bufNr -> []TableMeta
+	tableMetadataMu      sync.RWMutex
+	imageMetadata        map[int][]ImageMeta // bufNr -> []ImageMeta
+	imageMetadataMu      sync.RWMutex
+	headingMetadata      map[int]map[int]int // bufNr -> line -> heading level
+	headingMetadataMu    sync.RWMutex
+	taskMetadata         map[int]map[int]bool // bufNr -> line -> checked
+	taskMetadataMu       sync.RWMutex
+	codeBlockMetadata    map[int][]CodeBlockMeta // bufNr -> []CodeBlockMeta
+	codeBlockMetadataMu  sync.RWMutex
 	inlineCodeMetadata   map[int]map[int][]ColRange // bufNr -> line -> []ColRange
 	inlineCodeMetadataMu sync.RWMutex
-	ColorColumns      []int  // columns where colorcolumn should render (e.g. [80])
-	ColorColumnColor  string // hex color e.g. "#2a2a3a"
-	CursorLineEnabled bool
-	CursorLineColor   string // hex color e.g. "#2a2a3a"
+	ColorColumns         []int  // columns where colorcolumn should render (e.g. [80])
+	ColorColumnColor     string // hex color e.g. "#2a2a3a"
+	CursorLineEnabled    bool
+	CursorLineColor      string // hex color e.g. "#2a2a3a"
 }
 
-func NewScreen(ctx context.Context, cols int, rows int) *Screen {
+// emitEvent safely emits an event, checking if app is initialized
+func (s *Screen) emitEvent(eventName string, data interface{}) {
+	if s.app == nil {
+		utils.Log(fmt.Sprintf("Warning: Cannot emit event %s - app not initialized", eventName))
+		return
+	}
+	s.app.Event.Emit(eventName, data)
+}
+
+func NewScreen(ctx context.Context, cols int, rows int, app *application.App) *Screen {
 
 	// Create grids map and add default grid
 	grids := make(map[int]*Grid)
@@ -73,26 +83,27 @@ func NewScreen(ctx context.Context, cols int, rows int) *Screen {
 	}
 
 	return &Screen{
-		ctx:           ctx,
-		Width:         cols,
-		Height:        rows,
-		Grids:         grids,
-		Highlights:    highlights,
-		Windows:       make(map[int]*Window),
-		GridToWindow:  make(map[int]int),
-		DefaultFg:     0xffffff,
-		DefaultBg:     0x000000,
-		DefaultSp:     0xffffff,
-		ActiveGrid:    2,
-		Mode:          "normal",
-		PendingRender: false,
-		margins:       make([]int, 4), // Initialize margins slice
-		layout:        NewGridLayout(),
-		tableMetadata:   make(map[int][]TableMeta),
-		imageMetadata:   make(map[int][]ImageMeta),
-		headingMetadata: make(map[int]map[int]int),
-		taskMetadata:      make(map[int]map[int]bool),
-		codeBlockMetadata: make(map[int][]CodeBlockMeta),
+		ctx:                ctx,
+		app:                app,
+		Width:              cols,
+		Height:             rows,
+		Grids:              grids,
+		Highlights:         highlights,
+		Windows:            make(map[int]*Window),
+		GridToWindow:       make(map[int]int),
+		DefaultFg:          0xffffff,
+		DefaultBg:          0x000000,
+		DefaultSp:          0xffffff,
+		ActiveGrid:         2,
+		Mode:               "normal",
+		PendingRender:      false,
+		margins:            make([]int, 4), // Initialize margins slice
+		layout:             NewGridLayout(),
+		tableMetadata:      make(map[int][]TableMeta),
+		imageMetadata:      make(map[int][]ImageMeta),
+		headingMetadata:    make(map[int]map[int]int),
+		taskMetadata:       make(map[int]map[int]bool),
+		codeBlockMetadata:  make(map[int][]CodeBlockMeta),
 		inlineCodeMetadata: make(map[int]map[int][]ColRange),
 	}
 }
@@ -224,7 +235,7 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 		case "cmdline_pos":
 			s.handleCmdlinePos(args)
 		case "cmdline_hide":
-			Runtime.EventsEmit(s.ctx, "cmdline_hide")
+			s.emitEvent("cmdline_hide", struct{}{})
 		}
 	}
 }
@@ -464,7 +475,7 @@ func (s *Screen) handleWinViewport(args []interface{}) {
 			s.scrollDelta = float64(utils.ReflectToInt(viewportArgs[7]))
 		}
 
-		Runtime.EventsEmit(s.ctx, "viewport_changed", map[string]interface{}{
+		s.emitEvent("viewport_changed", map[string]interface{}{
 			"top_line":   topLine,
 			"bot_line":   botLine,
 			"cur_line":   curLine,
@@ -692,7 +703,7 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 
 func (s *Screen) modeChange(mode string) {
 	s.Mode = mode
-	Runtime.EventsEmit(s.ctx, "mode-changed", mode)
+	s.emitEvent("mode-changed", mode)
 }
 
 func (s *Screen) winHide(args []interface{}) {
@@ -709,7 +720,7 @@ func (s *Screen) winHide(args []interface{}) {
 	}
 	s.windowsMu.Unlock()
 	utils.Log(fmt.Sprintf("winHide hiding window with id=%d, s.Windows:", winId), s.Windows)
-	Runtime.EventsEmit(s.ctx, "hide-window", winId)
+	s.emitEvent("hide-window", winId)
 	s.updateLayout()
 }
 
@@ -743,9 +754,9 @@ func (s *Screen) winClose(args []interface{}) {
 			win, exists := s.Windows[winId]
 			if exists && win.IsFloating() {
 				if win.ZIndex == 69420 {
-					Runtime.EventsEmit(s.ctx, "preview-window-closed", winId)
+					s.emitEvent("preview-window-closed", winId)
 				} else {
-					Runtime.EventsEmit(s.ctx, "floating_window_closed", winId)
+					s.emitEvent("floating_window_closed", winId)
 				}
 			}
 			delete(s.GridToWindow, grid)
@@ -788,7 +799,7 @@ func (s *Screen) handleCmdlineShow(args []interface{}) {
 	// level := util.ReflectToInt(arg[5])
 	// fmt.Println("cmdline show", content, pos, firstc, prompt, indent, level)
 
-	Runtime.EventsEmit(s.ctx, "cmdline_show", map[string]interface{}{
+	s.emitEvent("cmdline_show", map[string]interface{}{
 		"content": content,
 		"pos":     pos,
 		"firstc":  firstc,
@@ -816,7 +827,7 @@ func (s *Screen) winPos(args []interface{}) {
 		window = NewWindow(winId, s.Grids[gridId])
 		s.Windows[winId] = window
 		s.GridToWindow[gridId] = winId
-		Runtime.EventsEmit(s.ctx, "window_opened")
+		s.emitEvent("window_opened", struct{}{})
 		utils.Log(fmt.Sprintf("winPos spawned with id=%d got %d windows now", winId, len(s.Windows)))
 	}
 	if winId != 0 {
@@ -851,7 +862,7 @@ func (s *Screen) updateLayout() {
 		s.layout.dirty = true
 	}
 	if s.layout.dirty {
-		Runtime.EventsEmit(s.ctx, "layout-updated", s.layout)
+		s.emitEvent("layout-updated", s.layout)
 		s.layout.dirty = false
 	}
 }
@@ -983,13 +994,21 @@ func (s *Screen) render() {
 			if window.Cursor != nil {
 				cursorLine = window.Cursor.Row - 1 // convert 1-indexed to 0-indexed
 			}
-			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid, filetype, bufNr, cursorLine))
+			s.emitEvent("content-updated", map[string]interface{}{
+				"winId":          winId,
+				"updatedContent": s.optimizeGrid(grid, filetype, bufNr, cursorLine),
+			})
 		} else {
 			// Skip rendering blink-cmp floating windows (handled by native completion menu)
 			if window.Buffer != nil && (*window.Buffer).Filetype == "blink-cmp-menu" {
 				continue
 			}
-			Runtime.EventsEmit(s.ctx, "content-updated", winId, s.renderFloatingWindow(window))
+			if s.app != nil {
+				s.app.Event.Emit("content-updated", map[string]interface{}{
+					"winId":          winId,
+					"updatedContent": s.renderFloatingWindow(window),
+				})
+			}
 		}
 	}
 }
@@ -1004,7 +1023,7 @@ func (s *Screen) handleCmdlinePos(args []interface{}) {
 	pos := utils.ReflectToInt(cmdlineArgs[0])
 	level := utils.ReflectToInt(cmdlineArgs[1])
 
-	Runtime.EventsEmit(s.ctx, "cmdline_pos", map[string]interface{}{
+	s.emitEvent("cmdline_pos", map[string]interface{}{
 		"pos":   pos,
 		"level": level,
 	})
@@ -1039,7 +1058,7 @@ func (s *Screen) EmitFloatingWindows() {
 		if window.ZIndex == 69420 {
 			if window.Dirty {
 				previewWindow := s.mapWindowInfo(window, winId)
-				Runtime.EventsEmit(s.ctx, "preview-window", previewWindow)
+				s.emitEvent("preview-window", previewWindow)
 			}
 			continue
 		}
@@ -1053,7 +1072,7 @@ func (s *Screen) EmitFloatingWindows() {
 	}
 
 	if len(floatingWindows) > 0 {
-		Runtime.EventsEmit(s.ctx, "floating_windows", floatingWindows)
+		s.emitEvent("floating_windows", floatingWindows)
 	}
 }
 
@@ -1065,7 +1084,7 @@ func (s *Screen) EmitCurrentState() {
 	// Force emit layout regardless of dirty flag (late-connecting clients missed the initial emit)
 	s.CalculateGridLayout()
 	s.layout.ActiveWindowId = s.ActiveWindow
-	Runtime.EventsEmit(s.ctx, "layout-updated", s.layout)
+	s.emitEvent("layout-updated", s.layout)
 
 	// Re-emit content for all windows
 	s.windowsMu.RLock()
@@ -1088,7 +1107,12 @@ func (s *Screen) EmitCurrentState() {
 		if window.Cursor != nil {
 			cursorLine = window.Cursor.Row - 1
 		}
-		Runtime.EventsEmit(s.ctx, "content-updated", winId, s.optimizeGrid(grid, filetype, bufNr, cursorLine))
+		if s.app != nil {
+			s.app.Event.Emit("content-updated", map[string]interface{}{
+				"winId":          winId,
+				"updatedContent": s.optimizeGrid(grid, filetype, bufNr, cursorLine),
+			})
+		}
 	}
 }
 

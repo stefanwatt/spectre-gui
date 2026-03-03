@@ -7,9 +7,9 @@ import (
 // CompletionItem represents a single completion item sent to the frontend
 type CompletionItem struct {
 	Label      string `json:"label"`
-	Kind       string `json:"kind"`       // "Function", "Variable", etc.
-	Detail     string `json:"detail"`     // type signature
-	Source     string `json:"source"`     // "lsp", "buffer", "path"
+	Kind       string `json:"kind"`   // "Function", "Variable", etc.
+	Detail     string `json:"detail"` // type signature
+	Source     string `json:"source"` // "lsp", "buffer", "path"
 	Deprecated bool   `json:"deprecated"`
 	SourceName string `json:"sourceName"` // "LSP", "Buffer", "Path"
 }
