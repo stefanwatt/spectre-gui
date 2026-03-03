@@ -6,6 +6,8 @@ export function CreateQuickfixList(arg1:Array<neovim.QuickfixEntry>):Promise<voi
 
 export function GetReplacementText(arg1:string,arg2:string,arg3:string,arg4:boolean):Promise<string>;
 
+export function Paste(arg1:string):Promise<void>;
+
 export function ReadLocalImage(arg1:string):Promise<string>;
 
 export function SendKey(arg1:string,arg2:boolean,arg3:boolean,arg4:boolean,arg5:string):Promise<void>;

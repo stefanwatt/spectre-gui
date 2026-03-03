@@ -136,6 +136,15 @@ var shiftedChars = map[string]bool{
 	"~":  true, // Shift+`
 }
 
+func Paste(text string) error {
+	_, err := NvimInstance.Paste(text, true, -1)
+	if err != nil {
+		log.Println("Error pasting to Neovim:", err)
+		return err
+	}
+	return nil
+}
+
 func SendKey(key string, ctrl bool, alt bool, shift bool) error {
 	_, err := utils.Find(ignored_keys, func(ignored_key string) bool {
 		return key == ignored_key
