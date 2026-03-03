@@ -7,6 +7,13 @@ import (
 	"nvim-gui/utils"
 )
 
+func (a *App) Paste(text string) {
+	err := neovim.Paste(text)
+	if err != nil {
+		utils.Log(err.Error())
+	}
+}
+
 func (a *App) SendKey(key string, ctrl bool, alt bool, shift bool, keymapMode string) {
 	utils.Log(fmt.Sprintf("SendKey key=%s ctrl=%t alt=%t shift=%t mode=%s", key, ctrl, alt, shift, keymapMode))
 	switch keymapMode {
