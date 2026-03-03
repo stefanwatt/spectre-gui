@@ -152,13 +152,6 @@ export function startListening() {
   });
 
   runtime.EventsOn('completion-documentation', (doc: App.CompletionDocumentation) => {
-    console.log('[completion-documentation]', {
-      hasText: !!doc?.text,
-      textLength: doc?.text?.length || 0,
-      kind: doc?.kind,
-      hasDetail: !!doc?.detail,
-      detailLength: doc?.detail?.length || 0
-    });
     setCompletionDocumentation(doc && (doc.text || doc.detail) ? doc : null);
   });
 }

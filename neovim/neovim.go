@@ -259,8 +259,6 @@ func StartListening(ctx context.Context) {
 					Detail: detail,
 				}
 
-				utils.Log(fmt.Sprintf("CompletionDocumentation: text_len=%d, kind=%s, detail_len=%d",
-					len(docText), docKind, len(detail)))
 
 				Runtime.EventsEmit(NvimScreen.ctx, "completion-documentation", doc)
 			}

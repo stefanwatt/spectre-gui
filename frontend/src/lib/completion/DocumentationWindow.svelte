@@ -10,15 +10,6 @@
 	let doc = $derived(getCompletionDocumentation());
 	let docRef: HTMLDivElement | undefined = $state(undefined);
 
-	$effect(() => {
-		console.log('[DocumentationWindow] doc changed:', {
-			hasDoc: !!doc,
-			text: doc?.text?.substring(0, 50),
-			kind: doc?.kind,
-			detail: doc?.detail?.substring(0, 50)
-		});
-	});
-
 	// Position to the right of the completion menu
 	let position = $derived.by(() => {
 		if (!menuRef || !doc) return { top: '0px', left: '0px', display: 'none' };
@@ -65,7 +56,7 @@
 	<div
 		bind:this={docRef}
 		class="documentation-window absolute z-50 overflow-y-auto rounded-md border border-surface0 bg-base-100 text-text drop-shadow-lg"
-		style="top: {position.top}; left: {position.left}; display: {position.display}; max-height: 400px; max-width: 600px; min-width: 300px;"
+		style="top: {position.top}; left: {position.left}; display: {position.display}; max-height: 400px; width: 400px;"
 	>
 		<div class="p-3 prose prose-sm prose-invert max-w-none">
 			{@html renderedDoc}
@@ -77,6 +68,9 @@
 	.documentation-window {
 		font-size: 16px;
 		line-height: 1.5;
+		overflow-x: hidden;
+		word-wrap: break-word;
+		overflow-wrap: break-word;
 	}
 
 	.documentation-window :global(pre) {
@@ -102,6 +96,18 @@
 
 	.documentation-window :global(p) {
 		margin-bottom: 8px;
+		word-wrap: break-word;
+		overflow-wrap: break-word;
+		word-break: break-word;
+		white-space: normal;
+		max-width: 100%;
+	}
+
+	.documentation-window :global(a) {
+		word-wrap: break-word;
+		overflow-wrap: break-word;
+		word-break: break-all;
+		white-space: normal;
 	}
 
 	.documentation-window :global(ul),
