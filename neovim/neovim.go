@@ -13,7 +13,6 @@ import (
 	"nvim-gui/utils"
 
 	"github.com/neovim/go-client/nvim"
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 var (
@@ -41,24 +40,15 @@ func CalculateGridSize(windowWidth, windowHeight int) (rows, cols int) {
 
 func StartListening(ctx context.Context) {
 	var err error
-	width, height := Runtime.WindowGetSize(ctx)
-	rows, cols := CalculateGridSize(width, height)
-	utils.Log(fmt.Sprintf("StartListening initializing screen with width=%d height=%d rows=%d cols=%d", width, height, rows, cols))
-	NvimScreen = NewScreen(ctx, cols, rows)
+	// Use default grid size for initial creation
+	// The frontend will call OnResize() once mounted
+	rows, cols := 24, 80
+	utils.Log(fmt.Sprintf("StartListening initializing screen with default rows=%d cols=%d", rows, cols))
+	NvimScreen = NewScreen(ctx, cols, rows, App)
 
-	// Set up resize handler
-	Runtime.EventsOn(ctx, "resize", func(optionalData ...interface{}) {
-		width, height := Runtime.WindowGetSize(ctx)
-		rows, cols := CalculateGridSize(width, height)
-		NvimScreen.Resize(cols, rows)
-	})
-
-	// Handle requests from frontend to re-emit current state (for late-connecting clients like Playwright)
-	Runtime.EventsOn(ctx, "request-state", func(optionalData ...interface{}) {
-		if NvimScreen != nil {
-			NvimScreen.EmitCurrentState()
-		}
-	})
+	// Note: resize and request-state handlers are now service methods on App:
+	// - App.OnResize(width, height) called from frontend
+	// - App.RequestState() called from frontend
 
 	nvimCtx, nvimCancel := context.WithCancel(ctx)
 	nvimExitChan := make(chan struct{})
@@ -83,7 +73,9 @@ func StartListening(ctx context.Context) {
 	if err != nil {
 		log.Println(err)
 		nvimCancel()
-		Runtime.Quit(ctx)
+		if App != nil {
+			App.Quit()
+		}
 		return
 	}
 
@@ -102,7 +94,9 @@ func StartListening(ctx context.Context) {
 		NvimInstance.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data []string) {
 			assert(len(data) == 1, "BufEnter: malformed data")
 			filepath := filepath.Base(data[0])
-			Runtime.EventsEmit(NvimScreen.ctx, "BufEnter", filepath)
+			if App != nil {
+			App.Event.Emit("BufEnter", filepath)
+		}
 		})
 
 		NvimInstance.RegisterHandler("TrekClosed", func(_ *nvim.Nvim, windowArgs []uint64) {
@@ -225,12 +219,16 @@ func StartListening(ctx context.Context) {
 					SelectedIndex: selectedIdx,
 					Col:           col,
 				}
-				Runtime.EventsEmit(NvimScreen.ctx, "completion-show", state)
+				if App != nil {
+					App.Event.Emit("completion-show", state)
+				}
 			}
 		})
 
 		NvimInstance.RegisterHandler("CompletionHide", func(updates ...[]interface{}) {
-			Runtime.EventsEmit(NvimScreen.ctx, "completion-hide")
+			if App != nil {
+				App.Event.Emit("completion-hide", struct{}{})
+			}
 		})
 
 		NvimInstance.RegisterHandler("CompletionSelect", func(updates ...[]interface{}) {
@@ -239,7 +237,9 @@ func StartListening(ctx context.Context) {
 					continue
 				}
 				idx := utils.ReflectToInt(data[0])
-				Runtime.EventsEmit(NvimScreen.ctx, "completion-select", idx)
+				if App != nil {
+					App.Event.Emit("completion-select", idx)
+				}
 			}
 		})
 
@@ -260,7 +260,9 @@ func StartListening(ctx context.Context) {
 				}
 
 
-				Runtime.EventsEmit(NvimScreen.ctx, "completion-documentation", doc)
+				if App != nil {
+					App.Event.Emit("completion-documentation", doc)
+				}
 			}
 		})
 
@@ -332,7 +334,9 @@ func StartListening(ctx context.Context) {
 	case <-nvimExitChan:
 		// Neovim exited, quit the app
 		utils.Log("Detected Neovim exit, shutting down application")
-		Runtime.Quit(ctx)
+		if App != nil {
+			App.Quit()
+		}
 	case <-ctx.Done():
 		// Parent context was cancelled
 		nvimCancel()

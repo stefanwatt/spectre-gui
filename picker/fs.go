@@ -5,9 +5,10 @@ import (
 	"nvim-gui/utils"
 	"time"
 
+	"nvim-gui/neovim"
+
 	"github.com/bep/debounce"
 	"github.com/fsnotify/fsnotify"
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 var debounced_files_changed = debounce.New(100 * time.Millisecond)
@@ -22,7 +23,9 @@ func OnWrite(event fsnotify.Event, ctx context.Context) {
 	debounced_files_changed(func() {
 		utils.Log("on_write")
 		utils.Log(write_event)
-		Runtime.EventsEmit(ctx, write_event)
+		if neovim.App != nil {
+			neovim.App.Event.Emit(write_event, struct{}{})
+		}
 	})
 }
 
@@ -34,7 +37,9 @@ func OnDelete(event fsnotify.Event, ctx context.Context) {
 
 	utils.Log("on_delete")
 	debounced_files_changed(func() {
-		Runtime.EventsEmit(ctx, DELETE)
+		if neovim.App != nil {
+			neovim.App.Event.Emit(DELETE, struct{}{})
+		}
 	})
 }
 
@@ -46,7 +51,9 @@ func has_flag(flag string, flags []string) bool {
 }
 
 func spawn_toast(ctx context.Context, level string, message string) {
-	Runtime.EventsEmit(ctx, TOAST, level, message)
+	if neovim.App != nil {
+		neovim.App.Event.Emit(TOAST, []interface{}{level, message})
+	}
 }
 
 func map_pagination(rg_lines []string) Pagination {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ReadLocalImage } from '$lib/wailsjs/go/main/App';
+	import { ReadLocalImage } from '@bindings/nvim-gui/app.js';
 
 	let { url, altText, class: className = '' }: { url: string; altText: string; class?: string } = $props();
 

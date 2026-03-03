@@ -1,11 +1,14 @@
 package picker
 
 import (
+	"context"
 	"fmt"
 	"nvim-gui/neovim"
 	"nvim-gui/utils"
 	"strconv"
 	"strings"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 var symbolIcons = map[string]string{
@@ -47,6 +50,10 @@ func NewSymbolsPicker() *LspSymbolsPicker {
 		Filepath: "",
 		Symbols:  []*neovim.LspSymbolItem{},
 	}
+}
+
+func (sp *LspSymbolsPicker) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	return nil
 }
 
 func (sp *LspSymbolsPicker) FindBufferSymbols(query string) []*PickerResult {

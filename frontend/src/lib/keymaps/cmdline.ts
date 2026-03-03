@@ -1,4 +1,4 @@
-import { SubstituteJump } from '$lib/wailsjs/go/main/App';
+import { SubstituteJump } from '@bindings/nvim-gui/app.js';
 
 export const keymaps: App.Keymap[] = [
   {

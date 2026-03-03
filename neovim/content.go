@@ -29,7 +29,7 @@ type TableRowOpts struct {
 }
 
 type ImageMeta struct {
-	Line    int    // 0-indexed buffer line
+	Line    int // 0-indexed buffer line
 	URL     string
 	AltText string
 }
@@ -56,7 +56,6 @@ type ColRange struct {
 type CodeBlockOpts struct {
 	Position string `json:"position"` // "first", "middle", "last"
 }
-
 
 type MarkdownOpts struct {
 	QuoteLevel   int            `json:"quoteLevel"`
@@ -125,7 +124,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 		// TODO: handle folds — folded lines cause line numbers to jump,
 		// topline+row won't be correct when folds are present.
 		lineNumber := grid.TopLine + row + 1 // 1-indexed buffer line
-		bufferLine := grid.TopLine + row      // 0-indexed buffer line
+		bufferLine := grid.TopLine + row     // 0-indexed buffer line
 		rowCells := grid.Cells[row]
 
 		if grid.DirtyRows[row] {
@@ -215,7 +214,6 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr int, cursorLine
 	}
 	return contentRows
 }
-
 
 func applyInlineCodeClass(tokens []*Token, ranges []ColRange) {
 	col := 0

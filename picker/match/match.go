@@ -20,7 +20,7 @@ type MatchesOfFile struct {
 }
 
 type Match struct {
-	Id              string 
+	Id              string
 	FileName        string
 	AbsolutePath    string
 	MatchedLine     string

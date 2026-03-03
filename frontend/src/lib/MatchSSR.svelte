@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { GetReplacementText } from '$lib/wailsjs/go/main/App';
-	import { OpenFile } from '$lib/wailsjs/go/picker/Picker';
+	import { GetReplacementText } from '@bindings/nvim-gui/app.js';
+	import { OpenFile } from '@bindings/nvim-gui/picker/picker.js';
 
 	let {
 		match,
@@ -17,10 +17,7 @@
 	} = $props();
 
 	async function openFile(match: App.RipgrepMatch) {
-		const runtime = await import('$lib/wailsjs/runtime/runtime');
-		if (runtime) {
-			OpenFile(match.AbsolutePath, match.Row, match.Col);
-		}
+		OpenFile(match.AbsolutePath, match.Row, match.Col);
 	}
 	let button: HTMLButtonElement;
 

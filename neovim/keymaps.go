@@ -8,7 +8,6 @@ import (
 	"nvim-gui/utils"
 
 	"github.com/neovim/go-client/nvim"
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type Keymaps struct {
@@ -55,23 +54,33 @@ func RegisterKeymap(event string, lhs string, cb func(v *nvim.Nvim, data interfa
 
 func SetupKeymaps() {
 	RegisterKeymap("live-grep", keymaps.GuiLiveGrep, func(_ *nvim.Nvim, data interface{}) {
-		Runtime.EventsEmit(NvimScreen.ctx, "show_live_grep")
+		if App != nil {
+			App.Event.Emit("show_live_grep", struct{}{})
+		}
 	})
 
 	RegisterKeymap("find-files", keymaps.GuiFindFiles, func(_ *nvim.Nvim, data interface{}) {
-		Runtime.EventsEmit(NvimScreen.ctx, "show-find-files")
+		if App != nil {
+			App.Event.Emit("show-find-files", struct{}{})
+		}
 	})
 
 	RegisterKeymap("find-references", keymaps.GuiFindReferences, func(_ *nvim.Nvim, data interface{}) {
-		Runtime.EventsEmit(NvimScreen.ctx, "show-find-references")
+		if App != nil {
+			App.Event.Emit("show-find-references", struct{}{})
+		}
 	})
 
 	RegisterKeymap("find-buffer-symbols", keymaps.GuiFindBufferSymbols, func(_ *nvim.Nvim, data interface{}) {
-		Runtime.EventsEmit(NvimScreen.ctx, "show-find-buffer-symbols")
+		if App != nil {
+			App.Event.Emit("show-find-buffer-symbols", struct{}{})
+		}
 	})
 
 	RegisterKeymap("find-help", keymaps.GuiFindHelp, func(_ *nvim.Nvim, data interface{}) {
-		Runtime.EventsEmit(NvimScreen.ctx, "show-find-help")
+		if App != nil {
+			App.Event.Emit("show-find-help", struct{}{})
+		}
 	})
 }
 

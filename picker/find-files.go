@@ -9,7 +9,6 @@ import (
 	"strings"
 )
 
-
 func FindFiles(dir, query string) ([]*PickerResult, error) {
 	git := exec.Command("git", "-C", dir, "ls-files")
 	fzf := exec.Command("fzf", "--filter="+query)

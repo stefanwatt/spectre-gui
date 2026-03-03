@@ -45,4 +45,3 @@ func (rgba *RGBA) String() string {
 	}
 	return fmt.Sprintf("rgba(%d, %d, %d, %f)", rgba.R, rgba.G, rgba.B, rgba.A)
 }
-

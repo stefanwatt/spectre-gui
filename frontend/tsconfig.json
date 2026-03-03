@@ -14,6 +14,9 @@
 		"paths": {
 			"$lib/*": [
 				"src/lib/*"
+			],
+			"@bindings/*": [
+				"bindings/*"
 			]
 		}
 	},
