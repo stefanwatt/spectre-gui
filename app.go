@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"mime"
 	"os"
 	"path/filepath"
@@ -39,6 +40,21 @@ func (a *App) OnResize(width, height int) {
 	if neovim.NvimScreen != nil {
 		neovim.NvimScreen.Resize(cols, rows)
 	}
+}
+
+// OnExternalWindowResize handles resize events from external OS windows
+func (a *App) OnExternalWindowResize(gridId, width, height int) {
+	rows, cols := neovim.CalculateGridSize(width, height)
+	if neovim.NvimInstance != nil {
+		neovim.NvimInstance.TryResizeUIGrid(gridId, cols, rows)
+	}
+}
+
+// OnWindowFocus is called from the frontend when a webview receives focus
+func (a *App) OnWindowFocus(winId int) {
+	utils.Log(fmt.Sprintf("OnWindowFocus winId=%d",winId))
+	neovim.NvimScreen.ActiveWindow = winId
+	neovim.SetCurrentWindow(winId)
 }
 
 // RequestState triggers emission of current state to frontend

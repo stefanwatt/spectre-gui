@@ -30,13 +30,15 @@ func (s *Screen) CalculateGridLayout() {
 	rowPositions := make(map[int]bool)
 	colPositions := make(map[int]bool)
 
+	s.windowsMu.RLock()
 	for _, window := range s.Windows {
-		if window.IsFloating() {
+		if window.IsFloating() || window.IsExternal() {
 			continue
 		}
 		rowPositions[window.StartRow] = true
 		colPositions[window.StartCol] = true
 	}
+	s.windowsMu.RUnlock()
 
 	// Step 2: Convert to sorted slices
 	rows := make([]int, 0, len(rowPositions))
@@ -65,8 +67,9 @@ func (s *Screen) CalculateGridLayout() {
 
 	var windows []*Window
 	var floatingWindows []*Window
+	s.windowsMu.RLock()
 	for winId, window := range s.Windows {
-		if window.Hidden || window.IsFloating() {
+		if window.Hidden || window.IsFloating() || window.IsExternal() {
 			floatingWindows = append(floatingWindows, window)
 			continue
 		}
@@ -114,6 +117,7 @@ func (s *Screen) CalculateGridLayout() {
 
 		windowAPIs = append(windowAPIs, w)
 	}
+	s.windowsMu.RUnlock()
 	sort.SliceStable(windowAPIs, func(i, j int) bool { return windowAPIs[i].ID < windowAPIs[j].ID })
 
 	windowAPIsChanged := false

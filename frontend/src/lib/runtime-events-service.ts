@@ -7,12 +7,50 @@ import {
   state as liveGrepState
 } from '$lib/picker/live-grep-results/results.service.svelte';
 
+let myWinId: number | null = null;
+let myGridId: number | null = null;
+
+export function setWindowContext(winId: number | null, gridId: number | null) {
+  myWinId = winId;
+  myGridId = gridId;
+}
+
+export function getWindowContext() {
+  return { winId: myWinId, gridId: myGridId };
+}
 
 export async function init() {
 }
 export function startListening() {
   window.addEventListener('resize', function () {
-    App.OnResize(window.innerWidth, window.innerHeight);
+    if (myWinId !== null && myGridId !== null) {
+      App.OnExternalWindowResize(myGridId, window.innerWidth, window.innerHeight);
+    } else {
+      App.OnResize(window.innerWidth, window.innerHeight);
+    }
+  });
+
+  // When this webview receives focus, tell Neovim to switch to the corresponding window
+  let lastFocusedWinId: number | null = null;
+  window.addEventListener('focus', function () {
+    let winId: number | null = null;
+    if (myWinId !== null) {
+      // External window: always focus this specific window
+      winId = myWinId;
+    } else {
+      // Main window: focus the first window in layout (non-external windows)
+      const firstWin = layout.windows[0];
+      if (firstWin) {
+        winId = firstWin.id;
+      }
+    }
+    if (winId !== null && winId !== lastFocusedWinId) {
+      lastFocusedWinId = winId;
+      App.OnWindowFocus(winId);
+    }
+  });
+  window.addEventListener('blur', function () {
+    lastFocusedWinId = null;
   });
 
   // Request current state from backend (for late-connecting clients like tests)
@@ -89,6 +127,8 @@ export function startListening() {
   Events.On('content-updated', (ev) => {
     const data: any = ev.data;
     const winId = data.winId;
+    // External windows only process their own content
+    if (myWinId !== null && winId !== myWinId) return;
     const updatedContent = data.updatedContent;
     const existing = windowContentRowMap.get(winId);
     if (existing && existing.length === updatedContent.length) {

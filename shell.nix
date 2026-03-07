@@ -11,9 +11,9 @@ pkgs.mkShell {
     export GIO_MODULE_DIR="${glib-networking}/lib/gio/modules/";
     export PLAYWRIGHT_BROWSERS_PATH="${playwright-driver.browsers}";
     export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1;
-    wails="/home/stefan/go/bin/wails3"
+    export wails="/home/stefan/go/bin/wails3"
     export PATH="/home/stefan/go/bin/:$PATH"
-    alias wdev="$wails dev -tags webkit2_41"
+    alias wdev="/home/stefan/go/bin/wails3 dev"
     alias wbuild="$wails build -tags webkit2_41"
     echo "Wails environment ready! Use 'wdev' to start the dev server and 'wbuild' to compile."
   '';

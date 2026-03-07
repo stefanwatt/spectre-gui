@@ -321,6 +321,11 @@ func StartListening(ctx context.Context) {
 			utils.Log(fmt.Sprintf("Error loading completion Lua: %v", err))
 		}
 
+		// Override split commands to create external windows (OS-level splits)
+		if err := NvimInstance.ExecLua(externalSplitsLua, nil); err != nil {
+			utils.Log(fmt.Sprintf("Error loading external splits Lua: %v", err))
+		}
+
 		if err := NvimInstance.Serve(); err != nil {
 			utils.Log(fmt.Sprintf("Neovim process terminated: %v\n%s", err, debug.Stack()))
 		}

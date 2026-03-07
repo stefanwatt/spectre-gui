@@ -128,6 +128,7 @@ func main() {
 
 	// Pass app to neovim package for event emission
 	neovim.SetApp(app)
+	neovim.InitOSWindowManager(app)
 
 	// Create window
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
@@ -137,6 +138,7 @@ func main() {
 		BackgroundColour: application.NewRGB(39, 42, 56),
 		URL:              "/",
 	})
+
 
 	// Run application
 	err = app.Run()

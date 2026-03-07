@@ -18,10 +18,24 @@ export function GetReplacementText(matchedLine: string, searchTerm: string, repl
 }
 
 /**
+ * OnExternalWindowResize handles resize events from external OS windows
+ */
+export function OnExternalWindowResize(gridId: number, width: number, height: number): $CancellablePromise<void> {
+    return $Call.ByID(2533106439, gridId, width, height);
+}
+
+/**
  * OnResize handles window resize events from the frontend
  */
 export function OnResize(width: number, height: number): $CancellablePromise<void> {
     return $Call.ByID(1493062928, width, height);
+}
+
+/**
+ * OnWindowFocus is called from the frontend when a webview receives focus
+ */
+export function OnWindowFocus(winId: number): $CancellablePromise<void> {
+    return $Call.ByID(564960524, winId);
 }
 
 export function Paste(text: string): $CancellablePromise<void> {

@@ -39,10 +39,7 @@ func TestOptimizeRow_MergesSameHl(t *testing.T) {
 		makeCell("b", 1, map[string]bool{"fg-1": true}),
 		makeCell("c", 1, map[string]bool{"fg-1": true}),
 	}
-	cursor := struct {
-		Row int
-		Col int
-	}{Row: -1, Col: -1} // cursor not on this row
+	cursor := Cursor{Row: -1, Col: -1} // cursor not on this row
 
 	result := s.optimizeRow(cells, 0, cursor)
 
@@ -61,10 +58,7 @@ func TestOptimizeRow_SplitsDifferentHl(t *testing.T) {
 		makeCell("b", 2, map[string]bool{"fg-2": true}),
 		makeCell("c", 1, map[string]bool{"fg-1": true}),
 	}
-	cursor := struct {
-		Row int
-		Col int
-	}{Row: -1, Col: -1}
+	cursor := Cursor{Row: -1, Col: -1}
 
 	result := s.optimizeRow(cells, 0, cursor)
 
@@ -84,10 +78,7 @@ func TestOptimizeRow_CursorInjection(t *testing.T) {
 		makeCell("b", 1, map[string]bool{"fg-1": true}),
 		makeCell("c", 1, map[string]bool{"fg-1": true}),
 	}
-	cursor := struct {
-		Row int
-		Col int
-	}{Row: 0, Col: 1} // cursor on cell "b"
+	cursor := Cursor{Row: 0, Col: 1} // cursor on cell "b"
 
 	result := s.optimizeRow(cells, 0, cursor)
 
@@ -121,10 +112,7 @@ func TestOptimizeRow_CursorSplitsToken(t *testing.T) {
 		makeCell("c", 1, map[string]bool{"fg-1": true}),
 		makeCell("d", 1, map[string]bool{"fg-1": true}),
 	}
-	cursor := struct {
-		Row int
-		Col int
-	}{Row: 0, Col: 2} // cursor on "c"
+	cursor := Cursor{Row: 0, Col: 2} // cursor on "c"
 
 	result := s.optimizeRow(cells, 0, cursor)
 
@@ -154,10 +142,7 @@ func TestOptimizeRow_TrailingWhitespace(t *testing.T) {
 		makeCell(" ", 1, map[string]bool{"fg-1": true}),
 		makeCell(" ", 1, map[string]bool{"fg-1": true}),
 	}
-	cursor := struct {
-		Row int
-		Col int
-	}{Row: -1, Col: -1}
+	cursor := Cursor{Row: -1, Col: -1}
 
 	result := s.optimizeRow(cells, 0, cursor)
 
@@ -171,10 +156,7 @@ func TestOptimizeRow_TrailingWhitespace(t *testing.T) {
 
 func TestOptimizeRow_EmptyRow(t *testing.T) {
 	s := &Screen{}
-	cursor := struct {
-		Row int
-		Col int
-	}{Row: -1, Col: -1}
+	cursor := Cursor{Row: -1, Col: -1}
 
 	result := s.optimizeRow([]*Cell{}, 0, cursor)
 

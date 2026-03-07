@@ -11,10 +11,7 @@ type Grid struct {
 	Width  int
 	Height int
 	Cells  [][]*Cell
-	Cursor struct {
-		Row int
-		Col int
-	}
+	Cursor Cursor
 	TopLine       int // first visible buffer line (0-indexed), from win_viewport
 	DirtyRows     []bool
 	OptimizedRows [][]*Cell

@@ -96,6 +96,10 @@ func (w *Window) IsFloating() bool {
 	return w.Type == "floating"
 }
 
+func (w *Window) IsExternal() bool {
+	return w.Type == "external"
+}
+
 func extractWindowId(window nvim.Window) (int, error) {
 	return strconv.Atoi(strings.Split(window.String(), ":")[1])
 }

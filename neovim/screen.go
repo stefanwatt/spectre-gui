@@ -215,6 +215,11 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 				gridArgs := arg.([]interface{})
 				s.winFloatPos(gridArgs)
 			}
+		case "win_external_pos":
+			for _, arg := range args {
+				extArgs := arg.([]interface{})
+				s.winExternalPos(extArgs)
+			}
 		case "win_close":
 			utils.Log("redraw win_close args:", args)
 			utils.Log("redraw win_close s.Grids", s.Grids)
@@ -759,6 +764,9 @@ func (s *Screen) winClose(args []interface{}) {
 					s.emitEvent("floating_window_closed", winId)
 				}
 			}
+			if exists && win.IsExternal() && osWindowMgr != nil {
+				osWindowMgr.CloseWindow(winId)
+			}
 			delete(s.GridToWindow, grid)
 			delete(s.Windows, winId)
 			utils.Log(fmt.Sprintf("winClose Window %d closed (grid %d)", winId, gridId))
@@ -943,6 +951,45 @@ func (s *Screen) winFloatPos(args []interface{}) {
 
 	utils.Log(fmt.Sprintf("Floating window %d anchored at grid %d (%f,%f) with z-index %d",
 		winId, anchorGrid, anchorRow, anchorCol, zIndex))
+}
+
+func (s *Screen) winExternalPos(args []interface{}) {
+	if len(args) < 2 {
+		return
+	}
+
+	gridId := utils.ReflectToInt(args[0])
+	nwindow := args[1].(nvim.Window)
+	winId, _ := strconv.Atoi(strings.Split(nwindow.String(), ":")[1])
+
+	utils.Log(fmt.Sprintf("winExternalPos gridId=%d winId=%d", gridId, winId))
+
+	s.windowsMu.Lock()
+	window, exists := s.Windows[winId]
+	if !exists {
+		window = NewWindow(winId, s.Grids[gridId])
+		s.Windows[winId] = window
+		s.GridToWindow[gridId] = winId
+	}
+	window.Type = "external"
+	window.Hidden = false
+	window.Dirty = true
+	s.windowsMu.Unlock()
+
+	if _, exists := s.Grids[gridId]; !exists {
+		s.gridResize(gridId, 80, 24)
+	}
+
+	if winId != 0 {
+		buffer, err := getWindowBuffer(winId)
+		if err == nil && buffer != nil {
+			window.Buffer = buffer
+		}
+	}
+
+	if osWindowMgr != nil {
+		osWindowMgr.CreateWindow(winId, gridId)
+	}
 }
 
 func (s *Screen) markAllWindowsDirty() {

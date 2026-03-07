@@ -398,10 +398,7 @@ func buildTableRowOpts(meta *TableMeta, bufferLine int, tokens []*Token) *TableR
 	}
 }
 
-func (s *Screen) optimizeRow(rowCells []*Cell, currentRow int, cursor struct {
-	Row int
-	Col int
-}) []*Cell {
+func (s *Screen) optimizeRow(rowCells []*Cell, currentRow int, cursor Cursor) []*Cell {
 	optimizedRow := make([]*Cell, 0)
 
 	if len(rowCells) == 0 {
