@@ -1,0 +1,179 @@
+package neovim
+
+import (
+	"fmt"
+	"nvim-gui/utils"
+	"sync"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
+)
+
+var osWindowMgr *OSWindowManager
+
+const (
+	floatCharWidth  = 12
+	floatLineHeight = 28
+)
+
+type OSWindowManager struct {
+	app           *application.App
+	windows       map[int]*application.WebviewWindow // winId → Wails window
+	floatWindows  map[int]*application.WebviewWindow // winId → Wails float window
+	initialWindow *application.WebviewWindow         // the first Wails window created in main.go
+	initialUsed   bool                               // whether the initial window has been reused
+	mu            sync.Mutex
+}
+
+func InitOSWindowManager(app *application.App) {
+	osWindowMgr = &OSWindowManager{
+		app:          app,
+		windows:      make(map[int]*application.WebviewWindow),
+		floatWindows: make(map[int]*application.WebviewWindow),
+	}
+}
+
+// SetInitialWindow stores the initial Wails window so it can be reused for the first neovim window
+func SetInitialWindow(win *application.WebviewWindow) {
+	if osWindowMgr == nil {
+		return
+	}
+	osWindowMgr.mu.Lock()
+	defer osWindowMgr.mu.Unlock()
+	osWindowMgr.initialWindow = win
+}
+
+func (m *OSWindowManager) CreateWindow(winId, gridId int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, exists := m.windows[winId]; exists {
+		return
+	}
+
+	utils.Log(fmt.Sprintf("OSWindowManager: creating OS window for winId=%d gridId=%d", winId, gridId))
+
+	url := fmt.Sprintf("/window/%d?gridId=%d", winId, gridId)
+
+	// Reuse the initial window for the first neovim window
+	if !m.initialUsed && m.initialWindow != nil {
+		m.initialUsed = true
+		m.initialWindow.SetURL(url)
+		m.windows[winId] = m.initialWindow
+		utils.Log(fmt.Sprintf("OSWindowManager: reused initial window for winId=%d", winId))
+		return
+	}
+
+	window := m.app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:            fmt.Sprintf("nvim-gui [%d]", winId),
+		Width:            800,
+		Height:           600,
+		BackgroundColour: application.NewRGB(39, 42, 56),
+		URL:              url,
+	})
+	m.windows[winId] = window
+	window.Show()
+}
+
+// SetCurrentWindow sets the given Neovim window as the active window.
+// Called from the frontend when a webview receives focus.
+func SetCurrentWindow(winId int) {
+	if NvimInstance == nil {
+		return
+	}
+
+	utils.Log(fmt.Sprintf("SetCurrentWindow: focusing Neovim window %d", winId))
+
+	nvimWin, err := getWindow(winId)
+	if err != nil {
+		utils.Log(fmt.Sprintf("SetCurrentWindow: failed to get window %d: %v", winId, err))
+		return
+	}
+
+	err = NvimInstance.SetCurrentWindow(*nvimWin)
+	if err != nil {
+		utils.Log(fmt.Sprintf("SetCurrentWindow: failed to set current window %d: %v", winId, err))
+	}
+}
+
+func (m *OSWindowManager) CloseWindow(winId int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	window, exists := m.windows[winId]
+	if !exists {
+		return
+	}
+
+	utils.Log(fmt.Sprintf("OSWindowManager: closing OS window for winId=%d", winId))
+	delete(m.windows, winId)
+
+	// If this is the last window, quit the app
+	if len(m.windows) == 0 {
+		utils.Log("OSWindowManager: last window closed, quitting app")
+		m.app.Quit()
+		return
+	}
+
+	window.Close()
+}
+
+func (m *OSWindowManager) WindowCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.windows)
+}
+
+func (m *OSWindowManager) CreateFloatWindow(winId, gridId, gridWidth, gridHeight int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, exists := m.floatWindows[winId]; exists {
+		return
+	}
+
+	utils.Log(fmt.Sprintf("OSWindowManager: creating float OS window for winId=%d gridId=%d (%dx%d)", winId, gridId, gridWidth, gridHeight))
+
+	url := fmt.Sprintf("/float/%d?gridId=%d", winId, gridId)
+	pixelWidth := gridWidth * floatCharWidth
+	pixelHeight := gridHeight * floatLineHeight
+
+
+	// window1 := m.app.Window.NewWithOptions(application.WebviewWindowOptions{
+	// 	Title:            fmt.Sprintf("nvim-gui [%d]", winId),
+	// 	Width:            800,
+	// 	Height:           600,
+	// 	BackgroundColour: application.NewRGB(39, 42, 56),
+	// 	URL:              url,
+	// })
+
+	window := m.app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:            fmt.Sprintf("nvim-gui-float"),
+		Width:            pixelWidth,
+		Height:           pixelHeight,
+		BackgroundColour: application.NewRGB(39, 42, 56),
+		URL:              url,
+	})
+	m.floatWindows[winId] = window
+	window.Show()
+}
+
+func (m *OSWindowManager) CloseFloatWindow(winId int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	window, exists := m.floatWindows[winId]
+	if !exists {
+		return
+	}
+
+	utils.Log(fmt.Sprintf("OSWindowManager: closing float OS window for winId=%d", winId))
+	delete(m.floatWindows, winId)
+	window.Close()
+}
+
+func (m *OSWindowManager) IsFloatWindow(winId int) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	_, exists := m.floatWindows[winId]
+	return exists
+}

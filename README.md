@@ -63,6 +63,21 @@ UI is not just about looking fancy though.
 Rendering floating windows on a terminal grid is a bit ridiculous. 
 If you want a border around a 3x3 window, well then now your window is 4x4.
 This project strives to render any floating windows via custom HTML rather than rendering the grid.
+
+Floating windows anchored to the global editor (e.g. hover docs, signature help) are spawned as 
+separate frameless OS windows with the title/name `nvim-gui-float`. To make your window manager 
+treat them as floating, add the appropriate rule:
+
+```
+# Hyprland
+windowrulev2 = float, title:^(nvim-gui-float)$
+
+# Sway
+for_window [title="nvim-gui-float"] floating enable
+
+# i3
+for_window [title="nvim-gui-float"] floating enable
+```
 #### Tiled
 I love my tiling window manager and I want it to be in charge of my window management. 
 I don't want to introduce another set of keymaps to manage my neovim windows.

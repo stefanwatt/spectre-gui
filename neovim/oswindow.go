@@ -10,9 +10,15 @@ import (
 
 var osWindowMgr *OSWindowManager
 
+const (
+	floatCharWidth  = 12
+	floatLineHeight = 28
+)
+
 type OSWindowManager struct {
 	app           *application.App
 	windows       map[int]*application.WebviewWindow // winId → Wails window
+	floatWindows  map[int]*application.WebviewWindow // winId → Wails float window
 	initialWindow *application.WebviewWindow         // the first Wails window created in main.go
 	initialUsed   bool                               // whether the initial window has been reused
 	mu            sync.Mutex
@@ -20,8 +26,9 @@ type OSWindowManager struct {
 
 func InitOSWindowManager(app *application.App) {
 	osWindowMgr = &OSWindowManager{
-		app:     app,
-		windows: make(map[int]*application.WebviewWindow),
+		app:          app,
+		windows:      make(map[int]*application.WebviewWindow),
+		floatWindows: make(map[int]*application.WebviewWindow),
 	}
 }
 
@@ -114,4 +121,61 @@ func (m *OSWindowManager) WindowCount() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return len(m.windows)
+}
+
+func (m *OSWindowManager) CreateFloatWindow(winId, gridId, gridWidth, gridHeight int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, exists := m.floatWindows[winId]; exists {
+		return
+	}
+
+	utils.Log(fmt.Sprintf("OSWindowManager: creating float OS window for winId=%d gridId=%d (%dx%d)", winId, gridId, gridWidth, gridHeight))
+
+	url := fmt.Sprintf("/float/%d?gridId=%d", winId, gridId)
+	pixelWidth := gridWidth * floatCharWidth
+	pixelHeight := gridHeight * floatLineHeight
+
+
+	// window1 := m.app.Window.NewWithOptions(application.WebviewWindowOptions{
+	// 	Title:            fmt.Sprintf("nvim-gui [%d]", winId),
+	// 	Width:            800,
+	// 	Height:           600,
+	// 	BackgroundColour: application.NewRGB(39, 42, 56),
+	// 	URL:              url,
+	// })
+
+	window := m.app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:            fmt.Sprintf("nvim-gui-float"),
+		X:0,
+		Y:0,
+		Width:            pixelWidth,
+		Height:           pixelHeight,
+		BackgroundColour: application.NewRGB(39, 42, 56),
+		URL:              url,
+	})
+	m.floatWindows[winId] = window
+	window.Show()
+}
+
+func (m *OSWindowManager) CloseFloatWindow(winId int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	window, exists := m.floatWindows[winId]
+	if !exists {
+		return
+	}
+
+	utils.Log(fmt.Sprintf("OSWindowManager: closing float OS window for winId=%d", winId))
+	delete(m.floatWindows, winId)
+	window.Close()
+}
+
+func (m *OSWindowManager) IsFloatWindow(winId int) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	_, exists := m.floatWindows[winId]
+	return exists
 }

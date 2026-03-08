@@ -717,6 +717,9 @@ func (s *Screen) winHide(args []interface{}) {
 	}
 	s.windowsMu.Unlock()
 	utils.Log(fmt.Sprintf("winHide hiding window with id=%d, s.Windows:", winId), s.Windows)
+	if exists && osWindowMgr != nil && osWindowMgr.IsFloatWindow(winId) {
+		osWindowMgr.CloseFloatWindow(winId)
+	}
 	s.emitEvent("hide-window", winId)
 }
 
@@ -743,12 +746,14 @@ func (s *Screen) winClose(args []interface{}) {
 
 	gridId := utils.ReflectToInt(args[0])
 	utils.Log(fmt.Sprintf("winClose closing gridId:%d", gridId))
-	s.windowsMu.RLock()
+	s.windowsMu.Lock()
 	for grid, winId := range s.GridToWindow {
 		if grid == gridId {
 			win, exists := s.Windows[winId]
 			if exists && win.IsFloating() {
-				if win.ZIndex == 69420 {
+				if osWindowMgr != nil && osWindowMgr.IsFloatWindow(winId) {
+					osWindowMgr.CloseFloatWindow(winId)
+				} else if win.ZIndex == 69420 {
 					s.emitEvent("preview-window-closed", winId)
 				} else {
 					s.emitEvent("floating_window_closed", winId)
@@ -765,7 +770,7 @@ func (s *Screen) winClose(args []interface{}) {
 			break
 		}
 	}
-	s.windowsMu.RUnlock()
+	s.windowsMu.Unlock()
 }
 
 func (s *Screen) handleCmdlineShow(args []interface{}) {
@@ -928,6 +933,11 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	// Update grid to window mapping
 	s.GridToWindow[gridId] = winId
 
+	// Floating windows anchored to the global grid should be separate OS windows
+	if anchorGrid == 1 && osWindowMgr != nil {
+		osWindowMgr.CreateFloatWindow(winId, gridId, window.Width, window.Height)
+	}
+
 	utils.Log(fmt.Sprintf("Floating window %d anchored at grid %d (%f,%f) with z-index %d",
 		winId, anchorGrid, anchorRow, anchorCol, zIndex))
 }
@@ -1004,7 +1014,9 @@ func (s *Screen) render() {
 		window.Dirty = false
 
 		grid := window.Grid
-		if !window.IsFloating() || window.ZIndex == 69420 {
+		isOSFloat := osWindowMgr != nil && osWindowMgr.IsFloatWindow(winId)
+
+		if !window.IsFloating() || window.ZIndex == 69420 || isOSFloat {
 			filetype := ""
 			bufNr := 0
 			if window.Buffer != nil {
@@ -1080,6 +1092,10 @@ func (s *Screen) EmitFloatingWindows() {
 		if window.Buffer != nil && (*window.Buffer).Filetype == "blink-cmp-menu" {
 			continue
 		}
+		// Skip OS float windows -- rendered in their own OS window
+		if osWindowMgr != nil && osWindowMgr.IsFloatWindow(winId) {
+			continue
+		}
 		if window.ZIndex == 69420 {
 			if window.Dirty {
 				previewWindow := s.mapWindowInfo(window, winId)
@@ -1142,13 +1158,6 @@ func (s *Screen) mapWindowInfo(window *Window, winId int) map[string]interface{}
 		// Floating windows anchored to the global grid (1) or an unknown grid
 		// should display on the active window
 		anchorWindow = s.ActiveWindow
-	}
-
-	if window.AnchorGrid == 1{
-		//HACK: anchor = editor
-		// we need to somehow handle this better! just putting it on the first window is not a great fix
-		// not sure if it can easily be a floating os window
-		anchorWindow = 1000
 	}
 	utils.Log(fmt.Sprintf("mapWindowInfo winId=%d anchorGrid=%d anchorWindow=%d", winId, window.AnchorGrid, anchorWindow))
 	windowInfo := map[string]interface{}{
