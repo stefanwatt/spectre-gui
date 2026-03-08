@@ -1,0 +1,22 @@
+
+goroutine 132 [running]:
+nvim-gui/neovim.assert(0x70?, {0x1790183?, 0x1763c51?})
+        /home/stefan/Projects/nvim-gui/neovim/substitute.go:19 +0x37
+nvim-gui/neovim.getWindowBuffer(0x3ed)
+        /home/stefan/Projects/nvim-gui/neovim/buffer.go:53 +0x1dd
+nvim-gui/neovim.(*Screen).winFloatPos(0xc000120000, {0xc000176420, 0xb, 0xb})
+        /home/stefan/Projects/nvim-gui/neovim/screen.go:903 +0x67a
+nvim-gui/neovim.(*Screen).handleRedraw(0xc000120000, {0xc0002e4000?, 0x0?, 0x0?})
+        /home/stefan/Projects/nvim-gui/neovim/screen.go:208 +0x9b0
+nvim-gui/neovim.StartListening.func1.1({0xc0002e4000?, 0x0?, 0x0?})
+        /home/stefan/Projects/nvim-gui/neovim/neovim.go:91 +0x2b
+reflect.Value.call({0x141a440?, 0x1e33e08?, 0x0?}, {0x1766293, 0x9}, {0xc001328df8, 0x1, 0x4aa5a7?})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/reflect/value.go:581 +0x965
+reflect.Value.CallSlice({0x141a440?, 0x1e33e08?, 0x8f?}, {0xc001328df8, 0x1, 0x1})
+        /nix/store/qpblhiv8rdnw45j0ghbbswcckcgsa6i0-go-1.25.6/share/go/src/reflect/value.go:378 +0x92
+github.com/neovim/go-client/msgpack/rpc.(*Endpoint).runNotifications(0xc000138ea0)
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/msgpack/rpc/rpc.go:677 +0x75
+created by github.com/neovim/go-client/msgpack/rpc.(*Endpoint).Serve in goroutine 131
+        /home/stefan/go/pkg/mod/github.com/neovim/go-client@v1.2.2-0.20240514170004-863141a115a5/msgpack/rpc/rpc.go:192 +0xdb
+  ERROR   task: Failed to run task "run": exit status 2
+2026/03/07 23:11:03 ERROR Could not refresh processes due to execution errors

@@ -25,7 +25,6 @@ declare module "@wailsio/runtime" {
             "hide-live-rep": any;
             "hide-window": number;
             "highlight-css": string;
-            "layout-updated": any;
             "mode-changed": string;
             "preview-window": any;
             "preview-window-closed": number;

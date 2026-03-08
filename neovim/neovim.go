@@ -41,14 +41,10 @@ func CalculateGridSize(windowWidth, windowHeight int) (rows, cols int) {
 func StartListening(ctx context.Context) {
 	var err error
 	// Use default grid size for initial creation
-	// The frontend will call OnResize() once mounted
+	// The frontend will call OnWindowResize() once mounted per-window
 	rows, cols := 24, 80
 	utils.Log(fmt.Sprintf("StartListening initializing screen with default rows=%d cols=%d", rows, cols))
 	NvimScreen = NewScreen(ctx, cols, rows, App)
-
-	// Note: resize and request-state handlers are now service methods on App:
-	// - App.OnResize(width, height) called from frontend
-	// - App.RequestState() called from frontend
 
 	nvimCtx, nvimCancel := context.WithCancel(ctx)
 	nvimExitChan := make(chan struct{})
@@ -290,7 +286,18 @@ func StartListening(ctx context.Context) {
 		readCursorLine(NvimScreen)
 
 		// Disable neovim's gutter, wrapping, colorcolumn, and cursorline — we render these ourselves.
+		// Use an autocmd so these stay enforced for all new windows (user config autocmds can re-enable them).
 		NvimInstance.Command("set nonumber norelativenumber signcolumn=no foldcolumn=0 nowrap colorcolumn= nocursorline conceallevel=0")
+		NvimInstance.ExecLua(`
+			vim.api.nvim_create_autocmd({"WinNew", "WinEnter", "BufWinEnter"}, {
+				callback = function()
+					vim.wo.number = false
+					vim.wo.relativenumber = false
+					vim.wo.signcolumn = "no"
+					vim.wo.foldcolumn = "0"
+				end
+			})
+		`, nil)
 
 		// Open test file if env var is set (used by e2e tests)
 		if testFile := os.Getenv("NVIM_GUI_TEST_FILE"); testFile != "" {
@@ -319,11 +326,6 @@ func StartListening(ctx context.Context) {
 		// Set up completion bridge for blink.cmp
 		if err := NvimInstance.ExecLua(completionLua, nil, NvimInstance.ChannelID()); err != nil {
 			utils.Log(fmt.Sprintf("Error loading completion Lua: %v", err))
-		}
-
-		// Override split commands to create external windows (OS-level splits)
-		if err := NvimInstance.ExecLua(externalSplitsLua, nil); err != nil {
-			utils.Log(fmt.Sprintf("Error loading external splits Lua: %v", err))
 		}
 
 		if err := NvimInstance.Serve(); err != nil {

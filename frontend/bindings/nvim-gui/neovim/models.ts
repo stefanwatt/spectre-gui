@@ -5,6 +5,31 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+export class Cursor {
+    "row": number;
+    "col": number;
+
+    /** Creates a new Cursor instance. */
+    constructor($$source: Partial<Cursor> = {}) {
+        if (!("row" in $$source)) {
+            this["row"] = 0;
+        }
+        if (!("col" in $$source)) {
+            this["col"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Cursor instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Cursor {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Cursor($$parsedSource as Partial<Cursor>);
+    }
+}
+
 export class QuickfixEntry {
     "filepath": string;
     "row": number;
@@ -37,3 +62,85 @@ export class QuickfixEntry {
         return new QuickfixEntry($$parsedSource as Partial<QuickfixEntry>);
     }
 }
+
+export class WindowAPI {
+    "id": number;
+    "type": string;
+    "width": number;
+    "height": number;
+    "lineNumbers": boolean;
+    "relativeLineNumbers": boolean;
+    "filetype": string;
+    "filepath": string;
+    "mode": string;
+    "cursor": Cursor | null;
+    "colorColumns": number[];
+    "colorColumnColor": string;
+    "cursorLineColor": string;
+
+    /** Creates a new WindowAPI instance. */
+    constructor($$source: Partial<WindowAPI> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = 0;
+        }
+        if (!("type" in $$source)) {
+            this["type"] = "";
+        }
+        if (!("width" in $$source)) {
+            this["width"] = 0;
+        }
+        if (!("height" in $$source)) {
+            this["height"] = 0;
+        }
+        if (!("lineNumbers" in $$source)) {
+            this["lineNumbers"] = false;
+        }
+        if (!("relativeLineNumbers" in $$source)) {
+            this["relativeLineNumbers"] = false;
+        }
+        if (!("filetype" in $$source)) {
+            this["filetype"] = "";
+        }
+        if (!("filepath" in $$source)) {
+            this["filepath"] = "";
+        }
+        if (!("mode" in $$source)) {
+            this["mode"] = "";
+        }
+        if (!("cursor" in $$source)) {
+            this["cursor"] = null;
+        }
+        if (!("colorColumns" in $$source)) {
+            this["colorColumns"] = [];
+        }
+        if (!("colorColumnColor" in $$source)) {
+            this["colorColumnColor"] = "";
+        }
+        if (!("cursorLineColor" in $$source)) {
+            this["cursorLineColor"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WindowAPI instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WindowAPI {
+        const $$createField9_0 = $$createType1;
+        const $$createField10_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("cursor" in $$parsedSource) {
+            $$parsedSource["cursor"] = $$createField9_0($$parsedSource["cursor"]);
+        }
+        if ("colorColumns" in $$parsedSource) {
+            $$parsedSource["colorColumns"] = $$createField10_0($$parsedSource["colorColumns"]);
+        }
+        return new WindowAPI($$parsedSource as Partial<WindowAPI>);
+    }
+}
+
+// Private type creation functions
+const $$createType0 = Cursor.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = $Create.Array($Create.Any);

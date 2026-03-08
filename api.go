@@ -26,6 +26,11 @@ func (a *App) SendKey(key string, ctrl bool, alt bool, shift bool, keymapMode st
 	}
 }
 
+func (a *App) GetWindow(id int) *neovim.WindowAPI{
+	window := neovim.NvimScreen.Windows[id]
+	return window.ToAPI()
+}	
+
 func (a *App) SubstituteJump() {
 	neovim.HandleSubstituteJump()
 }

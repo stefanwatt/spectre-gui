@@ -11,9 +11,11 @@ import (
 var osWindowMgr *OSWindowManager
 
 type OSWindowManager struct {
-	app     *application.App
-	windows map[int]*application.WebviewWindow // winId → Wails window (external windows only)
-	mu      sync.Mutex
+	app           *application.App
+	windows       map[int]*application.WebviewWindow // winId → Wails window
+	initialWindow *application.WebviewWindow         // the first Wails window created in main.go
+	initialUsed   bool                               // whether the initial window has been reused
+	mu            sync.Mutex
 }
 
 func InitOSWindowManager(app *application.App) {
@@ -21,6 +23,16 @@ func InitOSWindowManager(app *application.App) {
 		app:     app,
 		windows: make(map[int]*application.WebviewWindow),
 	}
+}
+
+// SetInitialWindow stores the initial Wails window so it can be reused for the first neovim window
+func SetInitialWindow(win *application.WebviewWindow) {
+	if osWindowMgr == nil {
+		return
+	}
+	osWindowMgr.mu.Lock()
+	defer osWindowMgr.mu.Unlock()
+	osWindowMgr.initialWindow = win
 }
 
 func (m *OSWindowManager) CreateWindow(winId, gridId int) {
@@ -33,12 +45,23 @@ func (m *OSWindowManager) CreateWindow(winId, gridId int) {
 
 	utils.Log(fmt.Sprintf("OSWindowManager: creating OS window for winId=%d gridId=%d", winId, gridId))
 
+	url := fmt.Sprintf("/window/%d?gridId=%d", winId, gridId)
+
+	// Reuse the initial window for the first neovim window
+	if !m.initialUsed && m.initialWindow != nil {
+		m.initialUsed = true
+		m.initialWindow.SetURL(url)
+		m.windows[winId] = m.initialWindow
+		utils.Log(fmt.Sprintf("OSWindowManager: reused initial window for winId=%d", winId))
+		return
+	}
+
 	window := m.app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            fmt.Sprintf("nvim-gui [%d]", winId),
 		Width:            800,
 		Height:           600,
 		BackgroundColour: application.NewRGB(39, 42, 56),
-		URL:              fmt.Sprintf("/?winId=%d&gridId=%d", winId, gridId),
+		URL:              url,
 	})
 	m.windows[winId] = window
 	window.Show()
@@ -53,7 +76,6 @@ func SetCurrentWindow(winId int) {
 
 	utils.Log(fmt.Sprintf("SetCurrentWindow: focusing Neovim window %d", winId))
 
-	
 	nvimWin, err := getWindow(winId)
 	if err != nil {
 		utils.Log(fmt.Sprintf("SetCurrentWindow: failed to get window %d: %v", winId, err))
@@ -70,9 +92,26 @@ func (m *OSWindowManager) CloseWindow(winId int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if window, exists := m.windows[winId]; exists {
-		utils.Log(fmt.Sprintf("OSWindowManager: closing OS window for winId=%d", winId))
-		window.Close()
-		delete(m.windows, winId)
+	window, exists := m.windows[winId]
+	if !exists {
+		return
 	}
+
+	utils.Log(fmt.Sprintf("OSWindowManager: closing OS window for winId=%d", winId))
+	delete(m.windows, winId)
+
+	// If this is the last window, quit the app
+	if len(m.windows) == 0 {
+		utils.Log("OSWindowManager: last window closed, quitting app")
+		m.app.Quit()
+		return
+	}
+
+	window.Close()
+}
+
+func (m *OSWindowManager) WindowCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.windows)
 }

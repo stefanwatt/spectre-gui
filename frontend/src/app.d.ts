@@ -10,6 +10,7 @@ declare global {
     interface NvimPosition {
       row: number;
       col: number;
+      activeWindowId: number;
     }
 
     interface NvimToken {
@@ -62,23 +63,12 @@ declare global {
       content: NvimToken[][]
     }
 
-    interface NvimLayout {
-      cols: string
-      rows: string
-      activeWindowId: number
-      windows: NvimWindow[]
-    }
-
     type Modifier = 'c' | 's' | 'a'
     interface NvimWindow {
       id: number;
       type: string;
       width: number;
       height: number;
-      colStart: number;
-      colEnd: number;
-      rowStart: number;
-      rowEnd: number;
       lineNumbers: boolean;
       relativeLineNumbers: boolean;
       floatingWindows: FloatingWindow[];

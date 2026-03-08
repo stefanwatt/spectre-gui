@@ -17,18 +17,10 @@ export function GetReplacementText(matchedLine: string, searchTerm: string, repl
     return $Call.ByID(436416066, matchedLine, searchTerm, replacementText, useRegex);
 }
 
-/**
- * OnExternalWindowResize handles resize events from external OS windows
- */
-export function OnExternalWindowResize(gridId: number, width: number, height: number): $CancellablePromise<void> {
-    return $Call.ByID(2533106439, gridId, width, height);
-}
-
-/**
- * OnResize handles window resize events from the frontend
- */
-export function OnResize(width: number, height: number): $CancellablePromise<void> {
-    return $Call.ByID(1493062928, width, height);
+export function GetWindow(id: number): $CancellablePromise<neovim$0.WindowAPI | null> {
+    return $Call.ByID(2939370543, id).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 /**
@@ -36,6 +28,14 @@ export function OnResize(width: number, height: number): $CancellablePromise<voi
  */
 export function OnWindowFocus(winId: number): $CancellablePromise<void> {
     return $Call.ByID(564960524, winId);
+}
+
+/**
+ * OnWindowResize handles resize events from any OS window.
+ * Each window resizes its own grid via TryResizeUIGrid.
+ */
+export function OnWindowResize(gridId: number, width: number, height: number): $CancellablePromise<void> {
+    return $Call.ByID(1892354684, gridId, width, height);
 }
 
 export function Paste(text: string): $CancellablePromise<void> {
@@ -64,3 +64,7 @@ export function SendKey(key: string, ctrl: boolean, alt: boolean, shift: boolean
 export function SubstituteJump(): $CancellablePromise<void> {
     return $Call.ByID(598655329);
 }
+
+// Private type creation functions
+const $$createType0 = neovim$0.WindowAPI.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);

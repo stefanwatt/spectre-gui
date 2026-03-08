@@ -36,12 +36,8 @@ type Window struct {
 type WindowAPI struct {
 	ID                  int     `json:"id"`
 	Type                string  `json:"type"`
-	Width               float64 `json:"width"`  // in percent of screen
-	Height              float64 `json:"height"` // in percent of screen
-	ColStart            int     `json:"colStart"`
-	ColEnd              int     `json:"colEnd"`
-	RowStart            int     `json:"rowStart"`
-	RowEnd              int     `json:"rowEnd"`
+	Width               float64 `json:"width"`
+	Height              float64 `json:"height"`
 	LineNumbers         bool    `json:"lineNumbers"`
 	RelativeLineNumbers bool    `json:"relativeLineNumbers"`
 	Filetype            string  `json:"filetype"`
@@ -53,20 +49,26 @@ type WindowAPI struct {
 	CursorLineColor     string  `json:"cursorLineColor"`
 }
 
-// Equal compares two WindowAPI structs and returns true if they are equal.
-func (w *WindowAPI) Equal(other *WindowAPI) bool {
-	if other == nil {
-		return false
+func (w *Window) ToAPI() *WindowAPI {
+	api := &WindowAPI{
+		ID:                  w.ID,
+		Type:                w.Type,
+		LineNumbers:         w.lineNumbers,
+		RelativeLineNumbers: w.relativeLineNumbers,
+		Mode:                w.Mode,
+		Cursor:              w.Cursor,
 	}
-
-	return w.ID == other.ID &&
-		w.Type == other.Type &&
-		w.Width == other.Width &&
-		w.Height == other.Height &&
-		w.ColStart == other.ColStart &&
-		w.ColEnd == other.ColEnd &&
-		w.RowStart == other.RowStart &&
-		w.RowEnd == other.RowEnd
+	if w.Buffer != nil {
+		buf := *w.Buffer
+		api.Filetype = buf.Filetype
+		api.Filepath = buf.Filepath
+	}
+	api.ColorColumns = NvimScreen.ColorColumns
+	api.ColorColumnColor = NvimScreen.ColorColumnColor
+	if NvimScreen.CursorLineEnabled {
+		api.CursorLineColor = NvimScreen.CursorLineColor
+	}
+	return api
 }
 
 // NewWindow creates a new window with the given ID and grid ID
@@ -94,10 +96,6 @@ func NewWindow(id int, grid *Grid) *Window {
 
 func (w *Window) IsFloating() bool {
 	return w.Type == "floating"
-}
-
-func (w *Window) IsExternal() bool {
-	return w.Type == "external"
 }
 
 func extractWindowId(window nvim.Window) (int, error) {

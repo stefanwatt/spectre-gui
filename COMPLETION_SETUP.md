@@ -4,14 +4,15 @@ This project includes a native Svelte completion menu that integrates with [blin
 
 ## Required Configuration
 
-To use the native completion menu, you need to configure blink.cmp in your Neovim config to disable its built-in UI:
+To use the native completion menu, you need to configure blink.cmp in your Neovim config to disable its built-in UI.
+To preserve functionality when using terminal neovim you can reference the global `nvim_gui` variable:
 
 ```lua
 require('blink.cmp').setup({
   completion = {
-    menu = { enabled = false },
-    ghost_text = { enabled = false },
-    documentation = { auto_show = false },
+    menu = { enabled = not vim.g.nvim_gui },
+    ghost_text = { enabled = not vim.g.nvim_gui },
+    documentation = { auto_show = not vim.g.nvim_gui },
   }
 })
 ```

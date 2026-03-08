@@ -14,7 +14,7 @@ pkgs.mkShell {
     export wails="/home/stefan/go/bin/wails3"
     export PATH="/home/stefan/go/bin/:$PATH"
     alias wdev="/home/stefan/go/bin/wails3 dev"
-    alias wbuild="$wails build -tags webkit2_41"
+    alias wbuild="/home/stefan/go/bin/wails3 build"
     echo "Wails environment ready! Use 'wdev' to start the dev server and 'wbuild' to compile."
   '';
 }

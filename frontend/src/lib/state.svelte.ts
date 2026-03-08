@@ -7,13 +7,7 @@ import { registerKeymap } from './keymaps/keymap-service';
 import { ClosePreview } from '@bindings/nvim-gui/picker/picker.js';
 import { SvelteMap } from 'svelte/reactivity';
 
-export let cursor = $state<App.NvimPosition>({ row: 0, col: 1 });
-export let layout = $state<App.NvimLayout>({
-  cols: "1fr",
-  rows: "1fr",
-  activeWindowId: 0,
-  windows: []
-});
+export let cursor = $state<App.NvimPosition>({ row: 0, col: 1, activeWindowId: 0 });
 export let windowContentRowMap = new SvelteMap<number, App.NvimRow[]>();
 
 

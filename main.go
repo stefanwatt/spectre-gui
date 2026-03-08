@@ -33,7 +33,6 @@ func init() {
 	// Rendering & Layout events
 	application.RegisterEvent[interface{}]("content-updated") // (winId int, tokens []Token)
 	application.RegisterEvent[string]("highlight-css")
-	application.RegisterEvent[interface{}]("layout-updated")   // GridLayout struct
 	application.RegisterEvent[interface{}]("viewport_changed") // map[string]interface{}
 	application.RegisterEvent[interface{}]("window_opened")
 
@@ -130,15 +129,16 @@ func main() {
 	neovim.SetApp(app)
 	neovim.InitOSWindowManager(app)
 
-	// Create window
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
+	// Create the initial window — it will be reused by OSWindowManager
+	// for the first neovim window (navigated to /window/{winId}?gridId={gridId})
+	initialWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "nvim-gui",
 		Width:            1024,
 		Height:           768,
 		BackgroundColour: application.NewRGB(39, 42, 56),
 		URL:              "/",
 	})
-
+	neovim.SetInitialWindow(initialWindow)
 
 	// Run application
 	err = app.Run()

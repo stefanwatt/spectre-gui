@@ -34,16 +34,9 @@ func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOpt
 	return nil
 }
 
-// OnResize handles window resize events from the frontend
-func (a *App) OnResize(width, height int) {
-	rows, cols := neovim.CalculateGridSize(width, height)
-	if neovim.NvimScreen != nil {
-		neovim.NvimScreen.Resize(cols, rows)
-	}
-}
-
-// OnExternalWindowResize handles resize events from external OS windows
-func (a *App) OnExternalWindowResize(gridId, width, height int) {
+// OnWindowResize handles resize events from any OS window.
+// Each window resizes its own grid via TryResizeUIGrid.
+func (a *App) OnWindowResize(gridId, width, height int) {
 	rows, cols := neovim.CalculateGridSize(width, height)
 	if neovim.NvimInstance != nil {
 		neovim.NvimInstance.TryResizeUIGrid(gridId, cols, rows)

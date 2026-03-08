@@ -40,7 +40,6 @@ type Screen struct {
 	PendingRender        bool
 	highlightsMu         sync.RWMutex // Mutex for Highlights map
 	windowsMu            sync.RWMutex // Mutex for Windows map
-	layout               *GridLayout
 	tableMetadata        map[int][]TableMeta // bufNr -> []TableMeta
 	tableMetadataMu      sync.RWMutex
 	imageMetadata        map[int][]ImageMeta // bufNr -> []ImageMeta
@@ -98,7 +97,6 @@ func NewScreen(ctx context.Context, cols int, rows int, app *application.App) *S
 		Mode:               "normal",
 		PendingRender:      false,
 		margins:            make([]int, 4), // Initialize margins slice
-		layout:             NewGridLayout(),
 		tableMetadata:      make(map[int][]TableMeta),
 		imageMetadata:      make(map[int][]ImageMeta),
 		headingMetadata:    make(map[int]map[int]int),
@@ -119,12 +117,6 @@ func handleEvent(update interface{}) (event string, ok bool) {
 	}
 
 	return event, ok
-}
-
-func (s *Screen) Resize(width int, height int) {
-	NvimScreen.Width = width
-	NvimScreen.Height = height
-	NvimInstance.TryResizeUI(width, height)
 }
 
 func (s *Screen) handleRedraw(updates [][]interface{}) {
@@ -726,7 +718,6 @@ func (s *Screen) winHide(args []interface{}) {
 	s.windowsMu.Unlock()
 	utils.Log(fmt.Sprintf("winHide hiding window with id=%d, s.Windows:", winId), s.Windows)
 	s.emitEvent("hide-window", winId)
-	s.updateLayout()
 }
 
 func (s *Screen) closeTrek(windowIds []int) {
@@ -751,7 +742,6 @@ func (s *Screen) winClose(args []interface{}) {
 	}
 
 	gridId := utils.ReflectToInt(args[0])
-	// Find the grid associated with this window
 	utils.Log(fmt.Sprintf("winClose closing gridId:%d", gridId))
 	s.windowsMu.RLock()
 	for grid, winId := range s.GridToWindow {
@@ -764,7 +754,8 @@ func (s *Screen) winClose(args []interface{}) {
 					s.emitEvent("floating_window_closed", winId)
 				}
 			}
-			if exists && win.IsExternal() && osWindowMgr != nil {
+			// Close OS window for all non-floating windows
+			if exists && !win.IsFloating() && osWindowMgr != nil {
 				osWindowMgr.CloseWindow(winId)
 			}
 			delete(s.GridToWindow, grid)
@@ -824,8 +815,6 @@ func (s *Screen) winPos(args []interface{}) {
 	gridId := utils.ReflectToInt(args[0])
 	nwindow := args[1].(nvim.Window)
 	winId, _ := strconv.Atoi(strings.Split(nwindow.String(), ":")[1])
-	row := utils.ReflectToInt(args[2])
-	col := utils.ReflectToInt(args[3])
 	width := utils.ReflectToInt(args[4])
 	height := utils.ReflectToInt(args[5])
 
@@ -846,32 +835,22 @@ func (s *Screen) winPos(args []interface{}) {
 	}
 	window.Width = width
 	window.Height = height
-	window.StartRow = row
-	window.StartCol = col
 	window.Hidden = false
 	window.Dirty = true
 	// Line numbers are rendered by the frontend — neovim's gutter is disabled
 	window.lineNumbers = true
 	window.relativeLineNumbers = true
-	utils.Log(fmt.Sprintf("winPos id=%d gridId=%d StartRow=%d StartCol=%d Width=%d Height=%d", winId, gridId, row, col, width, height))
+	utils.Log(fmt.Sprintf("winPos id=%d gridId=%d Width=%d Height=%d", winId, gridId, width, height))
 	s.windowsMu.RUnlock()
 
-	// Handle window positioning
+	// Ensure grid exists
 	if _, exists := s.Grids[gridId]; !exists {
-		// Create a new grid for this window
 		s.gridResize(gridId, width, height)
 	}
-}
 
-func (s *Screen) updateLayout() {
-	s.CalculateGridLayout()
-	if s.layout.ActiveWindowId != s.ActiveWindow {
-		s.layout.ActiveWindowId = s.ActiveWindow
-		s.layout.dirty = true
-	}
-	if s.layout.dirty {
-		s.emitEvent("layout-updated", s.layout)
-		s.layout.dirty = false
+	// Every normal window gets its own OS window
+	if osWindowMgr != nil {
+		osWindowMgr.CreateWindow(winId, gridId)
 	}
 }
 
@@ -898,7 +877,7 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	anchorCol := utils.ReflectToFloat(args[5])
 	focusable := args[6].(bool)
 	zIndex := utils.ReflectToInt(args[7])
-	utils.Log(fmt.Sprintf("winFloatPos winId: %d row: %f col %f", winId, anchorRow, anchorCol), args)
+	utils.Log(fmt.Sprintf("winFloatPos winId: %d anchorGrid: %d row: %f col %f", winId, anchorGrid, anchorRow, anchorCol), args)
 
 	// Update window tracking
 	s.windowsMu.Lock()
@@ -971,7 +950,6 @@ func (s *Screen) winExternalPos(args []interface{}) {
 		s.Windows[winId] = window
 		s.GridToWindow[gridId] = winId
 	}
-	window.Type = "external"
 	window.Hidden = false
 	window.Dirty = true
 	s.windowsMu.Unlock()
@@ -1015,7 +993,6 @@ func (s *Screen) scheduleRender() {
 
 func (s *Screen) render() {
 	s.EmitFloatingWindows()
-	s.updateLayout()
 
 	for winId, window := range s.Windows {
 		if window.Hidden {
@@ -1053,6 +1030,7 @@ func (s *Screen) render() {
 			if s.app != nil {
 				s.app.Event.Emit("content-updated", map[string]interface{}{
 					"winId":          winId,
+					"floating":       true,
 					"updatedContent": s.renderFloatingWindow(window),
 				})
 			}
@@ -1128,11 +1106,6 @@ func (s *Screen) EmitFloatingWindows() {
 func (s *Screen) EmitCurrentState() {
 	emitHighlightCSS(s.ctx)
 
-	// Force emit layout regardless of dirty flag (late-connecting clients missed the initial emit)
-	s.CalculateGridLayout()
-	s.layout.ActiveWindowId = s.ActiveWindow
-	s.emitEvent("layout-updated", s.layout)
-
 	// Re-emit content for all windows
 	s.windowsMu.RLock()
 	defer s.windowsMu.RUnlock()
@@ -1164,7 +1137,20 @@ func (s *Screen) EmitCurrentState() {
 }
 
 func (s *Screen) mapWindowInfo(window *Window, winId int) map[string]interface{} {
-	anchorWindow, _ := s.GridToWindow[window.AnchorGrid]
+	anchorWindow, ok := s.GridToWindow[window.AnchorGrid]
+	if !ok || anchorWindow == 0 {
+		// Floating windows anchored to the global grid (1) or an unknown grid
+		// should display on the active window
+		anchorWindow = s.ActiveWindow
+	}
+
+	if window.AnchorGrid == 1{
+		//HACK: anchor = editor
+		// we need to somehow handle this better! just putting it on the first window is not a great fix
+		// not sure if it can easily be a floating os window
+		anchorWindow = 1000
+	}
+	utils.Log(fmt.Sprintf("mapWindowInfo winId=%d anchorGrid=%d anchorWindow=%d", winId, window.AnchorGrid, anchorWindow))
 	windowInfo := map[string]interface{}{
 		"id":           winId,
 		"gridId":       window.Grid.ID,
