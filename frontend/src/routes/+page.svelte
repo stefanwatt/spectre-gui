@@ -5,7 +5,8 @@
 	import FloatingWindowContainer from '$lib/floating-windows/FloatingWindowContainer.svelte';
 	import NvimWindow from '$lib/windows/NvimWindow.svelte';
 	import CompletionMenu from '$lib/completion/CompletionMenu.svelte';
-	import { cmdline, windowContentRowMap, layout, cursor, nestedState, getFloatingWindows, completion } from '$lib/state.svelte';
+	import FileExplorer from '$lib/file-explorer/FileExplorer.svelte';
+	import { cmdline, windowContentRowMap, layout, cursor, nestedState, getFloatingWindows, completion, fileExplorer } from '$lib/state.svelte';
 	import { init, startListening } from '$lib/runtime-events-service';
 	import { handleKeypress, registerKeymap } from '$lib/keymaps/keymap-service';
 	import { keymaps as liveGrepKeymaps } from '$lib/keymaps/live-grep';
@@ -89,6 +90,10 @@
 	<div class="picker bg-darker victor-mono rounded-md p-2">
 		<PickerComponent />
 	</div>
+{/if}
+
+{#if fileExplorer.open}
+	<FileExplorer />
 {/if}
 
 <style>

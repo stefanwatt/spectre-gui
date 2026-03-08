@@ -27,6 +27,7 @@ declare module "@wailsio/runtime" {
             "highlight-css": string;
             "layout-updated": any;
             "mode-changed": string;
+            "neovim-ready": any;
             "preview-window": any;
             "preview-window-closed": number;
             "show-find-buffer-symbols": any;

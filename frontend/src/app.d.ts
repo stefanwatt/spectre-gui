@@ -234,6 +234,22 @@ declare global {
       detail: string; // item detail (type signature)
     }
 
+    interface FileEntry {
+      name: string;
+      path: string;
+      isDir: boolean;
+    }
+
+    interface FileExplorerState {
+      open: boolean;
+      currentDir: string;
+      parentEntries: FileEntry[];
+      previewEntries: FileEntry[];
+      previewIsFile: boolean;
+      centerWindowId: number;
+      previewWindowId: number;
+    }
+
     type NamedKey =
       | 'Unidentified'
       | 'Alt'

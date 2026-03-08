@@ -62,6 +62,9 @@ func init() {
 	// Buffer events
 	application.RegisterEvent[string]("BufEnter")
 
+	// Lifecycle events
+	application.RegisterEvent[interface{}]("neovim-ready")
+
 	// Picker Activation events
 	application.RegisterEvent[interface{}]("show_live_grep")
 	application.RegisterEvent[interface{}]("show-find-files")

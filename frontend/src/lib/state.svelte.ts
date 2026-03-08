@@ -74,6 +74,16 @@ export let nestedState: NestedState = $state({
   pickerResults: []
 })
 
+export let fileExplorer = $state<App.FileExplorerState>({
+  open: false,
+  currentDir: '',
+  parentEntries: [],
+  previewEntries: [],
+  previewIsFile: false,
+  centerWindowId: 0,
+  previewWindowId: 0,
+});
+
 let keymapMode: App.KeymapMode = $derived(
   ((): App.KeymapMode => {
     if (cmdline.visible) return 'cmdline';

@@ -82,6 +82,16 @@ func SetupKeymaps() {
 			App.Event.Emit("show-find-help", struct{}{})
 		}
 	})
+
+	RegisterKeymap("file-explorer", "<leader>e", func(_ *nvim.Nvim, data interface{}) {
+		// Open file explorer at current file's directory
+		var filepath string
+		err := NvimInstance.ExecLua("return vim.fn.expand('%:p:h')", &filepath)
+		if err != nil || filepath == "" {
+			filepath = "."
+		}
+		NvimScreen.FileExplorer.Open(filepath)
+	})
 }
 
 var specialKeys = map[string]string{

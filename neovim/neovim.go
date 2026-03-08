@@ -40,10 +40,8 @@ func CalculateGridSize(windowWidth, windowHeight int) (rows, cols int) {
 
 func StartListening(ctx context.Context) {
 	var err error
-	// Use default grid size for initial creation
-	// The frontend will call OnResize() once mounted
 	rows, cols := 24, 80
-	utils.Log(fmt.Sprintf("StartListening initializing screen with default rows=%d cols=%d", rows, cols))
+	utils.Log(fmt.Sprintf("StartListening initializing screen with rows=%d cols=%d", rows, cols))
 	NvimScreen = NewScreen(ctx, cols, rows, App)
 
 	// Note: resize and request-state handlers are now service methods on App:
@@ -266,6 +264,29 @@ func StartListening(ctx context.Context) {
 			}
 		})
 
+		// File explorer RPC handlers
+		NvimInstance.RegisterHandler("fe-cursor-moved", func(updates ...[]interface{}) {
+			for _, data := range updates {
+				if len(data) < 1 {
+					continue
+				}
+				row := utils.ReflectToInt(data[0])
+				NvimScreen.FileExplorer.UpdatePreview(row)
+			}
+		})
+		NvimInstance.RegisterHandler("fe-navigate-into", func(_ *nvim.Nvim, data interface{}) {
+			NvimScreen.FileExplorer.NavigateInto()
+		})
+		NvimInstance.RegisterHandler("fe-navigate-up", func(_ *nvim.Nvim, data interface{}) {
+			NvimScreen.FileExplorer.NavigateUp()
+		})
+		NvimInstance.RegisterHandler("fe-apply", func(_ *nvim.Nvim, data interface{}) {
+			NvimScreen.FileExplorer.Apply()
+		})
+		NvimInstance.RegisterHandler("fe-close", func(_ *nvim.Nvim, data interface{}) {
+			NvimScreen.FileExplorer.Close()
+		})
+
 		opts := map[string]interface{}{
 			"rgb":            true,
 			"ext_linegrid":   true,
@@ -283,6 +304,11 @@ func StartListening(ctx context.Context) {
 			utils.Log(err.Error())
 			nvimCancel()
 			return
+		}
+
+		// Signal frontend that neovim UI is attached and ready for resize
+		if App != nil {
+			App.Event.Emit("neovim-ready", struct{}{})
 		}
 
 		// Read colorcolumn and cursorline settings before disabling

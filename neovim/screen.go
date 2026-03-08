@@ -57,6 +57,7 @@ type Screen struct {
 	ColorColumnColor     string // hex color e.g. "#2a2a3a"
 	CursorLineEnabled    bool
 	CursorLineColor      string // hex color e.g. "#2a2a3a"
+	FileExplorer         *FileExplorer
 }
 
 // emitEvent safely emits an event, checking if app is initialized
@@ -82,7 +83,7 @@ func NewScreen(ctx context.Context, cols int, rows int, app *application.App) *S
 		Special:    0xffffff,
 	}
 
-	return &Screen{
+	s := &Screen{
 		ctx:                ctx,
 		app:                app,
 		Width:              cols,
@@ -106,6 +107,8 @@ func NewScreen(ctx context.Context, cols int, rows int, app *application.App) *S
 		codeBlockMetadata:  make(map[int][]CodeBlockMeta),
 		inlineCodeMetadata: make(map[int]map[int][]ColRange),
 	}
+	s.FileExplorer = NewFileExplorer(s)
+	return s
 }
 
 func handleEvent(update interface{}) (event string, ok bool) {
@@ -518,10 +521,9 @@ func (s *Screen) gridResize(gridId int, width int, height int) {
 		s.Grids[gridId] = grid
 	}
 
-	grid.Width = width
-	grid.Height = height
-
-	// Resize the grid cells
+	// Build all new slices BEFORE updating grid dimensions.
+	// The render goroutine reads grid.Height concurrently — if we set Height
+	// before the slices are ready, it will index out of bounds.
 	newCells := make([][]*Cell, height)
 	for i := range newCells {
 		newCells[i] = make([]*Cell, width)
@@ -541,8 +543,21 @@ func (s *Screen) gridResize(gridId int, width int, height int) {
 			}
 		}
 	}
+	newDirtyRows := make([]bool, height)
+	for i := range newDirtyRows {
+		newDirtyRows[i] = true
+	}
+	newOptimizedRows := make([][]*Cell, height)
+	newCachedTokens := make([][]*Token, height)
 
+	// Now atomically swap everything — set slices first, dimensions last
 	grid.Cells = newCells
+	grid.DirtyRows = newDirtyRows
+	grid.OptimizedRows = newOptimizedRows
+	grid.CachedTokens = newCachedTokens
+	grid.Width = width
+	grid.Height = height
+
 	// Update window dimensions if this grid is associated with a window
 	s.windowsMu.RLock()
 	if winId, exists := s.GridToWindow[gridId]; exists {
@@ -560,12 +575,6 @@ func (s *Screen) gridResize(gridId int, width int, height int) {
 		}
 	}
 	s.windowsMu.RUnlock()
-	grid.DirtyRows = make([]bool, height)
-	grid.OptimizedRows = make([][]*Cell, height)
-	grid.CachedTokens = make([][]*Token, height)
-	for i := range grid.DirtyRows {
-		grid.DirtyRows[i] = true
-	}
 }
 
 func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
@@ -1003,6 +1012,17 @@ func (s *Screen) render() {
 			if window.Buffer != nil && (*window.Buffer).Filetype == "blink-cmp-menu" {
 				continue
 			}
+			// File-explorer floating windows: use optimizeGrid (no trimPerimeter)
+			if window.Buffer != nil && strings.HasPrefix((*window.Buffer).Filetype, "file-explorer") {
+				filetype := (*window.Buffer).Filetype
+				if s.app != nil {
+					s.app.Event.Emit("content-updated", map[string]interface{}{
+						"winId":          winId,
+						"updatedContent": s.optimizeGrid(grid, filetype, 0, -1),
+					})
+				}
+				continue
+			}
 			if s.app != nil {
 				s.app.Event.Emit("content-updated", map[string]interface{}{
 					"winId":          winId,
@@ -1053,6 +1073,10 @@ func (s *Screen) EmitFloatingWindows() {
 		}
 		// Skip blink-cmp windows -- handled by native completion menu
 		if window.Buffer != nil && (*window.Buffer).Filetype == "blink-cmp-menu" {
+			continue
+		}
+		// Skip file-explorer windows — rendered by dedicated overlay
+		if window.Buffer != nil && strings.HasPrefix((*window.Buffer).Filetype, "file-explorer") {
 			continue
 		}
 		if window.ZIndex == 69420 {
