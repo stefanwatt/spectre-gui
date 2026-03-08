@@ -271,7 +271,9 @@ func StartListening(ctx context.Context) {
 					continue
 				}
 				row := utils.ReflectToInt(data[0])
-				NvimScreen.FileExplorer.UpdatePreview(row)
+				// Dispatch async to avoid deadlocking the RPC reader goroutine,
+				// since UpdatePreview makes outgoing RPC calls (SetBufferLines etc.)
+				go NvimScreen.FileExplorer.UpdatePreview(row)
 			}
 		})
 		NvimInstance.RegisterHandler("fe-navigate-into", func(_ *nvim.Nvim, data interface{}) {

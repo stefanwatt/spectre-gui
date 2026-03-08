@@ -119,6 +119,9 @@ func (fe *FileExplorer) Open(dir string) {
 		return
 	}
 
+	// Re-enable cursorline (disabled by style=minimal)
+	NvimInstance.ExecLua(fmt.Sprintf("vim.wo[%d].cursorline = true", int(fe.centerWin)), nil)
+
 	// Create preview buffer
 	fe.previewBuf, err = NvimInstance.CreateBuffer(false, true)
 	if err != nil {
@@ -421,8 +424,8 @@ func (fe *FileExplorer) setupKeymaps() {
 	luaCode := fmt.Sprintf(`
 		local buf = vim.api.nvim_get_current_buf()
 		local opts = { buffer = buf, noremap = true, silent = true }
-		vim.keymap.set('n', 'h', function() vim.rpcnotify(%d, 'fe-navigate-up') end, opts)
-		vim.keymap.set('n', 'l', function() vim.rpcnotify(%d, 'fe-navigate-into') end, opts)
+		vim.keymap.set('n', '<Left>', function() vim.rpcnotify(%d, 'fe-navigate-up') end, opts)
+		vim.keymap.set('n', '<Right>', function() vim.rpcnotify(%d, 'fe-navigate-into') end, opts)
 		vim.keymap.set('n', '<CR>', function() vim.rpcnotify(%d, 'fe-navigate-into') end, opts)
 		vim.keymap.set('n', 'q', function() vim.rpcnotify(%d, 'fe-close') end, opts)
 		vim.keymap.set('n', '<Esc>', function() vim.rpcnotify(%d, 'fe-close') end, opts)
