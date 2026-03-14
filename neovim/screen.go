@@ -18,8 +18,8 @@ import (
 
 type Screen struct {
 	margins              []int
-	Height               int //in number of cells
-	Width                int //in number of cells
+	Height               int // in number of cells
+	Width                int // in number of cells
 	topLine              int
 	botLine              int
 	curLine              int
@@ -57,6 +57,7 @@ type Screen struct {
 	ColorColumnColor     string // hex color e.g. "#2a2a3a"
 	CursorLineEnabled    bool
 	CursorLineColor      string // hex color e.g. "#2a2a3a"
+	FileExplorer         *FileExplorer
 }
 
 // emitEvent safely emits an event, checking if app is initialized
@@ -68,8 +69,7 @@ func (s *Screen) emitEvent(eventName string, data interface{}) {
 	s.app.Event.Emit(eventName, data)
 }
 
-func NewScreen(ctx context.Context, cols int, rows int, app *application.App) *Screen {
-
+func NewScreen(ctx context.Context, cols, rows int, app *application.App) *Screen {
 	// Create grids map and add default grid
 	grids := make(map[int]*Grid)
 	grids[1] = NewGrid(rows, cols)
@@ -121,7 +121,7 @@ func handleEvent(update interface{}) (event string, ok bool) {
 	return event, ok
 }
 
-func (s *Screen) Resize(width int, height int) {
+func (s *Screen) Resize(width, height int) {
 	NvimScreen.Width = width
 	NvimScreen.Height = height
 	NvimInstance.TryResizeUI(width, height)
@@ -240,8 +240,7 @@ func (s *Screen) handleRedraw(updates [][]interface{}) {
 	}
 }
 
-func (s *Screen) gridScroll(gridId int, top int, bot int, left int, right int, rows int, cols int) {
-
+func (s *Screen) gridScroll(gridId, top, bot, left, right, rows, cols int) {
 	grid, exists := s.Grids[gridId]
 	if !exists {
 		return
@@ -315,7 +314,7 @@ func (s *Screen) gridScroll(gridId int, top int, bot int, left int, right int, r
 	}
 }
 
-func (s *Screen) gridLine(gridId int, row int, col int, cells []interface{}) {
+func (s *Screen) gridLine(gridId, row, col int, cells []interface{}) {
 	grid, exists := s.Grids[gridId]
 	if !exists {
 		return
@@ -504,10 +503,9 @@ func (s *Screen) handleWinViewportMargins(args []interface{}) {
 	s.margins[1] = utils.ReflectToInt(marginArgs[3]) // bottom
 	s.margins[2] = utils.ReflectToInt(marginArgs[4]) // left
 	s.margins[3] = utils.ReflectToInt(marginArgs[5]) // right
-
 }
 
-func (s *Screen) gridResize(gridId int, width int, height int) {
+func (s *Screen) gridResize(gridId, width, height int) {
 	if gridId > 2 {
 		utils.Log(fmt.Sprintf("gridResize gridId: %d, width: %d, height: %d", gridId, width, height))
 	}
@@ -568,7 +566,7 @@ func (s *Screen) gridResize(gridId int, width int, height int) {
 	}
 }
 
-func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
+func (s *Screen) gridCursorGoto(gridId, row, col int) {
 	grid, exists := s.Grids[gridId]
 	if !exists {
 		return
@@ -598,7 +596,7 @@ func (s *Screen) gridCursorGoto(gridId int, row int, col int) {
 	}
 }
 
-func (s *Screen) defaultColorsSet(fg int, bg int, sp int) {
+func (s *Screen) defaultColorsSet(fg, bg, sp int) {
 	if fg >= 0 {
 		s.DefaultFg = fg
 	} else {
@@ -724,22 +722,6 @@ func (s *Screen) winHide(args []interface{}) {
 	s.updateLayout()
 }
 
-func (s *Screen) closeTrek(windowIds []int) {
-	s.windowsMu.Lock()
-	for _, winId := range windowIds {
-		_, exists := s.Windows[winId]
-		if exists {
-			delete(s.Windows, winId)
-		}
-		for grid, gridWinId := range s.GridToWindow {
-			if gridWinId == winId {
-				delete(s.GridToWindow, grid)
-			}
-		}
-	}
-	s.windowsMu.Unlock()
-}
-
 func (s *Screen) winClose(args []interface{}) {
 	if len(args) < 1 {
 		return
@@ -749,11 +731,14 @@ func (s *Screen) winClose(args []interface{}) {
 	// Find the grid associated with this window
 	utils.Log(fmt.Sprintf("winClose closing gridId:%d", gridId))
 	s.windowsMu.RLock()
+	closedFileExplorer := false
 	for grid, winId := range s.GridToWindow {
 		if grid == gridId {
 			win, exists := s.Windows[winId]
 			if exists && win.IsFloating() {
-				if win.ZIndex == 69420 {
+				if win.IsFileExplorer {
+					closedFileExplorer = true
+				} else if win.ZIndex == 69420 {
 					s.emitEvent("preview-window-closed", winId)
 				} else {
 					s.emitEvent("floating_window_closed", winId)
@@ -764,6 +749,19 @@ func (s *Screen) winClose(args []interface{}) {
 			utils.Log(fmt.Sprintf("winClose Window %d closed (grid %d)", winId, gridId))
 			utils.Log(fmt.Sprintf("winClose got %d windows now", len(s.Windows)))
 			break
+		}
+	}
+	// Check if all file explorer windows are now gone
+	if closedFileExplorer {
+		hasFileExplorer := false
+		for _, win := range s.Windows {
+			if win.IsFileExplorer {
+				hasFileExplorer = true
+				break
+			}
+		}
+		if !hasFileExplorer {
+			s.emitEvent("file-explorer-close", struct{}{})
 		}
 	}
 	s.windowsMu.RUnlock()
@@ -785,8 +783,7 @@ func (s *Screen) handleCmdlineShow(args []interface{}) {
 				// content += a[1].(string)
 				content += strings.Replace(a[1].(string), "\t", " ", -1)
 			} else {
-				content +=
-					sanitize(a[1].(string))
+				content += sanitize(a[1].(string))
 			}
 		}
 	}
@@ -831,7 +828,7 @@ func (s *Screen) winPos(args []interface{}) {
 		utils.Log(fmt.Sprintf("winPos spawned with id=%d got %d windows now", winId, len(s.Windows)))
 	}
 	if winId != 0 {
-		buffer, error := getWindowBuffer(winId)
+		buffer, error := GetWindowBuffer(winId)
 		if error == nil && buffer != nil {
 			window.Buffer = buffer
 		}
@@ -876,7 +873,7 @@ func (s *Screen) winFloatPos(args []interface{}) {
 
 	gridId := utils.ReflectToInt(args[0])
 	str := strings.TrimSpace(s.Grids[gridId].toString())
-	//NOTE: seems arbitrary, but theres some weird floating windows with bs content
+	// NOTE: seems arbitrary, but theres some weird floating windows with bs content
 	// idk wtf they are and i dont care. i want them gone. cant imagine they could be important with 3 chars
 	if len(str) < 4 {
 		return
@@ -913,9 +910,12 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	}
 
 	if winId != 0 {
-		buffer, error := getWindowBuffer(winId)
+		buffer, error := GetWindowBuffer(winId)
 		if error == nil && buffer != nil {
 			window.Buffer = buffer
+			if buffer.Filetype == "minifiles" {
+				window.IsFileExplorer = true
+			}
 		} else {
 			utils.Log(fmt.Sprintf("winFloatPos could not get the filetype for window with id=%d error:%s", winId, error.Error()))
 		}
@@ -970,6 +970,7 @@ func (s *Screen) render() {
 	s.EmitFloatingWindows()
 	s.updateLayout()
 
+	hasFileExplorerDirty := false
 	for winId, window := range s.Windows {
 		if window.Hidden {
 			continue
@@ -978,8 +979,31 @@ func (s *Screen) render() {
 			continue
 		}
 		window.Dirty = false
-
 		grid := window.Grid
+
+		// TODO: set s.FileExplorer -> hook into mini files open event autcmd
+		// Skip mini.files directory windows — rendered by custom file explorer UI
+		if s.FileExplorer != nil && window.IsFileExplorer {
+			bufNr := window.Buffer.BufNr
+			isDirectoryPreview := false
+			if preview, ok := s.FileExplorer.Preview.(FileExplorerDirectoryPreview); ok {
+				if preview.Directory != nil && preview.Directory.BufNr == bufNr {
+					isDirectoryPreview = true
+				}
+			}
+			if s.FileExplorer.Parent.BufNr == bufNr {
+				s.FileExplorer.updateParent(grid)
+			} else if s.FileExplorer.Current.BufNr == bufNr {
+				s.FileExplorer.updateCurrent(grid)
+			} else if s.FileExplorer.Preview.GetBufNr() == bufNr && isDirectoryPreview {
+				s.FileExplorer.updateDirPreview(grid)
+			} else {
+				s.FileExplorer.updateContentPreview(s.optimizeGrid(grid, "minifiles", bufNr, -1))
+			}
+			hasFileExplorerDirty = true
+			continue
+		}
+
 		if !window.IsFloating() || window.ZIndex == 69420 {
 			filetype := ""
 			bufNr := 0
@@ -1011,6 +1035,10 @@ func (s *Screen) render() {
 			}
 		}
 	}
+
+	if hasFileExplorerDirty {
+		s.emitEvent("file-explorer-update", s.FileExplorer)
+	}
 }
 
 // handleCmdlinePos processes the cmdline_pos event
@@ -1036,7 +1064,7 @@ func (s *Screen) EmitFloatingWindows() {
 	// Only emit if any floating window is dirty (newly created/updated)
 	hasNewFloating := false
 	for _, window := range s.Windows {
-		if window.IsFloating() && window.ZIndex != 69420 && window.Dirty {
+		if window.IsFloating() && window.ZIndex != 69420 && !window.IsFileExplorer && window.Dirty {
 			hasNewFloating = true
 			break
 		}
@@ -1053,6 +1081,10 @@ func (s *Screen) EmitFloatingWindows() {
 		}
 		// Skip blink-cmp windows -- handled by native completion menu
 		if window.Buffer != nil && (*window.Buffer).Filetype == "blink-cmp-menu" {
+			continue
+		}
+		// Skip mini.files directory windows -- rendered by custom file explorer UI
+		if window.IsFileExplorer {
 			continue
 		}
 		if window.ZIndex == 69420 {
@@ -1134,7 +1166,7 @@ func (s *Screen) mapWindowInfo(window *Window, winId int) map[string]interface{}
 	if window.Buffer != nil {
 		windowInfo["filetype"] = &window.Buffer.Filetype
 	}
-	//NOTE: need hex encoding for some nerdfont stuff (e.g. completion window)
+	// NOTE: need hex encoding for some nerdfont stuff (e.g. completion window)
 	windowInfo["isHex"] = isHex(window)
 	return windowInfo
 }
@@ -1145,7 +1177,7 @@ func (s *Screen) setTableMetadata(bufNr int, tables []TableMeta) {
 	s.tableMetadata[bufNr] = tables
 }
 
-func (s *Screen) getTableMetaForLine(bufNr int, bufferLine int) *TableMeta {
+func (s *Screen) getTableMetaForLine(bufNr, bufferLine int) *TableMeta {
 	if bufNr == 0 {
 		return nil
 	}
@@ -1201,7 +1233,7 @@ func (s *Screen) setImageMetadata(bufNr int, images []ImageMeta) {
 	s.imageMetadata[bufNr] = images
 }
 
-func (s *Screen) getImageMetaForLine(bufNr int, bufferLine int) *ImageMeta {
+func (s *Screen) getImageMetaForLine(bufNr, bufferLine int) *ImageMeta {
 	if bufNr == 0 {
 		return nil
 	}
@@ -1254,7 +1286,7 @@ func (s *Screen) setHeadingMetadata(bufNr int, headings map[int]int) {
 	s.headingMetadata[bufNr] = headings
 }
 
-func (s *Screen) getHeadingLevel(bufNr int, bufferLine int) int {
+func (s *Screen) getHeadingLevel(bufNr, bufferLine int) int {
 	if bufNr == 0 {
 		return 0
 	}
@@ -1287,7 +1319,7 @@ func (s *Screen) setTaskMetadata(bufNr int, tasks map[int]bool) {
 	s.taskMetadata[bufNr] = tasks
 }
 
-func (s *Screen) getTaskMetaForLine(bufNr int, bufferLine int) (checked bool, isTask bool) {
+func (s *Screen) getTaskMetaForLine(bufNr, bufferLine int) (checked, isTask bool) {
 	if bufNr == 0 {
 		return false, false
 	}
@@ -1321,7 +1353,7 @@ func (s *Screen) setCodeBlockMetadata(bufNr int, blocks []CodeBlockMeta) {
 	s.codeBlockMetadata[bufNr] = blocks
 }
 
-func (s *Screen) getCodeBlockMetaForLine(bufNr int, bufferLine int) *CodeBlockMeta {
+func (s *Screen) getCodeBlockMetaForLine(bufNr, bufferLine int) *CodeBlockMeta {
 	if bufNr == 0 {
 		return nil
 	}
@@ -1362,7 +1394,7 @@ func (s *Screen) setInlineCodeMetadata(bufNr int, codes map[int][]ColRange) {
 	s.inlineCodeMetadata[bufNr] = codes
 }
 
-func (s *Screen) getInlineCodeRanges(bufNr int, bufferLine int) []ColRange {
+func (s *Screen) getInlineCodeRanges(bufNr, bufferLine int) []ColRange {
 	if bufNr == 0 {
 		return nil
 	}

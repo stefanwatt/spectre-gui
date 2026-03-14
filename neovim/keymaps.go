@@ -3,14 +3,14 @@ package neovim
 import (
 	"fmt"
 	"log"
-	"strings"
-
 	"nvim-gui/utils"
+	"strings"
 
 	"github.com/neovim/go-client/nvim"
 )
 
 type Keymaps struct {
+	GuiFileExplorer            string `msgpack:"gui_file_explorer"`
 	GuiFindFiles               string `msgpack:"gui_find_files"`
 	GuiFindReferences          string `msgpack:"gui_find_references"`
 	GuiLiveGrep                string `msgpack:"gui_live_grep"`
@@ -28,6 +28,7 @@ type Keymaps struct {
 }
 
 var keymaps = Keymaps{
+	GuiFileExplorer:            "<leader>e",
 	GuiFindFiles:               "<leader>ff",
 	GuiFindReferences:          "<leader>fr",
 	GuiFindBufferSymbols:       "<leader>fs",
@@ -43,16 +44,22 @@ var keymaps = Keymaps{
 	FzfLuaFindProject:          "<leader>fp",
 	FzfLuaFindTodo:             "<leader>ft",
 }
+
 var keymapOpts = map[string]bool{
 	"noremap": false,
 }
 
-func RegisterKeymap(event string, lhs string, cb func(v *nvim.Nvim, data interface{})) {
+func RegisterKeymap(event, lhs string, cb func(v *nvim.Nvim, data interface{})) {
 	NvimInstance.SetKeyMap("n", lhs, fmt.Sprintf("<cmd>lua vim.fn.rpcrequest(%d,'%s',{})<cr>", NvimInstance.ChannelID(), event), keymapOpts)
 	NvimInstance.RegisterHandler(event, cb)
 }
 
 func SetupKeymaps() {
+	// RegisterKeymap("file-explorer", keymaps.GuiFileExplorer, func(_ *nvim.Nvim, data interface{}) {
+	// 	if App != nil {
+	// 		App.Event.Emit("show-file-explorer", struct{}{})
+	// 	}
+	// })
 	RegisterKeymap("live-grep", keymaps.GuiLiveGrep, func(_ *nvim.Nvim, data interface{}) {
 		if App != nil {
 			App.Event.Emit("show_live_grep", struct{}{})
@@ -140,9 +147,9 @@ var shiftedChars = map[string]bool{
 	":":  true, // Shift+;
 	"\"": true, // Shift+'
 	// "<":  true, // Shift+, //TODO: this fucks my indent keymap
-	">":  true, // Shift+.
-	"?":  true, // Shift+/
-	"~":  true, // Shift+`
+	">": true, // Shift+.
+	"?": true, // Shift+/
+	"~": true, // Shift+`
 }
 
 func Paste(text string) error {
@@ -154,7 +161,7 @@ func Paste(text string) error {
 	return nil
 }
 
-func SendKey(key string, ctrl bool, alt bool, shift bool) error {
+func SendKey(key string, ctrl, alt, shift bool) error {
 	_, err := utils.Find(ignored_keys, func(ignored_key string) bool {
 		return key == ignored_key
 	})

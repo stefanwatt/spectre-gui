@@ -19,6 +19,8 @@ declare module "@wailsio/runtime" {
             "content-updated": any;
             "cursor-changed": any;
             "file-deleted": any;
+            "file-explorer-close": any;
+            "file-explorer-update": any;
             "file-replaced": any;
             "floating_window_closed": number;
             "floating_windows": any;
@@ -29,6 +31,7 @@ declare module "@wailsio/runtime" {
             "mode-changed": string;
             "preview-window": any;
             "preview-window-closed": number;
+            "show-file-explorer": any;
             "show-find-buffer-symbols": any;
             "show-find-files": any;
             "show-find-help": any;

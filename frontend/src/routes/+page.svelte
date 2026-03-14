@@ -5,6 +5,7 @@
 	import FloatingWindowContainer from '$lib/floating-windows/FloatingWindowContainer.svelte';
 	import NvimWindow from '$lib/windows/NvimWindow.svelte';
 	import CompletionMenu from '$lib/completion/CompletionMenu.svelte';
+	import FileExplorer from '$lib/file-explorer/FileExplorer.svelte';
 	import { cmdline, windowContentRowMap, layout, cursor, nestedState, getFloatingWindows, completion } from '$lib/state.svelte';
 	import { init, startListening } from '$lib/runtime-events-service';
 	import { handleKeypress, registerKeymap } from '$lib/keymaps/keymap-service';
@@ -79,6 +80,7 @@
 			</div>
 		{/if}
 		<FloatingWindowContainer {floatingWindows} {windowContentRowMap} anchorWindow={0} />
+		<FileExplorer />
 	</div>
 	<div class="h-10">
 		<StatusLine filepath={activeWindow?.filepath} {cursor} mode={activeWindow?.mode}></StatusLine>

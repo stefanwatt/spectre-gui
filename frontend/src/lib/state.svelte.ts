@@ -63,9 +63,18 @@ let _floatingWindows: App.FloatingWindow[] = $state.raw([]);
 export function getFloatingWindows() { return _floatingWindows; }
 export function setFloatingWindows(v: App.FloatingWindow[]) { _floatingWindows = v; }
 
+let _fileExplorerState: App.FileExplorerState | null = $state(null);
+export function getFileExplorerState() { return _fileExplorerState; }
+export function setFileExplorerState(v: App.FileExplorerState | null) { _fileExplorerState = v; }
+
+let _fileExplorerVisible = $state(false);
+export function getFileExplorerVisible() { return _fileExplorerVisible; }
+export function setFileExplorerVisible(v: boolean) { _fileExplorerVisible = v; }
+
 interface NestedState {
   mode: App.VimMode;
   pickerResults: App.PickerResult[]
+  //TODO: not just pickers, could be other UI too
   activePicker?: App.Picker
   previewWindow?: App.FloatingWindow
 }

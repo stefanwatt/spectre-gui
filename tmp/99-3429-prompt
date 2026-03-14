@@ -1,0 +1,287 @@
+<Context>
+You receive a selection in neovim that you need to replace with new code.
+The selection's contents may contain notes, incorporate the notes every time if there are some.
+consider the context of the selection and what you are suppose to be implementing
+<SELECTION_LOCATION>
+range(point(47,1),point(110,1))
+</SELECTION_LOCATION>
+<SELECTION_CONTENT>
+func (fe *FileExplorer) renderFileExplorerDirectory(grid *Grid) []FileExplorerDirectoryEntry {
+	entries := make([]FileExplorerDirectoryEntry, 0, grid.Height)
+
+	for row := 0; row < grid.Height; row++ {
+		rowCells := grid.Cells[row]
+		if len(rowCells) == 0 {
+			continue
+		}
+
+		// mini.files format: /icon/ /filename or /icon/ /path/to/file
+		// The icon is between forward slashes, followed by spaces, then the text
+		var fullText strings.Builder
+		for _, cell := range rowCells {
+			fullText.WriteString(cell.Char)
+		}
+
+		line := fullText.String()
+		if line == "" {
+			continue
+		}
+
+		// Parse format: /icon/ /text
+		var icon string
+		var text string
+
+		// Find first closing slash for icon
+		if len(line) > 0 && line[0] == '/' {
+			iconEnd := strings.Index(line[1:], "/")
+			if iconEnd != -1 {
+				icon = line[1 : iconEnd+1] // Extract icon between slashes
+				remainder := line[iconEnd+2:]
+
+				// Skip spaces after icon section
+				remainder = strings.TrimLeft(remainder, " ")
+
+				// Remove leading slash if present
+				if len(remainder) > 0 && remainder[0] == '/' {
+					remainder = remainder[1:]
+				}
+
+				text = strings.TrimSpace(remainder)
+			} else {
+				// Fallback: no proper format, treat whole line as text
+				text = strings.TrimSpace(line)
+			}
+		} else {
+			// No leading slash, treat as plain text
+			text = strings.TrimSpace(line)
+		}
+
+		// Skip empty entries
+		if icon == "" && text == "" {
+			continue
+		}
+
+		entries = append(entries, FileExplorerDirectoryEntry{
+			Icon: icon,
+			Text: text,
+		})
+	}
+
+	return entries
+}
+
+</SELECTION_CONTENT>
+<FILE_CONTAINING_SELECTION>
+package neovim
+
+import "strings"
+
+type FileExplorerPreview interface {
+	isFileExplorerPreview()
+	GetBufNr() int
+}
+
+type FileExplorerDirectoryPreview struct {
+	Directory *FileExplorerDirectory `json:"directory"`
+}
+
+func (FileExplorerDirectoryPreview) isFileExplorerPreview() {}
+func (dp FileExplorerDirectoryPreview) GetBufNr() int {
+	return dp.Directory.BufNr
+}
+
+type FileExplorerContentPreview struct {
+	Content []ContentRow `json:"content"`
+	BufNr   int          `json:"bufNr"`
+}
+
+func (FileExplorerContentPreview) isFileExplorerPreview() {}
+
+func (cp FileExplorerContentPreview) GetBufNr() int {
+	return cp.BufNr
+}
+
+type FileExplorerDirectoryEntry struct {
+	ID   int    `json:"id"`
+	Icon string `json:"icon"`
+	Text string `json:"text"`
+}
+
+type FileExplorerDirectory struct {
+	BufNr   int                          `json:"bufNr"`
+	Entries []FileExplorerDirectoryEntry `json:"entries"`
+}
+
+type FileExplorer struct {
+	Parent  FileExplorerDirectory `json:"parent"`
+	Current FileExplorerDirectory `json:"current"`
+	Preview FileExplorerPreview   `json:"preview"`
+}
+
+func (fe *FileExplorer) renderFileExplorerDirectory(grid *Grid) []FileExplorerDirectoryEntry {
+	entries := make([]FileExplorerDirectoryEntry, 0, grid.Height)
+
+	for row := 0; row < grid.Height; row++ {
+		rowCells := grid.Cells[row]
+		if len(rowCells) == 0 {
+			continue
+		}
+
+		// mini.files format: /icon/ /filename or /icon/ /path/to/file
+		// The icon is between forward slashes, followed by spaces, then the text
+		var fullText strings.Builder
+		for _, cell := range rowCells {
+			fullText.WriteString(cell.Char)
+		}
+
+		line := fullText.String()
+		if line == "" {
+			continue
+		}
+
+		// Parse format: /icon/ /text
+		var icon string
+		var text string
+
+		// Find first closing slash for icon
+		if len(line) > 0 && line[0] == '/' {
+			iconEnd := strings.Index(line[1:], "/")
+			if iconEnd != -1 {
+				icon = line[1 : iconEnd+1] // Extract icon between slashes
+				remainder := line[iconEnd+2:]
+
+				// Skip spaces after icon section
+				remainder = strings.TrimLeft(remainder, " ")
+
+				// Remove leading slash if present
+				if len(remainder) > 0 && remainder[0] == '/' {
+					remainder = remainder[1:]
+				}
+
+				text = strings.TrimSpace(remainder)
+			} else {
+				// Fallback: no proper format, treat whole line as text
+				text = strings.TrimSpace(line)
+			}
+		} else {
+			// No leading slash, treat as plain text
+			text = strings.TrimSpace(line)
+		}
+
+		// Skip empty entries
+		if icon == "" && text == "" {
+			continue
+		}
+
+		entries = append(entries, FileExplorerDirectoryEntry{
+			Icon: icon,
+			Text: text,
+		})
+	}
+
+	return entries
+}
+
+func (fe *FileExplorer) updateParent(grid *Grid) {
+	fe.Parent.Entries = fe.renderFileExplorerDirectory(grid)
+}
+
+func (fe *FileExplorer) updateCurrent(grid *Grid) {
+	fe.Current.Entries = fe.renderFileExplorerDirectory(grid)
+}
+
+func (fe *FileExplorer) updateDirPreview(grid *Grid) {
+	if preview, ok := fe.Preview.(FileExplorerDirectoryPreview); ok {
+		preview.Directory.Entries = fe.renderFileExplorerDirectory(grid)
+	}
+}
+
+func (fe *FileExplorer) updateContentPreview(content []ContentRow) {
+	if preview, ok := fe.Preview.(FileExplorerContentPreview); ok {
+		preview.Content = content
+	}
+}
+</FILE_CONTAINING_SELECTION>
+
+</Context>
+<Prompt>
+i added the id to the entry struct as well. so parse that out too
+</Prompt>
+
+<Location><File>/home/stefan/Projects/nvim-gui/neovim/file-explorer.go</File><Function>range(point(47,1),point(110,1))</Function></Location>
+<FunctionText>func (fe *FileExplorer) renderFileExplorerDirectory(grid *Grid) []FileExplorerDirectoryEntry {
+	entries := make([]FileExplorerDirectoryEntry, 0, grid.Height)
+
+	for row := 0; row < grid.Height; row++ {
+		rowCells := grid.Cells[row]
+		if len(rowCells) == 0 {
+			continue
+		}
+
+		// mini.files format: /icon/ /filename or /icon/ /path/to/file
+		// The icon is between forward slashes, followed by spaces, then the text
+		var fullText strings.Builder
+		for _, cell := range rowCells {
+			fullText.WriteString(cell.Char)
+		}
+
+		line := fullText.String()
+		if line == "" {
+			continue
+		}
+
+		// Parse format: /icon/ /text
+		var icon string
+		var text string
+
+		// Find first closing slash for icon
+		if len(line) > 0 && line[0] == '/' {
+			iconEnd := strings.Index(line[1:], "/")
+			if iconEnd != -1 {
+				icon = line[1 : iconEnd+1] // Extract icon between slashes
+				remainder := line[iconEnd+2:]
+
+				// Skip spaces after icon section
+				remainder = strings.TrimLeft(remainder, " ")
+
+				// Remove leading slash if present
+				if len(remainder) > 0 && remainder[0] == '/' {
+					remainder = remainder[1:]
+				}
+
+				text = strings.TrimSpace(remainder)
+			} else {
+				// Fallback: no proper format, treat whole line as text
+				text = strings.TrimSpace(line)
+			}
+		} else {
+			// No leading slash, treat as plain text
+			text = strings.TrimSpace(line)
+		}
+
+		// Skip empty entries
+		if icon == "" && text == "" {
+			continue
+		}
+
+		entries = append(entries, FileExplorerDirectoryEntry{
+			Icon: icon,
+			Text: text,
+		})
+	}
+
+	return entries
+}
+</FunctionText>
+<TEMP_FILE>./tmp/99-3429</TEMP_FILE>
+<MustObey>
+NEVER alter any file other than TEMP_FILE.
+never provide the requested changes as conversational output. Return only the code.
+ONLY provide requested changes by writing the change to TEMP_FILE
+
+never attempt to read TEMP_FILE.
+It is purely for output.
+Previous contents, which may not exist, can be written over without worry
+After writing TEMP_FILE once you should be done.  Be done and end the session.
+
+</MustObey>

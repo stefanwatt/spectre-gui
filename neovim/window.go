@@ -25,6 +25,8 @@ type Window struct {
 	Focusable           bool   // Whether the window can be focused
 	ZIndex              int    // Z-index for floating windows
 	IsPopupmenu         bool   // Whether this is a completion menu
+	IsFileExplorer      bool   // Whether this is a mini.files directory window
+	Title               string // Floating window title (e.g. directory path for mini.files)
 	Hidden              bool
 	lineNumbers         bool
 	relativeLineNumbers bool

@@ -1,3 +1,15 @@
+<Context>
+You receive a selection in neovim that you need to replace with new code.
+The selection's contents may contain notes, incorporate the notes every time if there are some.
+consider the context of the selection and what you are suppose to be implementing
+<SELECTION_LOCATION>
+range(point(21,1),point(22,2))
+</SELECTION_LOCATION>
+<SELECTION_CONTENT>
+func add(a number, b number){
+}
+</SELECTION_CONTENT>
+<FILE_CONTAINING_SELECTION>
 package main
 
 import (
@@ -16,6 +28,9 @@ var assets embed.FS
 
 type Options struct {
 	File string `short:"f" long:"filename" description:"file to open" required:"false"`
+}
+
+func add(a number, b number){
 }
 
 func deleteIfExists(path string) error {
@@ -108,6 +123,8 @@ func main() {
 	liveGrepPicker := picker.NewLiveGrepPicker()
 	referencesPicker := picker.NewReferencesPicker()
 	symbolsPicker := picker.NewSymbolsPicker()
+	fileExplorer := NewFileExplorer()
+
 
 	// Create application
 	app := application.New(application.Options{
@@ -115,6 +132,7 @@ func main() {
 		Description: "Neovim GUI with Wails + Svelte",
 		Services: []application.Service{
 			application.NewService(appService),
+			application.NewService(fileExplorer),
 			application.NewService(pickerService),
 			application.NewService(liveGrepPicker),
 			application.NewService(referencesPicker),
@@ -148,3 +166,25 @@ func main() {
 		println("Error:", err.Error())
 	}
 }
+</FILE_CONTAINING_SELECTION>
+
+</Context>
+<Prompt>
+implement
+</Prompt>
+
+<Location><File>/home/stefan/Projects/nvim-gui/main.go</File><Function>range(point(21,1),point(22,2))</Function></Location>
+<FunctionText>func add(a number, b number){
+}</FunctionText>
+<TEMP_FILE>./tmp/99-6623</TEMP_FILE>
+<MustObey>
+NEVER alter any file other than TEMP_FILE.
+never provide the requested changes as conversational output. Return only the code.
+ONLY provide requested changes by writing the change to TEMP_FILE
+
+never attempt to read TEMP_FILE.
+It is purely for output.
+Previous contents, which may not exist, can be written over without worry
+After writing TEMP_FILE once you should be done.  Be done and end the session.
+
+</MustObey>

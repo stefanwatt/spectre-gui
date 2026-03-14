@@ -1,0 +1,55 @@
+func (fe *FileExplorer) renderFileExplorerDirectory(grid *Grid) []FileExplorerDirectoryEntry {
+	entries := make([]FileExplorerDirectoryEntry, 0, grid.Height)
+
+	for row := 0; row < grid.Height; row++ {
+		rowCells := grid.Cells[row]
+		if len(rowCells) == 0 {
+			continue
+		}
+
+		// Extract icon and text from the row
+		// Icon is typically the first character(s), text is the rest
+		var icon string
+		var text strings.Builder
+
+		// Find where icon ends and text begins
+		// Icons are usually 1-2 characters (unicode symbols or nerd font glyphs)
+		iconEnd := 0
+		for i, cell := range rowCells {
+			if cell.Char == " " && iconEnd == 0 {
+				iconEnd = i
+				break
+			}
+			if iconEnd == 0 {
+				icon += cell.Char
+			}
+		}
+
+		// If no space found, the whole row might be just an icon or just text
+		if iconEnd == 0 && len(rowCells) > 0 {
+			iconEnd = 1 // Assume first char is icon
+			if len(rowCells[0].Char) > 0 {
+				icon = rowCells[0].Char
+			}
+		}
+
+		// Collect the rest as text
+		for i := iconEnd; i < len(rowCells); i++ {
+			text.WriteString(rowCells[i].Char)
+		}
+
+		textStr := strings.TrimSpace(text.String())
+
+		// Skip empty rows
+		if icon == "" && textStr == "" {
+			continue
+		}
+
+		entries = append(entries, FileExplorerDirectoryEntry{
+			Icon: icon,
+			Text: textStr,
+		})
+	}
+
+	return entries
+}

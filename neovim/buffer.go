@@ -14,8 +14,23 @@ type Buffer struct {
 	Filetype string
 	BufNr    int
 }
+func GetCurrentBuffer()(*Buffer,error){
+	win, err := NvimInstance.CurrentWindow()
+	if err != nil {
+		return nil, err
+	}
+	winId, err := extractWindowId(win)
+	if err != nil {
+		return nil, err
+	}
+	buf, err := GetWindowBuffer(winId)
+	if err != nil {
+		return nil, err
+	}
+	return buf,nil
+}
 
-func getWindowBuffer(winId int) (*Buffer, error) {
+func GetWindowBuffer(winId int) (*Buffer, error) {
 	windows, error := NvimInstance.Windows()
 	if error != nil {
 		return nil, error

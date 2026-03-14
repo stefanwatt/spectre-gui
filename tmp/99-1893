@@ -1,0 +1,67 @@
+		// The Lua script creates a User autocmd that matches the mini.files patterns.
+		// When triggered, it fires vim.rpcnotify to send the data to your Go channel.
+		luaScript := `
+    local chan_id = ... -- The first argument passed to ExecLua
+
+    vim.api.nvim_create_autocmd("User", {
+        pattern = {
+            "MiniFilesExplorerOpen",
+            "MiniFilesExplorerClose",
+            "MiniFilesBufferCreate",
+            "MiniFilesBufferUpdate"
+        },
+        callback = function(args)
+            vim.rpcnotify(chan_id, "MiniFilesBridge", args.match, args.data or {})
+        end
+    })
+`
+
+		// Execute the Lua script, passing the channelID as the argument (...)
+		var result interface{}
+		err := NvimInstance.ExecLua(luaScript, &result, channelID)
+		if err != nil {
+			utils.Log(fmt.Sprintf("Failed to setup autocmd bridge: %v", err))
+		}
+
+		NvimInstance.RegisterHandler("MiniFilesBridge", func(eventName string, data interface{}) {
+			switch eventName {
+			case "MiniFilesExplorerOpen":
+				NvimScreen.FileExplorer = NewFileExplorer()
+				utils.Log("MiniFilesExplorerOpen: FileExplorer initialized")
+			case "MiniFilesExplorerClose":
+				NvimScreen.FileExplorer = nil
+				utils.Log("MiniFilesExplorerClose: FileExplorer reset")
+			case "MiniFilesBufferCreate":
+				if NvimScreen.FileExplorer == nil {
+					utils.Log("MiniFilesBufferCreate: FileExplorer is nil, ignoring")
+					return
+				}
+				dataMap, ok := data.(map[string]interface{})
+				if !ok {
+					utils.Log("MiniFilesBufferCreate: invalid data format")
+					return
+				}
+				bufNr := utils.ReflectToInt(dataMap["buf_id"])
+				typeStr, _ := dataMap["type"].(string)
+				switch typeStr {
+				case "anchor":
+					NvimScreen.FileExplorer.AnchorBufNr = bufNr
+				case "preview":
+					NvimScreen.FileExplorer.PreviewBufNr = bufNr
+				}
+				utils.Log(fmt.Sprintf("MiniFilesBufferCreate: type=%s bufNr=%d", typeStr, bufNr))
+			case "MiniFilesBufferUpdate":
+				if NvimScreen.FileExplorer == nil {
+					utils.Log("MiniFilesBufferUpdate: FileExplorer is nil, ignoring")
+					return
+				}
+				dataMap, ok := data.(map[string]interface{})
+				if !ok {
+					utils.Log("MiniFilesBufferUpdate: invalid data format")
+					return
+				}
+				bufNr := utils.ReflectToInt(dataMap["buf_id"])
+				typeStr, _ := dataMap["type"].(string)
+				utils.Log(fmt.Sprintf("MiniFilesBufferUpdate: type=%s bufNr=%d", typeStr, bufNr))
+			}
+		})
