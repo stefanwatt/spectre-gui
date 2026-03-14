@@ -234,25 +234,23 @@ declare global {
 		}
 
 		interface FileExplorerEntry {
-			name: string;
-			fs_type: 'file' | 'directory';
-			path: string;
+			id: number;
+			fsType: 'file' | 'directory';
+			text: string;
 			icon: string;
-			icon_hl: string;
+			iconClass: string;
 		}
 
-		interface FileExplorerPane {
-			win_id: number;
-			buf_id: number;
-			title: string;
-			cursor_line: number;
+		interface FileExplorerDirectory {
 			entries: FileExplorerEntry[];
 		}
 
+		interface FileExplorerPreview {}
+
 		interface FileExplorerState {
-			parent_dir?: FileExplorerPane;
-			current_dir?: FileExplorerPane;
-			preview?: FileExplorerPane;
+			parent?: FileExplorerDirectory;
+			current?: FileExplorerDirectory;
+			preview?: FileExplorerDirectory | FileExplorerPreview;
 		}
 
 		type NamedKey =

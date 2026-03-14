@@ -336,6 +336,21 @@ func (s *Screen) gridLine(gridId, row, col int, cells []interface{}) {
 		window, exists := s.Windows[winId]
 		if exists {
 			window.Dirty = true
+			if window.IsFileExplorer {
+				utils.Log("[minifiles] fileexplorer window gridLine")
+				buf, err := GetWindowBuffer(winId)
+				if err == nil {
+					utils.Log(fmt.Sprintf("[minifiles] buffer %d gridLine parentBuf=%d currentBuf=%d", buf.BufNr, s.FileExplorer.Parent.BufNr, s.FileExplorer.Current.BufNr))
+					switch buf.BufNr {
+					case s.FileExplorer.Parent.BufNr:
+						utils.Log("[minifiles] fileexplorer parent buf gridLine")
+					case s.FileExplorer.Current.BufNr:
+						utils.Log("[minifiles] fileexplorer current buf gridLine")
+					}
+				} else {
+					utils.Log("[minifiles] fileexplorer couldnt get window buffer")
+				}
+			}
 		}
 		s.windowsMu.Unlock()
 	}
@@ -910,11 +925,14 @@ func (s *Screen) winFloatPos(args []interface{}) {
 	}
 
 	if winId != 0 {
+		utils.Log(fmt.Sprintf("[minifiles] winFloatPos: calling GetWindowBuffer for winId=%d", winId))
 		buffer, error := GetWindowBuffer(winId)
 		if error == nil && buffer != nil {
 			window.Buffer = buffer
+			utils.Log(fmt.Sprintf("[minifiles] winFloatPos: winId=%d filetype=%s bufNr=%d", winId, buffer.Filetype, buffer.BufNr))
 			if buffer.Filetype == "minifiles" {
 				window.IsFileExplorer = true
+				utils.Log(fmt.Sprintf("[minifiles] winFloatPos: marked winId=%d as file explorer", winId))
 			}
 		} else {
 			utils.Log(fmt.Sprintf("winFloatPos could not get the filetype for window with id=%d error:%s", winId, error.Error()))
@@ -985,19 +1003,25 @@ func (s *Screen) render() {
 		// Skip mini.files directory windows — rendered by custom file explorer UI
 		if s.FileExplorer != nil && window.IsFileExplorer {
 			bufNr := window.Buffer.BufNr
+			utils.Log(fmt.Sprintf("[minifiles] render: processing file explorer winId=%d parentWinId=%d currentWinId=%d",
+				winId, s.FileExplorer.Parent.WinId, s.FileExplorer.Current.WinId))
 			isDirectoryPreview := false
 			if preview, ok := s.FileExplorer.Preview.(FileExplorerDirectoryPreview); ok {
 				if preview.Directory != nil && preview.Directory.BufNr == bufNr {
 					isDirectoryPreview = true
 				}
 			}
-			if s.FileExplorer.Parent.BufNr == bufNr {
+			if s.FileExplorer.Parent.WinId == winId {
+				utils.Log(fmt.Sprintf("[minifiles] render: updating parent bufNr=%d", bufNr))
 				s.FileExplorer.updateParent(grid)
-			} else if s.FileExplorer.Current.BufNr == bufNr {
+			} else if s.FileExplorer.Current.WinId == winId {
+				utils.Log(fmt.Sprintf("[minifiles] render: updating current bufNr=%d", bufNr))
 				s.FileExplorer.updateCurrent(grid)
-			} else if s.FileExplorer.Preview.GetBufNr() == bufNr && isDirectoryPreview {
+			} else if s.FileExplorer.Preview != nil && s.FileExplorer.Preview.GetWinId() == winId && isDirectoryPreview {
+				utils.Log(fmt.Sprintf("[minifiles] render: updating dir preview bufNr=%d", bufNr))
 				s.FileExplorer.updateDirPreview(grid)
 			} else {
+				utils.Log(fmt.Sprintf("[minifiles] render: updating content preview bufNr=%d", bufNr))
 				s.FileExplorer.updateContentPreview(s.optimizeGrid(grid, "minifiles", bufNr, -1))
 			}
 			hasFileExplorerDirty = true
@@ -1037,7 +1061,9 @@ func (s *Screen) render() {
 	}
 
 	if hasFileExplorerDirty {
+		utils.Log("[minifiles] render: emitting file-explorer-update")
 		s.emitEvent("file-explorer-update", s.FileExplorer)
+		utils.Log("[minifiles] render: file-explorer-update emitted successfully")
 	}
 }
 

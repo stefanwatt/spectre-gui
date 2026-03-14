@@ -79,8 +79,9 @@ export function startListening() {
 	});
 
 	Events.On('file-explorer-update', (ev) => {
-		const state = ev.data as App.FileExplorerState;
-		if (state && state.current_dir) {
+		const state = ev.data;
+		console.log(state)
+		if (state && state.current) {
 			setFileExplorerState(state);
 			setFileExplorerVisible(true);
 		}

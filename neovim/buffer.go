@@ -2,6 +2,8 @@ package neovim
 
 import (
 	"errors"
+	"fmt"
+	"nvim-gui/utils"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -31,6 +33,7 @@ func GetCurrentBuffer()(*Buffer,error){
 }
 
 func GetWindowBuffer(winId int) (*Buffer, error) {
+	utils.Log(fmt.Sprintf("[minifiles] GetWindowBuffer: fetching windows for winId=%d", winId))
 	windows, error := NvimInstance.Windows()
 	if error != nil {
 		return nil, error
@@ -46,6 +49,7 @@ func GetWindowBuffer(winId int) (*Buffer, error) {
 	if foundWindow == nil {
 		return nil, errors.New("couldnt find window")
 	}
+	utils.Log(fmt.Sprintf("[minifiles] GetWindowBuffer: found window, fetching buffer for winId=%d", winId))
 	buffer, error := NvimInstance.WindowBuffer(*foundWindow)
 
 	if error != nil {
@@ -58,6 +62,7 @@ func GetWindowBuffer(winId int) (*Buffer, error) {
 	if error != nil {
 		return nil, error
 	}
+	utils.Log(fmt.Sprintf("[minifiles] GetWindowBuffer: winId=%d filetype=%s", winId, filetype))
 	if filetype == "" {
 		var treesitterContext bool
 		NvimInstance.WindowVar(*foundWindow, "treesitter_context", &treesitterContext)
