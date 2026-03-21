@@ -45,19 +45,19 @@ type FileExplorerContentPreview struct {
 
 func (FileExplorerContentPreview) isFileExplorerPreview() {}
 
-func (cp FileExplorerContentPreview) GetBufNr() int {
+func (cp *FileExplorerContentPreview) GetBufNr() int {
 	return cp.BufNr
 }
 
-func (cp FileExplorerContentPreview) SetBufNr(bufNr int) {
+func (cp *FileExplorerContentPreview) SetBufNr(bufNr int) {
 	cp.BufNr = bufNr
 }
 
-func (cp FileExplorerContentPreview) GetWinId() int {
+func (cp *FileExplorerContentPreview) GetWinId() int {
 	return cp.WinId
 }
 
-func (cp FileExplorerContentPreview) SetWinId(winId int) {
+func (cp *FileExplorerContentPreview) SetWinId(winId int) {
 	cp.WinId = winId
 }
 
@@ -332,7 +332,7 @@ func (fe *FileExplorer) updateContentPreview(content []ContentRow) {
 		}
 	}
 
-	fe.Preview = FileExplorerContentPreview{
+	fe.Preview = &FileExplorerContentPreview{
 		Content: content,
 		BufNr:   bufNr,
 		WinId:   winId,

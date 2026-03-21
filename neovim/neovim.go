@@ -168,15 +168,19 @@ func StartListening(ctx context.Context) {
 					return
 				}
 				winId := utils.ReflectToInt(dataMap["win_id"])
+				bufNr := utils.ReflectToInt(dataMap["buf_id"])
 				column, _ := dataMap["column"].(string)
-				utils.Log(fmt.Sprintf("[minifiles] MiniFilesWindowOpen: column=%s winId=%d", column, winId))
+				utils.Log(fmt.Sprintf("[minifiles] MiniFilesWindowOpen: column=%s winId=%d bufNr=%d", column, winId, bufNr))
 				switch column {
 				case "parent":
 					NvimScreen.FileExplorer.Parent.WinId = winId
+					NvimScreen.FileExplorer.Parent.BufNr = bufNr
 				case "current":
 					NvimScreen.FileExplorer.Current.WinId = winId
+					NvimScreen.FileExplorer.Current.BufNr = bufNr
 				case "preview":
 					NvimScreen.FileExplorer.Preview.SetWinId(winId)
+					NvimScreen.FileExplorer.Preview.SetBufNr(bufNr)
 					NvimScreen.applyFileExplorerPreviewSize()
 				}
 			case "MiniFilesWindowUpdate":
@@ -189,12 +193,26 @@ func StartListening(ctx context.Context) {
 					return
 				}
 				column, _ := dataMap["column"].(string)
-				if column != "preview" {
+				if column == "" {
+					utils.Log("[minifiles] MiniFilesWindowUpdate: missing column")
 					return
 				}
 				winId := utils.ReflectToInt(dataMap["win_id"])
-				NvimScreen.FileExplorer.Preview.SetWinId(winId)
-				NvimScreen.applyFileExplorerPreviewSize()
+				bufNr := utils.ReflectToInt(dataMap["buf_id"])
+				switch column {
+				case "parent":
+					NvimScreen.FileExplorer.Parent.WinId = winId
+					NvimScreen.FileExplorer.Parent.BufNr = bufNr
+				case "current":
+					NvimScreen.FileExplorer.Current.WinId = winId
+					NvimScreen.FileExplorer.Current.BufNr = bufNr
+				case "preview":
+					NvimScreen.FileExplorer.Preview.SetWinId(winId)
+					NvimScreen.FileExplorer.Preview.SetBufNr(bufNr)
+					NvimScreen.applyFileExplorerPreviewSize()
+				default:
+					utils.Log(fmt.Sprintf("[minifiles] MiniFilesWindowUpdate: unsupported column=%s", column))
+				}
 			case "MiniFilesBufferUpdate":
 				// if NvimScreen.FileExplorer == nil {
 				// 	utils.Log("MiniFilesBufferUpdate: FileExplorer is nil, ignoring")
