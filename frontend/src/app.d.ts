@@ -243,9 +243,12 @@ declare global {
 
 		interface FileExplorerDirectory {
 			entries: FileExplorerEntry[];
+			selectedEntryId: number
 		}
 
-		interface FileExplorerPreview {}
+		interface FileExplorerPreview {
+			content: NvimRow[]
+		}
 
 		interface FileExplorerState {
 			parent?: FileExplorerDirectory;

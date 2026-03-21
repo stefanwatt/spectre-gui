@@ -20,8 +20,12 @@
 		<!-- 	{data.title} -->
 		<!-- </div> -->
 		<div class="overflow-y-auto">
-			{#each data.entries as entry, i}
-				<div class="flex cursor-default gap-1 whitespace-nowrap px-1 py-2">
+			{#each data.entries as entry (entry.id)}
+				<div
+					class="flex cursor-default gap-1 whitespace-nowrap px-1 py-2"
+					class:bg-blue-300={data.selectedEntryId === entry.id}
+					class:text-black={data.selectedEntryId === entry.id}
+				>
 					<span class="w-[2ch] shrink-0 text-center">{entry.icon}</span>
 					<span class="overflow-hidden text-ellipsis">{entry.text}</span>
 				</div>
@@ -32,17 +36,19 @@
 
 {#if visible && state?.current}
 	<div class="file-explorer victor-mono">
-		<div class="panes grid h-screen w-screen grid-rows-1 bg-base-100">
+		<div class="panes grid h-screen w-screen grid-rows-1 ">
 			{#if state.parent}
 				{@render pane(state.parent, 'parent')}
 			{/if}
 			{@render pane(state.current, 'current')}
 			{#if state.preview}
-				{#if state.preview.entries}
-					{@render pane(state.preview, 'preview')}
+				{#if state.preview.directory}
+					{@render pane(state.preview.directory, 'preview')}
 				{:else}
-					preview
-					<!-- <Grid ></Grid> -->
+					<div>
+						<Grid content={state.preview.content} lineNumbers={false} relativeLineNumbers={false}
+						></Grid>
+					</div>
 				{/if}
 			{/if}
 		</div>
@@ -71,5 +77,3 @@
 		opacity: 1;
 	}
 </style>
-
-

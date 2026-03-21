@@ -1,6 +1,10 @@
 package neovim
 
-import "strings"
+import (
+	"fmt"
+	"nvim-gui/utils"
+	"strings"
+)
 
 type FileExplorerPreview interface {
 	isFileExplorerPreview()
@@ -56,15 +60,18 @@ func (cp FileExplorerContentPreview) SetWinId(winId int) {
 }
 
 type FileExplorerDirectoryEntry struct {
-	ID   int    `json:"id"`
-	Icon string `json:"icon"`
-	Text string `json:"text"`
+	ID       int    `json:"id"`
+	Icon     string `json:"icon"`
+	Text     string `json:"text"`
+	FilePath string `json:"filePath"`
+	IsDir    bool   `json:"isDir"`
 }
 
 type FileExplorerDirectory struct {
-	WinId   int                          `json:"winId"`
-	BufNr   int                          `json:"bufNr"`
-	Entries []FileExplorerDirectoryEntry `json:"entries"`
+	WinId           int                          `json:"winId"`
+	BufNr           int                          `json:"bufNr"`
+	Entries         []FileExplorerDirectoryEntry `json:"entries"`
+	SelectedEntryId int                          `json:"selectedEntryId"`
 }
 
 type FileExplorer struct {
@@ -76,17 +83,23 @@ type FileExplorer struct {
 func NewFileExplorer() *FileExplorer {
 	return &FileExplorer{
 		Parent: FileExplorerDirectory{
-			BufNr:   -1,
-			Entries: []FileExplorerDirectoryEntry{},
+			BufNr:           -1,
+			WinId:           -1,
+			Entries:         []FileExplorerDirectoryEntry{},
+			SelectedEntryId: -1,
 		},
 		Current: FileExplorerDirectory{
-			BufNr:   -1,
-			Entries: []FileExplorerDirectoryEntry{},
+			BufNr:           -1,
+			WinId:           -1,
+			Entries:         []FileExplorerDirectoryEntry{},
+			SelectedEntryId: -1,
 		},
 		Preview: FileExplorerDirectoryPreview{
 			Directory: &FileExplorerDirectory{
-				BufNr:   -1,
-				Entries: []FileExplorerDirectoryEntry{},
+				BufNr:           -1,
+				WinId:           -1,
+				Entries:         []FileExplorerDirectoryEntry{},
+				SelectedEntryId: -1,
 			},
 		},
 	}
@@ -139,10 +152,13 @@ func (fe *FileExplorer) renderFileExplorerDirectory(grid *Grid) []FileExplorerDi
 			continue
 		}
 
+		isDir := strings.HasSuffix(text, "/")
+
 		entries = append(entries, FileExplorerDirectoryEntry{
-			ID:   row,
-			Icon: icon,
-			Text: text,
+			ID:    row,
+			Icon:  icon,
+			Text:  text,
+			IsDir: isDir,
 		})
 	}
 
@@ -158,13 +174,80 @@ func (fe *FileExplorer) updateCurrent(grid *Grid) {
 }
 
 func (fe *FileExplorer) updateDirPreview(grid *Grid) {
-	if preview, ok := fe.Preview.(FileExplorerDirectoryPreview); ok {
-		preview.Directory.Entries = fe.renderFileExplorerDirectory(grid)
+	winId := fe.Preview.GetWinId()
+	bufNr := fe.Preview.GetBufNr()
+	fe.Preview = FileExplorerDirectoryPreview{
+		Directory: &FileExplorerDirectory{
+			WinId:           winId,
+			BufNr:           bufNr,
+			Entries:         fe.renderFileExplorerDirectory(grid),
+			SelectedEntryId: -1,
+		},
 	}
 }
 
 func (fe *FileExplorer) updateContentPreview(content []ContentRow) {
-	if preview, ok := fe.Preview.(FileExplorerContentPreview); ok {
-		preview.Content = content
+	winId := fe.Preview.GetWinId()
+	bufNr := fe.Preview.GetBufNr()
+	if len(content) > 2 {
+		content = content[1 : len(content)-1]
 	}
+	for i := range content {
+		if len(content[i].Tokens) > 2 {
+			content[i].Tokens = content[i].Tokens[1:]
+			if len(content[i].Tokens) > 0 {
+				content[i].Tokens = content[i].Tokens[:len(content[i].Tokens)-1]
+			}
+		}
+	}
+
+	fe.Preview = FileExplorerContentPreview{
+		Content: content,
+		BufNr:   bufNr,
+		WinId:   winId,
+	}
+}
+
+func (fe *FileExplorer) updateCursor(winId, row, col int) (*FileExplorerDirectoryEntry, error) {
+	// Helper to find the entry ID for a given row in a directory
+	findEntryForRow := func(entries []FileExplorerDirectoryEntry, targetRow int) (*FileExplorerDirectoryEntry, error) {
+		// Find the entry whose ID matches the grid row
+		for _, entry := range entries {
+			if entry.ID == targetRow {
+				utils.Log(fmt.Sprintf("[fileexplorer] found entry with id=%d", winId))
+				return &entry, nil
+			}
+		}
+		utils.Log(fmt.Sprintf("[fileexplorer] could not find entry with id=%d", winId))
+		return nil, fmt.Errorf("[fileexplorer] could not find entry with id=%d", winId)
+	}
+
+	if fe.Parent.WinId == winId {
+		utils.Log("[fileexplorer] updating cursor for parent")
+		entry, err := findEntryForRow(fe.Parent.Entries, row)
+		if err != nil {
+			return nil, err
+		}
+		fe.Parent.SelectedEntryId = entry.ID
+		return entry, nil
+	} else if fe.Current.WinId == winId {
+		utils.Log("[fileexplorer] updating cursor for current")
+		entry, err := findEntryForRow(fe.Current.Entries, row)
+		if err != nil {
+			return nil, err
+		}
+		fe.Current.SelectedEntryId = entry.ID
+		return entry, nil
+	} else if fe.Preview.GetWinId() == winId {
+		utils.Log("[fileexplorer] updating cursor for preview")
+		if dirPreview, ok := fe.Preview.(FileExplorerDirectoryPreview); ok {
+			entry, err := findEntryForRow(dirPreview.Directory.Entries, row)
+			if err != nil {
+				return nil, err
+			}
+			dirPreview.Directory.SelectedEntryId = entry.ID
+			return entry, nil
+		}
+	}
+	return nil, fmt.Errorf("didnt find window or entry for cursor")
 }

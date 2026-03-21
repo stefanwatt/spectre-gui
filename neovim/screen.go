@@ -594,7 +594,13 @@ func (s *Screen) gridCursorGoto(gridId, row, col int) {
 	s.ActiveGrid = gridId
 	s.ActiveWindow = s.GridToWindow[gridId]
 	s.UpdateCursor()
-	utils.Log(fmt.Sprintf("gridCursorGoto row=%d col=%d activeWindowId=%d", row, col, s.ActiveWindow))
+	if s.FileExplorer != nil {
+		entry, err := s.FileExplorer.updateCursor(s.ActiveWindow, row, col)
+		if err == nil {
+			utils.Log(fmt.Sprintf("[fileexplorer] cursor on entry: text=%s isDir=%v", entry.Text, entry.IsDir))
+			s.emitEvent("file-explorer-update", s.FileExplorer)
+		}
+	}
 	if row >= 0 && row < grid.Height {
 		grid.DirtyRows[row] = true
 	}
@@ -999,30 +1005,32 @@ func (s *Screen) render() {
 		window.Dirty = false
 		grid := window.Grid
 
-		// TODO: set s.FileExplorer -> hook into mini files open event autcmd
-		// Skip mini.files directory windows — rendered by custom file explorer UI
 		if s.FileExplorer != nil && window.IsFileExplorer {
 			bufNr := window.Buffer.BufNr
 			utils.Log(fmt.Sprintf("[minifiles] render: processing file explorer winId=%d parentWinId=%d currentWinId=%d",
 				winId, s.FileExplorer.Parent.WinId, s.FileExplorer.Current.WinId))
-			isDirectoryPreview := false
-			if preview, ok := s.FileExplorer.Preview.(FileExplorerDirectoryPreview); ok {
-				if preview.Directory != nil && preview.Directory.BufNr == bufNr {
-					isDirectoryPreview = true
-				}
-			}
 			if s.FileExplorer.Parent.WinId == winId {
 				utils.Log(fmt.Sprintf("[minifiles] render: updating parent bufNr=%d", bufNr))
 				s.FileExplorer.updateParent(grid)
 			} else if s.FileExplorer.Current.WinId == winId {
 				utils.Log(fmt.Sprintf("[minifiles] render: updating current bufNr=%d", bufNr))
 				s.FileExplorer.updateCurrent(grid)
-			} else if s.FileExplorer.Preview != nil && s.FileExplorer.Preview.GetWinId() == winId && isDirectoryPreview {
-				utils.Log(fmt.Sprintf("[minifiles] render: updating dir preview bufNr=%d", bufNr))
-				s.FileExplorer.updateDirPreview(grid)
-			} else {
-				utils.Log(fmt.Sprintf("[minifiles] render: updating content preview bufNr=%d", bufNr))
-				s.FileExplorer.updateContentPreview(s.optimizeGrid(grid, "minifiles", bufNr, -1))
+			} else if s.FileExplorer.Preview != nil && s.FileExplorer.Preview.GetWinId() == winId {
+				// Determine preview type from the currently selected entry in the current directory
+				selectedIsDir := false
+				for _, entry := range s.FileExplorer.Current.Entries {
+					if entry.ID == s.FileExplorer.Current.SelectedEntryId {
+						selectedIsDir = entry.IsDir
+						break
+					}
+				}
+				if selectedIsDir {
+					utils.Log(fmt.Sprintf("[minifiles] render: updating dir preview bufNr=%d", bufNr))
+					s.FileExplorer.updateDirPreview(grid)
+				} else {
+					utils.Log(fmt.Sprintf("[minifiles] render: updating content preview bufNr=%d", bufNr))
+					s.FileExplorer.updateContentPreview(s.optimizeGrid(grid, "minifiles", bufNr, -1))
+				}
 			}
 			hasFileExplorerDirty = true
 			continue
