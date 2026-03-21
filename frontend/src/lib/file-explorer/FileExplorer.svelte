@@ -81,7 +81,7 @@
 
 {#snippet pane(data: App.FileExplorerDirectory, role: 'parent' | 'current')}
 	<div
-		class="overflow-y-auto border-r-2 border-r-surface0"
+		class="overflow-y-auto border-r-2 border-r-surface0 bg-base-100"
 		class:focused={role === 'current'}
 		class:parent-dir={role === 'parent'}
 		class:current-dir={role === 'current'}
@@ -107,14 +107,14 @@
 {/snippet}
 
 {#if visible && state?.current}
-	<div class="file-explorer victor-mono">
-		<div class="panes grid h-full w-full grid-rows-1">
+	<div class="file-explorer victor-mono bg-base-100">
+		<div class="panes grid h-full w-full grid-rows-1 bg-base-100">
 			{#if state.parent}
 				{@render pane(state.parent, 'parent')}
 			{/if}
 			{@render pane(state.current, 'current')}
 			{#if state.preview}
-				<div class="preview-pane overflow-y-auto" bind:this={previewPaneEl}>
+				<div class="preview-pane overflow-y-auto bg-base-100" bind:this={previewPaneEl}>
 					{#if state.preview.directory}
 						<div class="overflow-y-auto">
 							{#each state.preview.directory.entries as entry (entry.id)}
@@ -151,7 +151,7 @@
 	.file-explorer {
 		position: absolute;
 		inset: 0;
-		z-index: 100;
+		z-index: 150;
 		pointer-events: none;
 	}
 </style>
