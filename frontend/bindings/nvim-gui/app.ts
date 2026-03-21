@@ -17,6 +17,10 @@ export function GetReplacementText(matchedLine: string, searchTerm: string, repl
     return $Call.ByID(436416066, matchedLine, searchTerm, replacementText, useRegex);
 }
 
+export function OnFileExplorerPreviewResize(width: number, height: number): $CancellablePromise<void> {
+    return $Call.ByID(70856491, width, height);
+}
+
 /**
  * OnResize handles window resize events from the frontend
  */

@@ -118,6 +118,10 @@ func StartListening(ctx context.Context) {
 		if err != nil {
 			utils.Log(fmt.Sprintf("Failed to setup autocmd bridge: %v", err))
 		}
+		err = EnsureMiniFilesPatched()
+		if err != nil {
+			utils.Log(fmt.Sprintf("[minifiles] failed to load patched mini.files: %v", err))
+		}
 
 		NvimInstance.RegisterHandler("MiniFilesBridge", func(eventName string, data interface{}) {
 			utils.Log(fmt.Sprintf("[minifiles] MiniFilesBridge received event=%s", eventName))
@@ -173,7 +177,24 @@ func StartListening(ctx context.Context) {
 					NvimScreen.FileExplorer.Current.WinId = winId
 				case "preview":
 					NvimScreen.FileExplorer.Preview.SetWinId(winId)
+					NvimScreen.applyFileExplorerPreviewSize()
 				}
+			case "MiniFilesWindowUpdate":
+				if NvimScreen.FileExplorer == nil {
+					return
+				}
+				dataMap, ok := data.(map[string]interface{})
+				if !ok {
+					utils.Log("[minifiles] MiniFilesWindowUpdate: invalid data format")
+					return
+				}
+				column, _ := dataMap["column"].(string)
+				if column != "preview" {
+					return
+				}
+				winId := utils.ReflectToInt(dataMap["win_id"])
+				NvimScreen.FileExplorer.Preview.SetWinId(winId)
+				NvimScreen.applyFileExplorerPreviewSize()
 			case "MiniFilesBufferUpdate":
 				// if NvimScreen.FileExplorer == nil {
 				// 	utils.Log("MiniFilesBufferUpdate: FileExplorer is nil, ignoring")

@@ -120,3 +120,17 @@ func getWindow(winId int) (*nvim.Window, error) {
 	}
 	return &foundWin, err
 }
+
+func resizeFloatingWindow(winId, cols, rows int) error {
+	win, err := getWindow(winId)
+	if err != nil {
+		return err
+	}
+	config, err := NvimInstance.WindowConfig(*win)
+	if err != nil {
+		return err
+	}
+	config.Width = cols
+	config.Height = rows
+	return NvimInstance.SetWindowConfig(*win, config)
+}

@@ -125,6 +125,45 @@ func (s *Screen) Resize(width, height int) {
 	NvimScreen.Width = width
 	NvimScreen.Height = height
 	NvimInstance.TryResizeUI(width, height)
+	s.applyFileExplorerPreviewSize()
+}
+
+func (s *Screen) SetFileExplorerPreviewSizePixels(widthPx, heightPx int) {
+	cols, rows := PreviewGridSizeFromPixels(widthPx, heightPx)
+	currentCols := cols / 2
+	if currentCols < 1 {
+		currentCols = 1
+	}
+	currentRows := rows
+	if currentRows < 1 {
+		currentRows = 1
+	}
+	if err := SetMiniFilesWindowOverrides(currentCols, cols, currentRows, rows); err != nil {
+		utils.Log(fmt.Sprintf("[minifiles] failed to set window overrides current=%dx%d preview=%dx%d err=%v",
+			currentCols, currentRows, cols, rows, err))
+	}
+	if s.FileExplorer != nil {
+		if s.FileExplorer.PreviewTargetCols == cols && s.FileExplorer.PreviewTargetRows == rows {
+			return
+		}
+		s.FileExplorer.SetPreviewTargetSize(cols, rows)
+	}
+	s.applyFileExplorerPreviewSize()
+}
+
+func (s *Screen) applyFileExplorerPreviewSize() {
+	if s.FileExplorer == nil || !s.FileExplorer.HasPreviewTargetSize() {
+		return
+	}
+	previewWinId := s.FileExplorer.Preview.GetWinId()
+	if previewWinId < 1 {
+		return
+	}
+	err := resizeFloatingWindow(previewWinId, s.FileExplorer.PreviewTargetCols, s.FileExplorer.PreviewTargetRows)
+	if err != nil {
+		utils.Log(fmt.Sprintf("[minifiles] failed to resize preview winId=%d cols=%d rows=%d err=%v",
+			previewWinId, s.FileExplorer.PreviewTargetCols, s.FileExplorer.PreviewTargetRows, err))
+	}
 }
 
 func (s *Screen) handleRedraw(updates [][]interface{}) {

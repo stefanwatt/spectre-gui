@@ -2,7 +2,9 @@ package neovim
 
 import (
 	"fmt"
+	"math"
 	"nvim-gui/utils"
+	"path/filepath"
 	"strings"
 )
 
@@ -75,9 +77,11 @@ type FileExplorerDirectory struct {
 }
 
 type FileExplorer struct {
-	Parent  FileExplorerDirectory `json:"parent"`
-	Current FileExplorerDirectory `json:"current"`
-	Preview FileExplorerPreview   `json:"preview"`
+	Parent            FileExplorerDirectory `json:"parent"`
+	Current           FileExplorerDirectory `json:"current"`
+	Preview           FileExplorerPreview   `json:"preview"`
+	PreviewTargetRows int                   `json:"-"`
+	PreviewTargetCols int                   `json:"-"`
 }
 
 func NewFileExplorer() *FileExplorer {
@@ -102,7 +106,134 @@ func NewFileExplorer() *FileExplorer {
 				SelectedEntryId: -1,
 			},
 		},
+		PreviewTargetRows: 0,
+		PreviewTargetCols: 0,
 	}
+}
+
+func (fe *FileExplorer) SetPreviewTargetSize(cols, rows int) {
+	if cols < 1 {
+		cols = 1
+	}
+	if rows < 1 {
+		rows = 1
+	}
+	fe.PreviewTargetCols = cols
+	fe.PreviewTargetRows = rows
+}
+
+func (fe *FileExplorer) HasPreviewTargetSize() bool {
+	return fe.PreviewTargetCols > 0 && fe.PreviewTargetRows > 0
+}
+
+func PreviewGridSizeFromPixels(widthPx, heightPx int) (cols, rows int) {
+	const cellWidth = 12
+	const cellHeight = 28
+	if widthPx < 1 {
+		widthPx = 1
+	}
+	if heightPx < 1 {
+		heightPx = 1
+	}
+	cols = int(math.Floor(float64(widthPx) / float64(cellWidth)))
+	rows = int(math.Floor(float64(heightPx) / float64(cellHeight)))
+	if cols < 1 {
+		cols = 1
+	}
+	if rows < 1 {
+		rows = 1
+	}
+	return cols, rows
+}
+
+func SetMiniFilesWindowOverrides(currentCols, previewCols, currentRows, previewRows int) error {
+	if currentCols < 1 {
+		currentCols = 1
+	}
+	if previewCols < 1 {
+		previewCols = 1
+	}
+	if currentRows < 1 {
+		currentRows = 1
+	}
+	if previewRows < 1 {
+		previewRows = 1
+	}
+	lua := `
+local cur_w, prev_w, cur_h, prev_h = ...
+local ok, mf = pcall(require, "mini.files")
+if not ok or mf == nil then
+  return false
+end
+if type(mf.set_window_overrides) == "function" then
+  mf.set_window_overrides(cur_w, prev_w, cur_h, prev_h)
+  return true
+end
+if type(mf.set_window_width_overrides) == "function" then
+  mf.set_window_width_overrides(cur_w, prev_w)
+  return true
+end
+if type(_G.MiniFiles) == "table" then
+  if type(_G.MiniFiles.set_window_overrides) == "function" then
+    _G.MiniFiles.set_window_overrides(cur_w, prev_w, cur_h, prev_h)
+    return true
+  end
+  if type(_G.MiniFiles.set_window_width_overrides) == "function" then
+    _G.MiniFiles.set_window_width_overrides(cur_w, prev_w)
+    return true
+  end
+end
+return false
+`
+	var applied bool
+	if err := NvimInstance.ExecLua(lua, &applied, currentCols, previewCols, currentRows, previewRows); err != nil {
+		return err
+	}
+	if !applied {
+		return fmt.Errorf("mini.files window override API not available")
+	}
+	return nil
+}
+
+func EnsureMiniFilesPatched() error {
+	lua := `
+if package.loaded["mini.files"] ~= nil then
+  package.loaded["mini.files"] = nil
+end
+if type(_G.MiniFiles) == "table" then
+  _G.MiniFiles = nil
+end
+return true
+`
+	var ok bool
+	if err := NvimInstance.ExecLua(lua, &ok); err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("failed to reset mini.files module before patch")
+	}
+	patchPath := filepath.Join("/home/stefan/Projects/mini.files/lua", "mini/files.lua")
+	loadLua := `
+local path = ...
+if vim and vim.fn and vim.fn.filereadable(path) == 0 then
+  return false
+end
+local chunk, load_err = loadfile(path)
+if not chunk then
+  error(load_err)
+end
+local module = chunk()
+package.loaded["mini.files"] = module
+_G.MiniFiles = module
+return true
+`
+	if err := NvimInstance.ExecLua(loadLua, &ok, patchPath); err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("failed to load patched mini.files from %s", patchPath)
+	}
+	return nil
 }
 
 func (fe *FileExplorer) renderFileExplorerDirectory(grid *Grid) []FileExplorerDirectoryEntry {
