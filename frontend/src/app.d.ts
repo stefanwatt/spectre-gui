@@ -235,7 +235,7 @@ declare global {
 
 		interface FileExplorerEntry {
 			id: number;
-			fsType: 'file' | 'directory';
+			isDir: boolean;
 			text: string;
 			icon: string;
 			iconClass: string;
@@ -243,11 +243,11 @@ declare global {
 
 		interface FileExplorerDirectory {
 			entries: FileExplorerEntry[];
-			selectedEntryId: number
+			selectedEntryId: number;
 		}
 
 		interface FileExplorerPreview {
-			content: NvimRow[]
+			content: NvimRow[];
 		}
 
 		interface FileExplorerState {

@@ -81,7 +81,7 @@
 
 {#snippet pane(data: App.FileExplorerDirectory, role: 'parent' | 'current')}
 	<div
-		class="overflow-y-auto border-r-2 border-r-surface0 bg-base-100"
+		class="bg-very-dark overflow-y-auto border-r-2 border-r-surface0"
 		class:focused={role === 'current'}
 		class:parent-dir={role === 'parent'}
 		class:current-dir={role === 'current'}
@@ -93,12 +93,16 @@
 		<!-- </div> -->
 		<div class="overflow-y-auto">
 			{#each data.entries as entry (entry.id)}
+				{@const selected = data.selectedEntryId === entry.id}
 				<div
 					class="flex cursor-default gap-1 whitespace-nowrap px-1 py-2"
-					class:bg-blue-300={data.selectedEntryId === entry.id}
-					class:text-black={data.selectedEntryId === entry.id}
+					class:bg-blue={selected}
+					class:text-black={selected}
 				>
-					<span class="w-[2ch] shrink-0 text-center">{entry.icon}</span>
+					<span
+						class:bg-blue={!selected && entry.isDir}
+						class={`w-[2ch] shrink-0 text-center ${entry.iconClass ?? ''}`}>{entry.icon}</span
+					>
 					<span class="overflow-hidden text-ellipsis">{entry.text}</span>
 				</div>
 			{/each}
@@ -107,23 +111,24 @@
 {/snippet}
 
 {#if visible && state?.current}
-	<div class="file-explorer victor-mono bg-base-100">
-		<div class="panes grid h-full w-full grid-rows-1 bg-base-100">
+	<div class="file-explorer victor-mono bg-very-dark text-text">
+		<div class="panes bg-very-dark grid h-full w-full grid-rows-1">
 			{#if state.parent}
 				{@render pane(state.parent, 'parent')}
 			{/if}
 			{@render pane(state.current, 'current')}
 			{#if state.preview}
-				<div class="preview-pane overflow-y-auto bg-base-100" bind:this={previewPaneEl}>
+				<div class="preview-pane bg-very-dark overflow-y-auto" bind:this={previewPaneEl}>
 					{#if state.preview.directory}
 						<div class="overflow-y-auto">
 							{#each state.preview.directory.entries as entry (entry.id)}
+								{@const selected = state.preview.directory.selectedEntryId === entry.id}
 								<div
 									class="flex cursor-default gap-1 whitespace-nowrap px-1 py-2"
-									class:bg-blue-300={state.preview.directory.selectedEntryId === entry.id}
-									class:text-black={state.preview.directory.selectedEntryId === entry.id}
+									class:bg-blue={selected}
+									class:text-black={selected}
 								>
-									<span class="w-[2ch] shrink-0 text-center">{entry.icon}</span>
+									<span class={`w-[2ch] shrink-0 text-center ${entry.iconClass ?? ''}`}>{entry.icon}</span>
 									<span class="overflow-hidden text-ellipsis">{entry.text}</span>
 								</div>
 							{/each}
@@ -140,11 +145,16 @@
 	</div>
 {/if}
 
-<!-- class:bg-blue-300={i + 1 === data.cursor_line} -->
-<!-- class:text-black={i + 1 === data.cursor_line} -->
-<!-- class:directory={entry.fs_type === 'directory'} -->
-
 <style>
+	:global(.preview-pane .flex.overflow-hidden.whitespace-pre.leading-none) {
+		background-color: #181825 !important;
+	}
+	:global(.preview-pane .flex.overflow-hidden.whitespace-pre.leading-none span) {
+		background-color: #181825 !important;
+	}
+	.bg-very-dark {
+		background-color: #181825;
+	}
 	.panes {
 		grid-template-columns: 3fr 3fr 6fr;
 	}

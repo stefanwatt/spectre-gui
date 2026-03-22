@@ -62,11 +62,12 @@ func (cp *FileExplorerContentPreview) SetWinId(winId int) {
 }
 
 type FileExplorerDirectoryEntry struct {
-	ID       int    `json:"id"`
-	Icon     string `json:"icon"`
-	Text     string `json:"text"`
-	FilePath string `json:"filePath"`
-	IsDir    bool   `json:"isDir"`
+	ID        int    `json:"id"`
+	Icon      string `json:"icon"`
+	IconClass string `json:"iconClass"`
+	Text      string `json:"text"`
+	FilePath  string `json:"filePath"`
+	IsDir     bool   `json:"isDir"`
 }
 
 type FileExplorerDirectory struct {
@@ -244,39 +245,68 @@ func (fe *FileExplorer) renderFileExplorerDirectory(grid *Grid) []FileExplorerDi
 			continue
 		}
 
-		var fullText strings.Builder
-		for _, cell := range rowCells {
-			fullText.WriteString(cell.Char)
+		firstNonEmpty := -1
+		lastNonEmpty := -1
+		for i, cell := range rowCells {
+			if strings.TrimSpace(cell.Char) != "" {
+				firstNonEmpty = i
+				break
+			}
 		}
-
-		line := strings.TrimSpace(fullText.String())
-		if line == "" {
+		if firstNonEmpty == -1 {
 			continue
 		}
+		for i := len(rowCells) - 1; i >= 0; i-- {
+			if strings.TrimSpace(rowCells[i].Char) != "" {
+				lastNonEmpty = i
+				break
+			}
+		}
+		if lastNonEmpty == -1 {
+			continue
+		}
+
+		leftChar := rowCells[firstNonEmpty].Char
+		rightChar := rowCells[lastNonEmpty].Char
 
 		// Skip border rows (top: ┌...┐, bottom: └...┘)
-		if strings.HasPrefix(line, "┌") || strings.HasPrefix(line, "└") {
+		if leftChar == "┌" || leftChar == "└" {
 			continue
 		}
 
-		// Strip │ borders from content rows
-		if strings.HasPrefix(line, "│") && strings.HasSuffix(line, "│") {
-			line = strings.TrimPrefix(line, "│")
-			line = strings.TrimSuffix(line, "│")
-			line = strings.TrimSpace(line)
+		contentStart := firstNonEmpty
+		contentEnd := lastNonEmpty
+		if leftChar == "│" && rightChar == "│" && contentEnd-contentStart >= 2 {
+			contentStart++
+			contentEnd--
 		}
+		if contentStart > contentEnd {
+			continue
+		}
+		contentCells := rowCells[contentStart : contentEnd+1]
 
+		line := strings.TrimSpace(cellsToString(contentCells))
 		if line == "" {
 			continue
 		}
 
-		// Extract icon: first rune if non-ASCII (e.g., devicon)
 		var icon string
+		var iconClass string
 		text := line
-		runes := []rune(line)
-		if len(runes) > 1 && runes[0] > 127 {
-			icon = string(runes[0])
-			text = strings.TrimSpace(string(runes[1:]))
+		iconCellIndex := -1
+		for i, cell := range contentCells {
+			if strings.TrimSpace(cell.Char) != "" {
+				iconCellIndex = i
+				break
+			}
+		}
+		if iconCellIndex >= 0 {
+			iconRunes := []rune(contentCells[iconCellIndex].Char)
+			if len(iconRunes) > 0 && iconRunes[0] > 127 {
+				icon = contentCells[iconCellIndex].Char
+				iconClass = contentCells[iconCellIndex].ClassesToString()
+				text = strings.TrimSpace(cellsToString(contentCells[iconCellIndex+1:]))
+			}
 		}
 
 		if icon == "" && text == "" {
@@ -286,14 +316,26 @@ func (fe *FileExplorer) renderFileExplorerDirectory(grid *Grid) []FileExplorerDi
 		isDir := strings.HasSuffix(text, "/")
 
 		entries = append(entries, FileExplorerDirectoryEntry{
-			ID:    row,
-			Icon:  icon,
-			Text:  text,
-			IsDir: isDir,
+			ID:        row,
+			Icon:      icon,
+			IconClass: iconClass,
+			Text:      text,
+			IsDir:     isDir,
 		})
 	}
 
 	return entries
+}
+
+func cellsToString(cells []*Cell) string {
+	var builder strings.Builder
+	for _, cell := range cells {
+		if cell == nil {
+			continue
+		}
+		builder.WriteString(cell.Char)
+	}
+	return builder.String()
 }
 
 func (fe *FileExplorer) updateParent(grid *Grid) {
