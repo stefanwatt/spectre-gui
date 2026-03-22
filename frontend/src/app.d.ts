@@ -242,8 +242,11 @@ declare global {
 		}
 
 		interface FileExplorerDirectory {
+			winId: number;
+			bufNr: number;
 			entries: FileExplorerEntry[];
 			selectedEntryId: number;
+			cursorCol: number;
 		}
 
 		interface FileExplorerPreview {
@@ -254,6 +257,13 @@ declare global {
 			parent?: FileExplorerDirectory;
 			current?: FileExplorerDirectory;
 			preview?: FileExplorerDirectory | FileExplorerPreview;
+			currentWinMode?: VimMode;
+		}
+
+		interface FileExplorerConfirmPrompt {
+			winId: number;
+			message: string;
+			choices: string[];
 		}
 
 		type NamedKey =

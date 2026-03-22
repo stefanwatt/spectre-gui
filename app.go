@@ -48,6 +48,13 @@ func (a *App) OnFileExplorerPreviewResize(width, height int) {
 	neovim.NvimScreen.SetFileExplorerPreviewSizePixels(width, height)
 }
 
+func (a *App) OnFileExplorerConfirmChoice(winId, choice int) {
+	if neovim.NvimScreen == nil {
+		return
+	}
+	neovim.NvimScreen.HandleFileExplorerConfirmChoice(winId, choice)
+}
+
 // RequestState triggers emission of current state to frontend
 func (a *App) RequestState() {
 	if neovim.NvimScreen != nil {

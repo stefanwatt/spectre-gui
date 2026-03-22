@@ -130,6 +130,7 @@ func StartListening(ctx context.Context) {
 				if NvimScreen.FileExplorer == nil {
 					NvimScreen.FileExplorer = NewFileExplorer()
 				}
+				NvimScreen.FileExplorer.CurrentWinMode = NvimScreen.Mode
 				utils.Log("[minifiles] MiniFilesExplorerOpen: FileExplorer initialized")
 			case "MiniFilesExplorerClose":
 				NvimScreen.FileExplorer = nil
@@ -214,18 +215,20 @@ func StartListening(ctx context.Context) {
 					utils.Log(fmt.Sprintf("[minifiles] MiniFilesWindowUpdate: unsupported column=%s", column))
 				}
 			case "MiniFilesBufferUpdate":
-				// if NvimScreen.FileExplorer == nil {
-				// 	utils.Log("MiniFilesBufferUpdate: FileExplorer is nil, ignoring")
-				// 	return
-				// }
-				// dataMap, ok := data.(map[string]interface{})
-				// if !ok {
-				// 	utils.Log("MiniFilesBufferUpdate: invalid data format")
-				// 	return
-				// }
-				// bufNr := utils.ReflectToInt(dataMap["buf_id"])
-				// typeStr, _ := dataMap["type"].(string)
-				utils.Log(fmt.Sprintf("MiniFilesBufferUpdate"))
+				if NvimScreen.FileExplorer == nil {
+					return
+				}
+				dataMap, ok := data.(map[string]interface{})
+				if !ok {
+					utils.Log("MiniFilesBufferUpdate: invalid data format")
+					return
+				}
+				bufNr := utils.ReflectToInt(dataMap["buf_id"])
+				if bufNr < 1 {
+					return
+				}
+				NvimScreen.FileExplorer.RefreshDirectoryLineMap(bufNr)
+				utils.Log(fmt.Sprintf("[minifiles] MiniFilesBufferUpdate: refreshed fs_type map for buf=%d", bufNr))
 			}
 		})
 

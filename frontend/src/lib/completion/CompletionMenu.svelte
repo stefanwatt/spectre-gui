@@ -91,7 +91,7 @@
 {#if completion.visible && completion.items.length > 0}
 	<div
 		bind:this={menuRef}
-		class="completion-menu absolute z-50 overflow-y-auto rounded-md border border-surface0 bg-base-100 text-text drop-shadow-lg"
+		class="completion-menu absolute z-[210] overflow-y-auto rounded-md border border-surface0 bg-base-100 text-text drop-shadow-lg"
 		style="top: {topPx}; left: {leftCh}; max-height: {10 * lineHeight}px;"
 	>
 		{#each completion.items as item, i (i)}

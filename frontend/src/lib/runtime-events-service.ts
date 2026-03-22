@@ -13,6 +13,7 @@ import {
 	setFloatingWindows,
 	setFileExplorerState,
 	setFileExplorerVisible,
+	setFileExplorerConfirmPrompt,
 	completion,
 	setCompletionDocumentation
 } from '$lib/state.svelte';
@@ -90,6 +91,16 @@ export function startListening() {
 	Events.On('file-explorer-close', (_ev) => {
 		setFileExplorerVisible(false);
 		setFileExplorerState(null);
+		setFileExplorerConfirmPrompt(null);
+	});
+
+	Events.On('file-explorer-confirm-prompt-show', (ev) => {
+		const prompt = ev.data as App.FileExplorerConfirmPrompt;
+		setFileExplorerConfirmPrompt(prompt);
+	});
+
+	Events.On('file-explorer-confirm-prompt-hide', (_ev) => {
+		setFileExplorerConfirmPrompt(null);
 	});
 
 	Events.On('cmdline_pos', (ev) => {

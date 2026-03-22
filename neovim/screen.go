@@ -69,6 +69,13 @@ func (s *Screen) emitEvent(eventName string, data interface{}) {
 	s.app.Event.Emit(eventName, data)
 }
 
+func (s *Screen) syncFileExplorerMode() {
+	if s.FileExplorer == nil {
+		return
+	}
+	s.FileExplorer.CurrentWinMode = s.Mode
+}
+
 func NewScreen(ctx context.Context, cols, rows int, app *application.App) *Screen {
 	// Create grids map and add default grid
 	grids := make(map[int]*Grid)
@@ -637,6 +644,7 @@ func (s *Screen) gridCursorGoto(gridId, row, col int) {
 		entry, err := s.FileExplorer.updateCursor(s.ActiveWindow, row, col)
 		if err == nil {
 			utils.Log(fmt.Sprintf("[fileexplorer] cursor on entry: text=%s isDir=%v", entry.Text, entry.IsDir))
+			s.syncFileExplorerMode()
 			s.emitEvent("file-explorer-update", s.FileExplorer)
 		}
 	}
@@ -762,6 +770,10 @@ func (s *Screen) hlAttrDefine(args []interface{}) {
 func (s *Screen) modeChange(mode string) {
 	s.Mode = mode
 	s.emitEvent("mode-changed", mode)
+	if s.FileExplorer != nil {
+		s.syncFileExplorerMode()
+		s.emitEvent("file-explorer-update", s.FileExplorer)
+	}
 }
 
 func (s *Screen) winHide(args []interface{}) {
@@ -778,6 +790,7 @@ func (s *Screen) winHide(args []interface{}) {
 	}
 	s.windowsMu.Unlock()
 	utils.Log(fmt.Sprintf("winHide hiding window with id=%d, s.Windows:", winId), s.Windows)
+	s.emitEvent("file-explorer-confirm-prompt-hide", struct{}{})
 	s.emitEvent("hide-window", winId)
 	s.updateLayout()
 }
@@ -801,6 +814,7 @@ func (s *Screen) winClose(args []interface{}) {
 				} else if win.ZIndex == 69420 {
 					s.emitEvent("preview-window-closed", winId)
 				} else {
+					s.emitEvent("file-explorer-confirm-prompt-hide", struct{}{})
 					s.emitEvent("floating_window_closed", winId)
 				}
 			}
@@ -1050,10 +1064,10 @@ func (s *Screen) render() {
 				winId, s.FileExplorer.Parent.WinId, s.FileExplorer.Current.WinId))
 			if s.FileExplorer.Parent.WinId == winId {
 				utils.Log(fmt.Sprintf("[minifiles] render: updating parent bufNr=%d", bufNr))
-				s.FileExplorer.updateParent(grid)
+				s.FileExplorer.updateParent(grid, bufNr)
 			} else if s.FileExplorer.Current.WinId == winId {
 				utils.Log(fmt.Sprintf("[minifiles] render: updating current bufNr=%d", bufNr))
-				s.FileExplorer.updateCurrent(grid)
+				s.FileExplorer.updateCurrent(grid, bufNr)
 			} else if s.FileExplorer.Preview != nil && s.FileExplorer.Preview.GetWinId() == winId {
 				// Determine preview type from the currently selected entry in the current directory
 				selectedIsDir := false
@@ -1065,7 +1079,7 @@ func (s *Screen) render() {
 				}
 				if selectedIsDir {
 					utils.Log(fmt.Sprintf("[minifiles] render: updating dir preview bufNr=%d", bufNr))
-					s.FileExplorer.updateDirPreview(grid)
+					s.FileExplorer.updateDirPreview(grid, bufNr)
 				} else {
 					utils.Log(fmt.Sprintf("[minifiles] render: updating content preview bufNr=%d", bufNr))
 					s.FileExplorer.updateContentPreview(s.optimizeGrid(grid, "minifiles", bufNr, -1))
@@ -1109,6 +1123,7 @@ func (s *Screen) render() {
 
 	if hasFileExplorerDirty {
 		utils.Log("[minifiles] render: emitting file-explorer-update")
+		s.syncFileExplorerMode()
 		s.emitEvent("file-explorer-update", s.FileExplorer)
 		utils.Log("[minifiles] render: file-explorer-update emitted successfully")
 	}
@@ -1152,6 +1167,9 @@ func (s *Screen) EmitFloatingWindows() {
 		if !window.IsFloating() {
 			continue
 		}
+		if s.emitFileExplorerConfirmPrompt(window) {
+			continue
+		}
 		// Skip blink-cmp windows -- handled by native completion menu
 		if window.Buffer != nil && (*window.Buffer).Filetype == "blink-cmp-menu" {
 			continue
@@ -1190,6 +1208,11 @@ func (s *Screen) EmitCurrentState() {
 	s.CalculateGridLayout()
 	s.layout.ActiveWindowId = s.ActiveWindow
 	s.emitEvent("layout-updated", s.layout)
+	s.emitEvent("file-explorer-confirm-prompt-hide", struct{}{})
+	if s.FileExplorer != nil {
+		s.syncFileExplorerMode()
+		s.emitEvent("file-explorer-update", s.FileExplorer)
+	}
 
 	// Re-emit content for all windows
 	s.windowsMu.RLock()

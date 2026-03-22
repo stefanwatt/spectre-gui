@@ -12,10 +12,12 @@ blockquote .font-bold {
   text-shadow: none !important;
 }
 
+.file-explorer.mode-i .cursor,
 .active-window.mode-i .cursor {
   box-shadow: -2px 0 0 0 #eebebe;
 }
 
+.file-explorer.mode-n .cursor,
 .active-window.mode-n .cursor {
   color: #272a38 !important;
   background-color: #eebebe !important;

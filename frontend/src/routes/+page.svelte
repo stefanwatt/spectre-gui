@@ -6,6 +6,7 @@
 	import NvimWindow from '$lib/windows/NvimWindow.svelte';
 	import CompletionMenu from '$lib/completion/CompletionMenu.svelte';
 	import FileExplorer from '$lib/file-explorer/FileExplorer.svelte';
+	import FileExplorerConfirmPrompt from '$lib/file-explorer/FileExplorerConfirmPrompt.svelte';
 	import { cmdline, windowContentRowMap, layout, cursor, nestedState, getFloatingWindows, completion } from '$lib/state.svelte';
 	import { init, startListening } from '$lib/runtime-events-service';
 	import { handleKeypress, registerKeymap } from '$lib/keymaps/keymap-service';
@@ -27,11 +28,25 @@
 	});
 	let floatingWindows = $derived(getFloatingWindows());
 	let activeWindow = $derived(layout.windows.find((win) => win.id === layout.activeWindowId));
+	let lastLayoutActiveWindowId = $state<number | undefined>(undefined);
 	$effect(() => {
 		//NOTE: we dont want to rely on redraw events for cursor updates
 		//so we have a separate event listener for cursor updates
 		if (!activeWindow) return;
 		activeWindow.cursor = cursor;
+		lastLayoutActiveWindowId = activeWindow.id;
+	});
+	let completionHostWindowId = $derived.by(() => {
+		if (!completion.visible) {
+			return undefined;
+		}
+		if (activeWindow) {
+			return activeWindow.id;
+		}
+		if (lastLayoutActiveWindowId !== undefined) {
+			return lastLayoutActiveWindowId;
+		}
+		return layout.windows[0]?.id;
 	});
 	let PickerComponent = $derived(nestedState.activePicker?.component);
 </script>
@@ -72,7 +87,7 @@
 							{windowContentRowMap}
 							anchorWindow={win.id}
 						/>
-						{#if layout.activeWindowId === win.id}
+						{#if layout.activeWindowId === win.id || completionHostWindowId === win.id}
 							<CompletionMenu {completion} />
 						{/if}
 					</div>
@@ -81,6 +96,7 @@
 		{/if}
 		<FloatingWindowContainer {floatingWindows} {windowContentRowMap} anchorWindow={0} />
 		<FileExplorer />
+		<FileExplorerConfirmPrompt />
 	</div>
 	<div class="h-10">
 		<StatusLine filepath={activeWindow?.filepath} {cursor} mode={activeWindow?.mode}></StatusLine>

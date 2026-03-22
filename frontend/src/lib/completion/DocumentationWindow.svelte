@@ -55,7 +55,7 @@
 {#if doc && (doc.text || doc.detail)}
 	<div
 		bind:this={docRef}
-		class="documentation-window absolute z-50 overflow-y-auto rounded-md border border-surface0 bg-base-100 text-text drop-shadow-lg"
+		class="documentation-window absolute z-[210] overflow-y-auto rounded-md border border-surface0 bg-base-100 text-text drop-shadow-lg"
 		style="top: {position.top}; left: {position.left}; display: {position.display}; max-height: 400px; width: 400px;"
 	>
 		<div class="p-3 prose prose-sm prose-invert max-w-none">

@@ -71,6 +71,12 @@ let _fileExplorerVisible = $state(false);
 export function getFileExplorerVisible() { return _fileExplorerVisible; }
 export function setFileExplorerVisible(v: boolean) { _fileExplorerVisible = v; }
 
+let _fileExplorerConfirmPrompt: App.FileExplorerConfirmPrompt | null = $state(null);
+export function getFileExplorerConfirmPrompt() { return _fileExplorerConfirmPrompt; }
+export function setFileExplorerConfirmPrompt(v: App.FileExplorerConfirmPrompt | null) {
+  _fileExplorerConfirmPrompt = v;
+}
+
 interface NestedState {
   mode: App.VimMode;
   pickerResults: App.PickerResult[]
