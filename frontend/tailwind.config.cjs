@@ -1,15 +1,17 @@
 /** @type {import('tailwindcss').Config}*/
+const ctpTw = require("@catppuccin/tailwindcss")
 const config = {
   content: ["./src/**/*.{html,js,svelte,ts}"],
 
   theme: {
-    extend: {},
+    extend: { },
   },
 
   plugins: [
     require("daisyui"),
-    require("@catppuccin/tailwindcss")({
+    ctpTw({
       defaultFlavour: 'frappe',
+    
     })
   ],
   daisyui: {
@@ -20,7 +22,7 @@ const config = {
           secondary: "#f4b8e4",
           accent: "#81c8be",
           neutral: "#232634",
-          "base-100": "#303446",
+          "base-100": "#272a38",
           info: "#85c1dc",
           success: "#a6d189",
           warning: "#e5c890",

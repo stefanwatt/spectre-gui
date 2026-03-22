@@ -1,0 +1,49 @@
+<script lang="ts">
+	import ChevronDown from '$lib/icons/ChevronDown.svelte';
+	import ChevronUp from '$lib/icons/ChevronUp.svelte';
+	import ResultsHeader from './ResultsHeader.svelte';
+	import { state } from './results.service.svelte';
+	import Match from '$lib/MatchSSR.svelte';
+	import NoResults from './NoResults.svelte';
+
+	let collapsed = false;
+	interface ResultsProps {
+		searchTerm: string;
+		replaceTerm?: string;
+		regex: boolean;
+	}
+	let { searchTerm, replaceTerm, regex }: ResultsProps = $props();
+</script>
+
+{#if state.results?.length}
+	<div class="min-h-full grow snap-y snap-mandatory overflow-x-hidden overflow-y-scroll">
+		<div class="grid h-full w-full auto-rows-min grid-cols-[1fr,15fr] md:grid-cols-[5rem,auto]">
+			{#each state.results as item (item.Path)}
+				<div class="mb-2 flex w-full items-center justify-end text-blue">
+					{#if !collapsed}
+						<ChevronDown></ChevronDown>
+					{:else}
+						<ChevronUp></ChevronUp>
+					{/if}
+				</div>
+				<div class="mb-2 snap-start">
+					<ResultsHeader path={item.Path} match_count={item.Matches.length}></ResultsHeader>
+				</div>
+				{#each item.Matches as match (match.Id)}
+					<div class="flex w-full snap-start items-center justify-end pr-2 text-overlay0">
+						{match.Row}:{match.Col}
+					</div>
+					<Match
+						{match}
+						{searchTerm}
+						selectedMatch={state.selectedMatch}
+						replaceTerm={replaceTerm || ''}
+						{regex}
+					></Match>
+				{/each}
+			{/each}
+		</div>
+	</div>
+{:else}
+	<NoResults></NoResults>
+{/if}

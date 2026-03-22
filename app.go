@@ -2,75 +2,85 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"mime"
+	"os"
+	"path/filepath"
+	"strings"
 
-	"spectre-gui/match"
-	"spectre-gui/neovim"
-	"spectre-gui/utils"
+	"nvim-gui/neovim"
+	"nvim-gui/utils"
 
-	Runtime "github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-var ctx context.Context
-
-type AppState struct {
-	SearchTerm     string
-	ReplaceTerm    string
-	Dir            string
-	Include        string
-	Exclude        string
-	CaseSensitive  bool
-	Regex          bool
-	MatchWholeWord bool
-	PreserveCase   bool
-	Pagination     Pagination
-	TotalResults   int
-	TotalFiles     int
-}
-
-type PageMatch struct {
-	RgLine string
-	Match  *match.Match
-}
-
-type Page struct {
-	Index   int
-	Matches []PageMatch
-}
-type Pagination struct {
-	PageIndex int
-	Pages     []Page
-}
-type SearchContext struct {
-	ctx         context.Context
-	cancel_func context.CancelFunc
-}
-
 type App struct {
-	ctx        context.Context
-	State      AppState
-	search_ctx SearchContext
-	Mode       string
-	Servername string
+	ctx context.Context
+	App *application.App
 }
 
 func NewApp() *App {
 	return &App{}
 }
 
-func (a *App) mounted(ctx context.Context) {
-	utils.Log("mounted mode: ", a.Mode)
-	Runtime.EventsEmit(a.ctx, "change-url", a.Mode)
-	if a.Servername != "" {
-		go neovim.StartListening(a.Servername, a.ctx)
+func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	a.ctx = ctx
+	utils.SetupLog()
+
+	// Start neovim after app is ready
+	go neovim.StartListening(ctx)
+
+	return nil
+}
+
+// OnResize handles window resize events from the frontend
+func (a *App) OnResize(width, height int) {
+	rows, cols := neovim.CalculateGridSize(width, height)
+	if neovim.NvimScreen != nil {
+		neovim.NvimScreen.Resize(cols, rows)
 	}
 }
 
-func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
-	search_ctx, cancel := context.WithCancel(context.Background())
-	a.search_ctx = SearchContext{
-		ctx:         search_ctx,
-		cancel_func: cancel,
+func (a *App) OnFileExplorerPreviewResize(width, height int) {
+	if neovim.NvimScreen == nil {
+		return
 	}
-	utils.SetupLog()
+	neovim.NvimScreen.SetFileExplorerPreviewSizePixels(width, height)
+}
+
+func (a *App) OnFileExplorerConfirmChoice(winId, choice int) {
+	if neovim.NvimScreen == nil {
+		return
+	}
+	neovim.NvimScreen.HandleFileExplorerConfirmChoice(winId, choice)
+}
+
+// RequestState triggers emission of current state to frontend
+func (a *App) RequestState() {
+	if neovim.NvimScreen != nil {
+		neovim.NvimScreen.EmitCurrentState()
+	}
+}
+
+// ReadLocalImage decodes a base64-encoded local file path and returns it as a data URL.
+// This allows the frontend to load local images in both dev and production modes.
+func (a *App) ReadLocalImage(encoded string) string {
+	decoded, err := base64.URLEncoding.DecodeString(encoded)
+	if err != nil {
+		return ""
+	}
+	absPath := string(decoded)
+	ext := strings.ToLower(filepath.Ext(absPath))
+	if !imageExtensions[ext] {
+		return ""
+	}
+	data, err := os.ReadFile(absPath)
+	if err != nil {
+		return ""
+	}
+	contentType := mime.TypeByExtension(ext)
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	return "data:" + contentType + ";base64," + base64.StdEncoding.EncodeToString(data)
 }

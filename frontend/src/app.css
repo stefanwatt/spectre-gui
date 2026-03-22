@@ -2,6 +2,65 @@
 @tailwind components;
 @tailwind base;
 
+.font-bold {
+  text-shadow:
+    0.5px 0 currentColor,
+    0 0.5px currentColor;
+}
+
+blockquote .font-bold {
+  text-shadow: none !important;
+}
+
+.file-explorer.mode-i .cursor,
+.active-window.mode-i .cursor {
+  box-shadow: -2px 0 0 0 #eebebe;
+}
+
+.file-explorer.mode-n .cursor,
+.active-window.mode-n .cursor {
+  color: #272a38 !important;
+  background-color: #eebebe !important;
+}
+
+.active-window.mode-v .cursor {
+  color: #272a38 !important;
+  background-color: #eebebe !important;
+}
+
+.cmdline-container {
+  border: 1px solid;
+  @apply border-base;
+  @apply rounded-md;
+  position: absolute;
+}
+
+.cmdline-indent {
+  user-select: none;
+}
+
+.text-dark {
+  color: #1b1e29;
+}
+
+.text-darker {
+  color: #161821;
+}
+
+.bg-dark {
+  background-color: #1b1e29;
+}
+
+.bg-darker {
+  background-color: #161821;
+}
+
+/* Inline code */
+.code {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
 
 /* Background */
 .spectre-bg {

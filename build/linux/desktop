@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=My Product
+Comment=A nvim-wails3 application
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/nvim-wails3 %u
+Terminal=false
+Type=Application
+Icon=nvim-wails3
+Categories=Utility;
+StartupWMClass=nvim-wails3
+
+ 

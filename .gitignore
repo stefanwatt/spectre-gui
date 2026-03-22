@@ -1,3 +1,7 @@
 build/bin
+.cursor
 node_modules
 frontend/dist
+.playwright-mcp
+tmp
+bin

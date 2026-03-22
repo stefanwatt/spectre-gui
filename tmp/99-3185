@@ -1,0 +1,20 @@
+			case "MiniFilesWindowOpen":
+				if NvimScreen.FileExplorer == nil {
+					NvimScreen.FileExplorer = NewFileExplorer()
+				}
+				dataMap, ok := data.(map[string]interface{})
+				if !ok {
+					utils.Log("[minifiles] MiniFilesWindowOpen: invalid data format")
+					return
+				}
+				winId := utils.ReflectToInt(dataMap["win_id"])
+				column, _ := dataMap["column"].(string)
+				utils.Log(fmt.Sprintf("[minifiles] MiniFilesWindowOpen: column=%s winId=%d", column, winId))
+				switch column {
+				case "parent":
+					NvimScreen.FileExplorer.Parent.WinId = winId
+				case "current":
+					NvimScreen.FileExplorer.Current.WinId = winId
+				case "preview":
+					NvimScreen.FileExplorer.Preview.SetWinId(winId)
+				}

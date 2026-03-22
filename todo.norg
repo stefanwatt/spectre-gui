@@ -1,105 +1,73 @@
-* (-) Todo
-** (-) Technical
-*** command line args
-    add args for all the input fields and flags
-*** ( ) integrate with neovim
-*** tests
-    - this is actually very testable
-    - come up with scenarios and mock input files
-    - probably just test api.go ?
-*** (-) fix delay on replacing
-    search is pretty fast again, but seems to take a lot of cpu resources
-*** (x) BUG: some matches dont show proper match/replacement indicators
-*** (x) BUG: matches with same filename but different subdirs get grouped
-*** ( ) BUG: incorrect search result
-    search for 
-    function\\((.\*\\w+.\*)\\)
-    in
-    \/home/stefan/.config/nvim
-    you get a result from lsp/luasnip.lua
-    with function() being an incorrect match
-    it doesnt have \\w+
-
-*** ( ) BUG: flickering while typing
-    maybe something with the debounce?
-*** (x) BUG: replace does nothing
-    generally works on first try and subsequent ones with same search term.
-    but following scenario generally doesnt work:
-    ~ search utils
-    ~ replace all one by one with foo
-    ~ search foo
-    ~ press enter
-    *Expected Result:*
-    entry is replaced back to "utils"
-    *Actual Result:* 
-    nothing happens except a toast sometimes
-
-    Fixed
-    - The original issue was coming from hardcoded values that were send to go
-    - the rest was due to incorrect checks when running replace
-
-
-*** (x) refactoring
-**** (x) frontend
-**** (x) response model
-     - maybe struct instead of map so we don't have to do mapping in svelte
-
-**** (x) separation of concerns
-     - ripgrep should not be handling the match struct
-       we need a new module for that
-
-*** (x) debounce all inputs
-** (-) Features
-*** (x) pagination
-*** ( ) sqlite
-*** (x) replace all
-*** ( ) make directory a comma separated list as well
-*** ( ) remember last inputs
-    will get interesting when hooked up to neovim
-*** ( ) allow selection of multiple items
-    - now we have not only /selected/,but /marked/ and /cursor/ 
-      or something like that
-    - space to mark
-*** (x) undo 
-    - keep a stack of replace actions in go
-    - actions have an array of replaced lines and their original text
-    - push to stack on replace/replace all
-    - pop from stack on undo
-    - replace with original text
-
-*** ( ) Keyboard first
-    make sure everything is fully keyboard navigable
-    what does that even mean?
-*** (x) search and replace behavior flags
-**** (x) highlighting
-     - highlighting in regex mode needs to show the matched text not the search term
-
-**** (x) search
-     - ignore case
-     - regex
-     - match whole word
-**** (x) replace
-     - preserve case
-** (-) UI/UX
+* ( ) Todo
+**  ( ) general 
+   - (x) add more binding structs so that i dont need to do everything in api.go
+    - (x) adding a picker has a lot of manual steps
+    - ( ) nothing is rendered intially, gotta press esc or something to get a render
+    - ( ) random crashes.. no clue what triggers em. dont happen very often 
+    - (x) filepath change doesnt update in statusline because it's only recomputed when the layout changes
+    - (x) bug: dt) does not work
+    - ( ) line numbers sometimes dont show up immediately, but will be there after triggering a redraw
+    - (x) line numbers are not per grid/window; for example with relative numbers and a two way split 
+      -> moving in one window will affect the other
+    - ( ) we cannot always rely on line numbers being present
+    - (x) line numbers are a little offset
+    - ( ) for stuff like relative line numbers, cursor line etc. we will probably disable it and just reimplement in svelte
+          -> we should read the config value and toggle these features accordingly
+    - ( ) implement Markdown
+    - (x) visual selection has some bugs with the beginning of the row not having the correct background color
+    - ( ) refactor screen.go -> probably has too much logic
+    - (-) pickers: add stuff from spectre-gui back in 
+    -- ( ) if you try to open a file that's deleted, but the change isnt staged then we get a crash
+    -- (x) livegrep 
+    -- (x) find-files
+    -- ( ) project wide find and replace
+    -- (x) file preview
+    -- (x) quickfixlist
+    -- (x) find references
+    -- (x) find symbol
+    --- (x) implement logic
+    --- (x) improve ui
+    -- (x) find help file
+    - ( ) handle virtual text 
+    - ( ) :Lazy is somehow not emitted as a floating window
+    - ( ) theres a bug where the current line number gets stuck in relative number mode when scrolling a lot with arrows
+    - ( ) still got some rendering performance issues in fzf-lua pickers 
+          -> it seems to be much better when we just never apply any css classes
+    - (x) cursor should only be displayed in active window
+    - (-) completion menu is not correctly positioned when at the bottom of the viewport so its above not below the cursor
+          -> partially fixed. at least its not overlaying the text that you're typing anymore,
+          but position calculation is still kinda off
+          -> we could know if it opened to the bottom/top based on comparing the anchor row with the cursor row
+    - ( ) display more info in statusline: git branch, filename, file dirty
+** ( ) cmdline QoL
+   - ( ) completion (probably handled by extmarks)
+*** ( ) search
+  - ( ) keep search open after <CR>
+  - ( ) show number of search results and current search result index
+*** ( ) substitute
+  - (-) jump between search and replace term
+  - ( ) toggle flags with keymaps
 
 
-*** ( ) line context
-    what to do on very long lines?
-    matched text should always be visible
-    in my examples it works fine because lines are generally short,
-    but we could think about not always displaying from the start of the line
-*** ( ) BUG: daisyui/tailwind catppucin theme  colors not working
-*** (x) BUG: highlighting is broken around search term highlight
-    use go pkg chroma instead of prism
-
-*** ( ) scroll when selected match is out of viewport
-*** (x) create file watchers on current matches
-    - when Search runs create new file watcher
-    - emit event from go code with entirely new RipgrepResult
-    - listen for event in svelte and update results
-*** (x) bug: highlighting missing
-    1. open page (with "utils" as search)-> highlighting works
-    2. type nonsense -> no search results
-    3. search for "utils" again -> no highlighting
-*** (x) toasts
-    - to confirm successful/failed replace action
+** ( ) Done
+   - (x) kill nvim-gui when underlying neovim instance dies
+   - (x) implement cmdline
+   - (x) make sure there's no gaps between rows such that visual selection etc. doesnt have weird gaps with different colors inbetween
+   - (x) apply highlighting with css classes instead of style attribute
+   - (x) completion
+   - (x) handle multiple grids for splits etc.
+   - (x) calculate left offset for floating windows etc. in go 
+   - (x) horizontal! cursor movement is slow af to re-render
+   - (x) continuous scrolling with down arrow is lagging
+   - (x) display line numbers in svelte
+   - (x) get cursor from autocmd or something again
+   - (x) bug with floating window: not sure what this is called. when you are in a function that's longer than the viewport
+          then you get the first line of the function as context. this is apparently coded as a floating window
+          and its not rendered well -> it's nvim-treesitter-context
+   - (x) dont trim line gutter from floating window
+   - (x) dont display line numbers in Alpha startmenu etc.
+    - (x) insert mode cursor
+    - (x) insert mode cursor is very messed up when typing
+    - (x) the fix for closing residual windows when there's already a window that has 100% width doesnt work when in a split
+          -> i guess this was actually only a problem for trek.nvim
+          -> my suspicion is that it's that the last window of the tab being closed also closes the tab and then we dont get a winclose event

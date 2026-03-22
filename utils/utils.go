@@ -13,6 +13,15 @@ import (
 	"unicode"
 )
 
+func GetGitRepoRoot(dir string) string {
+	cmd := exec.Command("git", "-C", dir, "rev-parse", "--show-toplevel")
+	output, err := cmd.Output()
+	if err != nil {
+		return dir
+	}
+	return strings.TrimSpace(string(output))
+}
+
 func GetLeadingWhitespace(s string) string {
 	var leadingWhitespace []rune
 	for _, r := range s {

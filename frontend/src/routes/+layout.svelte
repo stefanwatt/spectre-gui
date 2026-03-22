@@ -1,7 +1,7 @@
 <script>
 	import Toast from '$lib/notification/Toast.svelte';
-	import { toast } from '$lib/store';
 	import { fade } from 'svelte/transition';
+	import { state } from '$lib/picker/live-grep-results/results.service.svelte';
 </script>
 
 <!-- <div -->
@@ -9,8 +9,8 @@
 <!-- > -->
 <slot />
 <!-- </div> -->
-{#if $toast}
+{#if state.toast}
 	<div transition:fade={{ delay: 250, duration: 300 }}>
-		<Toast text={$toast.text} level={$toast.level}></Toast>
+		<Toast text={state.toast.text} level={state.toast.level}></Toast>
 	</div>
 {/if}

@@ -3,32 +3,91 @@ package main
 import (
 	"embed"
 	"fmt"
+	"nvim-gui/neovim"
+	"nvim-gui/picker"
 	"os"
 
-	"spectre-gui/lua"
-
 	"github.com/jessevdk/go-flags"
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/logger"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 //go:embed all:frontend/build
 var assets embed.FS
 
 type Options struct {
-	SearchTerm  string `short:"s" long:"search-term" description:"search term" required:"false"`
-	ReplaceTerm string `short:"r" long:"replace-term" description:"replace term" required:"false"`
-	Dir         string `short:"d" long:"dir" description:"Directory to search in" required:"false"`
-	Include     string `short:"i" long:"include" description:"glob pattern eg.: */**.go to include in search" required:"false"`
-	Exclude     string `short:"x" long:"exclude" description:"glob pattern eg.: */**.go to exclude from search" required:"false"`
-	Mode        string `short:"m" long:"mode" description:"mode" required:"false"`
-	Servername  string `short:"n" long:"servername" description:"neovim servername" required:"false"`
+	File string `short:"f" long:"filename" description:"file to open" required:"false"`
+}
+
+func deleteIfExists(path string) error {
+	var err error
+	if _, err = os.Stat(path); err == nil {
+		return os.Remove(path)
+	} else if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}
+
+func init() {
+	// Register all events used in the application
+	// Rendering & Layout events
+	application.RegisterEvent[interface{}]("content-updated") // (winId int, tokens []Token)
+	application.RegisterEvent[string]("highlight-css")
+	application.RegisterEvent[interface{}]("layout-updated")   // GridLayout struct
+	application.RegisterEvent[interface{}]("viewport_changed") // map[string]interface{}
+	application.RegisterEvent[interface{}]("window_opened")
+
+	// Window Management events
+	application.RegisterEvent[int]("hide-window")
+	application.RegisterEvent[interface{}]("floating_windows") // []map[string]interface{}
+	application.RegisterEvent[interface{}]("preview-window")   // map[string]interface{}
+	application.RegisterEvent[int]("floating_window_closed")
+	application.RegisterEvent[int]("preview-window-closed")
+
+	// Cursor & Mode events
+	application.RegisterEvent[interface{}]("cursor-changed") // CursorMoveEvent struct
+	application.RegisterEvent[string]("mode-changed")
+
+	// Command Line events
+	application.RegisterEvent[interface{}]("cmdline_show") // map[string]interface{}
+	application.RegisterEvent[interface{}]("cmdline_pos")  // map[string]interface{}
+	application.RegisterEvent[interface{}]("cmdline_hide")
+
+	// Completion events
+	application.RegisterEvent[interface{}]("completion-show") // CompletionState
+	application.RegisterEvent[interface{}]("completion-hide")
+	application.RegisterEvent[int]("completion-select")
+	application.RegisterEvent[interface{}]("completion-documentation") // CompletionDocumentation
+
+	// Buffer events
+	application.RegisterEvent[string]("BufEnter")
+
+	application.RegisterEvent[interface{}]("show-file-explorer")
+	// File Explorer events (mini.files integration)
+	application.RegisterEvent[interface{}]("file-explorer-update") // []FileExplorerPane
+	application.RegisterEvent[interface{}]("file-explorer-close")
+	// Picker Activation events
+	application.RegisterEvent[interface{}]("show_live_grep")
+	application.RegisterEvent[interface{}]("show-find-files")
+	application.RegisterEvent[interface{}]("show-find-references")
+	application.RegisterEvent[interface{}]("show-find-buffer-symbols")
+	application.RegisterEvent[interface{}]("show-find-help")
+	application.RegisterEvent[interface{}]("hide-live-rep")
+
+	// File System events
+	application.RegisterEvent[interface{}]("file-replaced")
+	application.RegisterEvent[interface{}]("file-deleted")
+	application.RegisterEvent[interface{}]("toast") // (level, message)
 }
 
 func main() {
-	app := NewApp()
+	// WebKitGTK on Wayland uses DMABuf for hardware-accelerated rendering, but the
+	// DMABuf surface doesn't resize correctly when the compositor resizes the window,
+	// leaving transparent gaps. Disabling it forces WebKit to use a software surface
+	// that resizes properly.
+	os.Setenv("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
+
+	// Parse command line options
 	var opts Options
 	parser := flags.NewParser(&opts, flags.Default)
 	_, err := parser.Parse()
@@ -37,45 +96,54 @@ func main() {
 		os.Exit(1)
 	}
 
-	app.Mode = opts.Mode
-	app.Mode = "buffer"
-	// app.Servername = opts.Servername
-	app.Servername = "/tmp/nvimsocket"
-
-	config := lua.LoadConfig()
-	state := AppState{
-		SearchTerm: opts.SearchTerm,
-		// SearchTerm: `foo`,
-		ReplaceTerm: opts.ReplaceTerm,
-		// ReplaceTerm: `bar`,
-		// Dir: opts.Dir,
-		Dir:           "/home/stefan/Projects/spectre-gui",
-		Include:       opts.Include,
-		Exclude:       opts.Exclude,
-		CaseSensitive: config.CaseSensitive,
-		Regex:         config.Regex,
-		// Regex:          true,
-		MatchWholeWord: config.MatchWholeWord,
-		// MatchWholeWord: false,
-		PreserveCase: config.PreserveCase,
+	// Delete old log file
+	err = deleteIfExists("/tmp/nvim-gui.log")
+	if err != nil {
+		fmt.Println("error deleting nvim socket")
 	}
-	app.State = state
-	err = wails.Run(&options.App{
-		Title:              "spectre-gui",
-		LogLevel:           logger.ERROR,
-		LogLevelProduction: logger.ERROR,
-		Width:              1024,
-		Height:             768,
-		AssetServer: &assetserver.Options{
-			Assets: assets,
+
+	// Create services
+	appService := NewApp()
+	pickerService := picker.NewPicker()
+	liveGrepPicker := picker.NewLiveGrepPicker()
+	referencesPicker := picker.NewReferencesPicker()
+	symbolsPicker := picker.NewSymbolsPicker()
+
+	// Create application
+	app := application.New(application.Options{
+		Name:        "nvim-gui",
+		Description: "Neovim GUI with Wails + Svelte",
+		Services: []application.Service{
+			application.NewService(appService),
+			application.NewService(pickerService),
+			application.NewService(liveGrepPicker),
+			application.NewService(referencesPicker),
+			application.NewService(symbolsPicker),
 		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup:        app.startup,
-		OnDomReady:       app.mounted,
-		Bind: []interface{}{
-			app,
+		Assets: application.AssetOptions{
+			Handler: application.AssetFileServerFS(assets),
 		},
 	})
+
+	// Store app reference in services that need it
+	appService.App = app
+	pickerService.App = app
+	liveGrepPicker.App = app
+
+	// Pass app to neovim package for event emission
+	neovim.SetApp(app)
+
+	// Create window
+	app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:            "nvim-gui",
+		Width:            1024,
+		Height:           768,
+		BackgroundColour: application.NewRGB(39, 42, 56),
+		URL:              "/",
+	})
+
+	// Run application
+	err = app.Run()
 	if err != nil {
 		println("Error:", err.Error())
 	}

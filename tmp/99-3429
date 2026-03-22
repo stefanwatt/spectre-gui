@@ -1,0 +1,64 @@
+func (fe *FileExplorer) renderFileExplorerDirectory(grid *Grid) []FileExplorerDirectoryEntry {
+	entries := make([]FileExplorerDirectoryEntry, 0, grid.Height)
+
+	for row := 0; row < grid.Height; row++ {
+		rowCells := grid.Cells[row]
+		if len(rowCells) == 0 {
+			continue
+		}
+
+		// mini.files format: /icon/ /filename or /icon/ /path/to/file
+		// The icon is between forward slashes, followed by spaces, then the text
+		var fullText strings.Builder
+		for _, cell := range rowCells {
+			fullText.WriteString(cell.Char)
+		}
+
+		line := fullText.String()
+		if line == "" {
+			continue
+		}
+
+		// Parse format: /icon/ /text
+		var icon string
+		var text string
+
+		// Find first closing slash for icon
+		if len(line) > 0 && line[0] == '/' {
+			iconEnd := strings.Index(line[1:], "/")
+			if iconEnd != -1 {
+				icon = line[1 : iconEnd+1] // Extract icon between slashes
+				remainder := line[iconEnd+2:]
+
+				// Skip spaces after icon section
+				remainder = strings.TrimLeft(remainder, " ")
+
+				// Remove leading slash if present
+				if len(remainder) > 0 && remainder[0] == '/' {
+					remainder = remainder[1:]
+				}
+
+				text = strings.TrimSpace(remainder)
+			} else {
+				// Fallback: no proper format, treat whole line as text
+				text = strings.TrimSpace(line)
+			}
+		} else {
+			// No leading slash, treat as plain text
+			text = strings.TrimSpace(line)
+		}
+
+		// Skip empty entries
+		if icon == "" && text == "" {
+			continue
+		}
+
+		entries = append(entries, FileExplorerDirectoryEntry{
+			ID:   row,
+			Icon: icon,
+			Text: text,
+		})
+	}
+
+	return entries
+}

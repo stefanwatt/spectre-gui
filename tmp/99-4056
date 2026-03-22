@@ -1,0 +1,4 @@
+type FileExplorerPreviewAPI struct {
+	Directory *FileExplorerDirectoryAPI
+	Content   []ContentRow
+}

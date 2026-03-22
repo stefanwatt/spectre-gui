@@ -1,0 +1,40 @@
+type FileExplorerPreview interface {
+	isFileExplorerPreview()
+	GetBufNr() int
+}
+
+type FileExplorerDirectoryPreview struct {
+	Directory *FileExplorerDirectory `json:"directory"`
+}
+
+func (FileExplorerDirectoryPreview) isFileExplorerPreview() {}
+func (dp FileExplorerDirectoryPreview) GetBufNr() int {
+	return dp.Directory.BufNr
+}
+
+type FileExplorerContentPreview struct {
+	Content []ContentRow `json:"content"`
+	BufNr   int          `json:"bufNr"`
+}
+
+func (FileExplorerContentPreview) isFileExplorerPreview() {}
+
+func (cp FileExplorerContentPreview) GetBufNr() int {
+	return cp.BufNr
+}
+
+type FileExplorerDirectoryEntry struct {
+	Icon string `json:"icon"`
+	Text string `json:"text"`
+}
+
+type FileExplorerDirectory struct {
+	BufNr   int                          `json:"bufNr"`
+	Entries []FileExplorerDirectoryEntry `json:"entries"`
+}
+
+type FileExplorer struct {
+	Parent  FileExplorerDirectory `json:"parent"`
+	Current FileExplorerDirectory `json:"current"`
+	Preview FileExplorerPreview   `json:"preview"`
+}

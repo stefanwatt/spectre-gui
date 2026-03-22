@@ -1,0 +1,15 @@
+type FileExplorerPreview interface {
+	isFileExplorerPreview()
+}
+
+type FileExplorerDirectoryPreview struct {
+	Directory *FileExplorerDirectoryAPI
+}
+
+func (FileExplorerDirectoryPreview) isFileExplorerPreview() {}
+
+type FileExplorerContentPreview struct {
+	Content []ContentRow
+}
+
+func (FileExplorerContentPreview) isFileExplorerPreview() {}

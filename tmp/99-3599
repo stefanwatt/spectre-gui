@@ -1,0 +1,15 @@
+		NvimInstance.RegisterHandler("MiniFilesBufferCreate", func(updates ...[]interface{}) {
+			utils.Log(fmt.Sprintf("MiniFilesBufferCreate: %+v", updates))
+		})
+
+		NvimInstance.RegisterHandler("MiniFilesBufferUpdate", func(updates ...[]interface{}) {
+			utils.Log(fmt.Sprintf("MiniFilesBufferUpdate: %+v", updates))
+		})
+
+		NvimInstance.RegisterHandler("MiniFilesExplorerOpen", func(updates ...[]interface{}) {
+			utils.Log(fmt.Sprintf("MiniFilesExplorerOpen: %+v", updates))
+		})
+
+		NvimInstance.RegisterHandler("MiniFilesExplorerClose", func(updates ...[]interface{}) {
+			utils.Log(fmt.Sprintf("MiniFilesExplorerClose: %+v", updates))
+		})

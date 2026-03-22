@@ -28,7 +28,7 @@ func SetupLog() {
 
 func Log(text string, args ...interface{}) {
 	if do_log {
-		message := "\n" + lipgloss.NewStyle().Background(lipgloss.Color("#fff")).Foreground(lipgloss.Color("#000")).Render(text) + "\n"
+		message := "\n" + text + "\n"
 		log.Println(message, args)
 	}
 }
