@@ -2,13 +2,13 @@ package runtime
 
 import (
 	"context"
-	"sync"
-
 	"nvim-gui/core/events"
 	"nvim-gui/core/model"
 	"nvim-gui/core/ports"
 	"nvim-gui/core/projection"
 	"nvim-gui/core/reducer"
+	fileexplorer "nvim-gui/features/file-explorer"
+	"sync"
 )
 
 type Runtime struct {
@@ -20,16 +20,18 @@ type Runtime struct {
 	events chan events.Event
 	done   chan struct{}
 
-	mu sync.RWMutex
+	mu            sync.RWMutex
+	screenReducer *reducer.Reducer
 }
 
-func New(emitter ports.UIEmitter) *Runtime {
+func New(emitter ports.UIEmitter, fileExplorerRegistry *fileexplorer.Registry) *Runtime {
 	return &Runtime{
-		state:     model.NewAppState(),
-		emitter:   emitter,
-		projector: projection.NoopProjector{},
-		events:    make(chan events.Event, 2048),
-		done:      make(chan struct{}),
+		state:         model.NewAppState(),
+		emitter:       emitter,
+		projector:     projection.NoopProjector{},
+		events:        make(chan events.Event, 2048),
+		done:          make(chan struct{}),
+		screenReducer: reducer.NewReducer(fileExplorerRegistry),
 	}
 }
 
@@ -76,7 +78,7 @@ func (r *Runtime) Snapshot() model.AppState {
 func (r *Runtime) handle(event events.Event) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	reducer.Apply(r.state, event)
+	r.screenReducer.Apply(r.state, event)
 
 	if event.Name == events.EventFlush && r.emitter != nil {
 		projector := r.projector

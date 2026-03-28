@@ -1,14 +1,25 @@
 package reducer
 
 import (
-	"strings"
-
 	"nvim-gui/core/events"
 	"nvim-gui/core/model"
 	"nvim-gui/rendering"
+	"strings"
+
+	fileexplorer "nvim-gui/features/file-explorer"
 )
 
-func Apply(state *model.AppState, event events.Event) {
+type Reducer struct {
+	fileExplorerRegistry *fileexplorer.Registry
+}
+
+func NewReducer(fileExplorerRegistry *fileexplorer.Registry) *Reducer {
+	return &Reducer{
+		fileExplorerRegistry,
+	}
+}
+
+func (r *Reducer) Apply(state *model.AppState, event events.Event) {
 	s := &state.Editor.Screen
 
 	switch event.Name {
@@ -159,6 +170,19 @@ func Apply(state *model.AppState, event events.Event) {
 			win.Width = grid.Width
 			win.Height = grid.Height
 		}
+		snap := r.fileExplorerRegistry.Snapshot()
+		if snap.Active {
+			if snap.Parent.WinID == payload.WindowID {
+				win.IsFileExplorer = true
+				win.PaneRole = "parent"
+			} else if snap.Current.WinID == payload.WindowID {
+				win.IsFileExplorer = true
+				win.PaneRole = "current"
+			} else if snap.Preview.WinID == payload.WindowID {
+				win.IsFileExplorer = true
+				win.PaneRole = "preview"
+			}
+		}
 
 	case events.EventWinHide:
 		payload, ok := event.Payload.(int)
@@ -189,6 +213,14 @@ func Apply(state *model.AppState, event events.Event) {
 			delete(s.GridToWindow, win.GridID)
 			delete(s.Windows, payload)
 		}
+		hasAnyFileExplorer := false
+		for _, w := range s.Windows {
+			if w != nil && w.IsFileExplorer {
+				hasAnyFileExplorer = true
+				break
+			}
+		}
+		state.Features.FileExplorer.Active = hasAnyFileExplorer
 
 	case events.EventWinViewport:
 		payload, ok := event.Payload.(events.WindowViewport)

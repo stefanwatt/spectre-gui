@@ -45,21 +45,23 @@ type GridState struct {
 }
 
 type WindowState struct {
-	ID         int
-	GridID     int
-	Type       string
-	StartRow   int
-	StartCol   int
-	Width      int
-	Height     int
-	Hidden     bool
-	Focusable  bool
-	Anchor     string
-	AnchorGrid int
-	ZIndex     int
-	Filetype   string
-	Filepath   string
-	Dirty      bool // set by reducer when window content may have changed
+	ID             int
+	GridID         int
+	Type           string
+	StartRow       int
+	StartCol       int
+	Width          int
+	Height         int
+	Hidden         bool
+	Focusable      bool
+	Anchor         string
+	AnchorGrid     int
+	ZIndex         int
+	Filetype       string
+	Filepath       string
+	Dirty          bool // set by reducer when window content may have changed
+	IsFileExplorer bool
+	PaneRole       string // parent, current, preview  or ""
 }
 
 type ViewportState struct {
@@ -94,9 +96,13 @@ type HighlightState struct {
 	Definitions [][]any
 }
 
-type MarkdownState struct{}
-type CompletionState struct{}
-type FileExplorerState struct{}
+type (
+	MarkdownState     struct{}
+	CompletionState   struct{}
+	FileExplorerState struct {
+		Active bool
+	}
+)
 type PickerState struct{}
 
 // EnsureCells allocates or resizes the Cells and DirtyRows arrays to match Width x Height.

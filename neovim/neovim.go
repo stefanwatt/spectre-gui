@@ -126,70 +126,53 @@ func StartListening(ctx context.Context) {
 		}
 
 		NvimClient.RegisterHandler("MiniFilesBridge", func(eventName string, data interface{}) {
-			log.Debug(fmt.Sprintf("[minifiles] MiniFilesBridge received event=%s", eventName))
+			fileExplorerRegistry := GetFileExplorerRegistry()
+			if fileExplorerRegistry == nil {
+				log.Debug("[minifiles] MiniFilesBridge: file explorer registry is nil, ignoring event")
+				return
+			}
 			switch eventName {
 			case "MiniFilesExplorerOpen":
-				if NvimScreen.FileExplorer == nil {
-					NvimScreen.FileExplorer = NewFileExplorer()
-				}
-				NvimScreen.FileExplorer.CurrentWinMode = NvimScreen.Mode
-				log.Debug("[minifiles] MiniFilesExplorerOpen: FileExplorer initialized")
+				fileExplorerRegistry.SetActive(true)
+				// TODO: verify this is not needed anymore
+				// NvimScreen.FileExplorer.CurrentWinMode = NvimScreen.Mode
 			case "MiniFilesExplorerClose":
-				NvimScreen.FileExplorer = nil
-				log.Debug("[minifiles] MiniFilesExplorerClose: FileExplorer reset")
+				fileExplorerRegistry.SetActive(false)
 			case "MiniFilesBufferCreate":
-				if NvimScreen.FileExplorer == nil {
-					NvimScreen.FileExplorer = NewFileExplorer()
-				}
+				fileExplorerRegistry.SetActive(true)
 				dataMap, ok := data.(map[string]interface{})
 				if !ok {
-					log.Debug("[minifiles] MiniFilesBufferCreate: invalid data format")
 					return
 				}
 				bufNr := utils.ReflectToInt(dataMap["buf_id"])
 				column, _ := dataMap["column"].(string)
-				log.Debug(fmt.Sprintf("[minifiles] MiniFilesBufferCreate: column=%s bufNr=%d", column, bufNr))
 				switch column {
 				case "parent":
-					// TODO: there is a bug: this is emitted twice when opening and only the first one is the correct parent bufnr
-					if NvimScreen.FileExplorer.Parent.BufNr == -1 {
-						NvimScreen.FileExplorer.Parent.BufNr = bufNr
-					}
+					fileExplorerRegistry.UpdateParentPaneBufnr(bufNr)
 				case "current":
-					NvimScreen.FileExplorer.Current.BufNr = bufNr
+					fileExplorerRegistry.UpdateCurrentPaneBufnr(bufNr)
 				case "preview":
-					NvimScreen.FileExplorer.Preview.SetBufNr(bufNr)
+					fileExplorerRegistry.UpdatePreviewPaneBufnr(bufNr)
 				}
 			case "MiniFilesWindowOpen":
-				log.Debug("[minifiles] MiniFilesWindowOpen")
-				if NvimScreen.FileExplorer == nil {
-					NvimScreen.FileExplorer = NewFileExplorer()
-				}
+				fileExplorerRegistry.SetActive(true)
 				dataMap, ok := data.(map[string]interface{})
 				if !ok {
-					log.Debug("[minifiles] MiniFilesWindowOpen: invalid data format")
 					return
 				}
 				winId := utils.ReflectToInt(dataMap["win_id"])
 				bufNr := utils.ReflectToInt(dataMap["buf_id"])
 				column, _ := dataMap["column"].(string)
-				log.Debug(fmt.Sprintf("[minifiles] MiniFilesWindowOpen: column=%s winId=%d bufNr=%d", column, winId, bufNr))
 				switch column {
 				case "parent":
-					NvimScreen.FileExplorer.Parent.WinId = winId
-					NvimScreen.FileExplorer.Parent.BufNr = bufNr
+					fileExplorerRegistry.AssignParentPane(winId, bufNr)
 				case "current":
-					NvimScreen.FileExplorer.Current.WinId = winId
-					NvimScreen.FileExplorer.Current.BufNr = bufNr
+					fileExplorerRegistry.AssignCurrentPane(winId, bufNr)
 				case "preview":
-					NvimScreen.FileExplorer.Preview.SetWinId(winId)
-					NvimScreen.FileExplorer.Preview.SetBufNr(bufNr)
+					fileExplorerRegistry.AssignPreviewPane(winId, bufNr)
 					NvimScreen.applyFileExplorerPreviewSize()
 				}
 			case "MiniFilesWindowUpdate":
-				if NvimScreen.FileExplorer == nil {
-					return
-				}
 				dataMap, ok := data.(map[string]interface{})
 				if !ok {
 					log.Debug("[minifiles] MiniFilesWindowUpdate: invalid data format")
@@ -204,22 +187,17 @@ func StartListening(ctx context.Context) {
 				bufNr := utils.ReflectToInt(dataMap["buf_id"])
 				switch column {
 				case "parent":
-					NvimScreen.FileExplorer.Parent.WinId = winId
-					NvimScreen.FileExplorer.Parent.BufNr = bufNr
+					fileExplorerRegistry.AssignParentPane(winId, bufNr)
 				case "current":
-					NvimScreen.FileExplorer.Current.WinId = winId
-					NvimScreen.FileExplorer.Current.BufNr = bufNr
+					fileExplorerRegistry.AssignCurrentPane(winId, bufNr)
 				case "preview":
-					NvimScreen.FileExplorer.Preview.SetWinId(winId)
-					NvimScreen.FileExplorer.Preview.SetBufNr(bufNr)
+					fileExplorerRegistry.AssignPreviewPane(winId, bufNr)
+					//TODO: what about preview HasPreviewTargetSize and previewTargetCols
 					NvimScreen.applyFileExplorerPreviewSize()
 				default:
 					log.Debug(fmt.Sprintf("[minifiles] MiniFilesWindowUpdate: unsupported column=%s", column))
 				}
 			case "MiniFilesBufferUpdate":
-				if NvimScreen.FileExplorer == nil {
-					return
-				}
 				dataMap, ok := data.(map[string]interface{})
 				if !ok {
 					log.Debug("MiniFilesBufferUpdate: invalid data format")
@@ -229,8 +207,11 @@ func StartListening(ctx context.Context) {
 				if bufNr < 1 {
 					return
 				}
-				NvimScreen.FileExplorer.RefreshDirectoryLineMap(bufNr)
-				log.Debug(fmt.Sprintf("[minifiles] MiniFilesBufferUpdate: refreshed fs_type map for buf=%d", bufNr))
+				lineMap, err := GetMiniFilesDirectoryLineMap(bufNr)
+				if err != nil {
+					return
+				}
+				fileExplorerRegistry.SetDirectoryLineMap(bufNr, lineMap)
 			}
 		})
 

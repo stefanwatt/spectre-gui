@@ -6,12 +6,12 @@ import (
 	"mime"
 	appruntime "nvim-gui/app/runtime"
 	"nvim-gui/core/projection"
+	fileexplorer "nvim-gui/features/file-explorer"
+	"nvim-gui/neovim"
+	"nvim-gui/utils"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"nvim-gui/neovim"
-	"nvim-gui/utils"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -40,12 +40,15 @@ func NewApp() *App {
 func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	a.ctx = ctx
 	utils.SetupLog()
-	a.runtime = appruntime.New(nil)
+	fileExplorerRegistry := fileexplorer.NewRegistry()
+	neovim.SetFileExplorerRegistry(fileExplorerRegistry)
+	a.runtime = appruntime.New(nil, fileExplorerRegistry)
 	a.runtime.SetEmitter(wailsUIEmitter{app: a.App})
 	a.runtime.SetProjector(projection.CompositeProjector{
 		Projectors: []projection.Projector{
 			projection.NewLayoutContentProjector(),
 			projection.EventsProjector{},
+			projection.NewFileExplorerProjector(fileExplorerRegistry),
 		},
 	})
 	a.runtime.Start(ctx)
@@ -80,7 +83,7 @@ func (a *App) OnFileExplorerConfirmChoice(winId, choice int) {
 // RequestState triggers emission of current state to frontend
 func (a *App) RequestState() {
 	if neovim.NvimScreen != nil {
-		//TODO: delete after a while if we dont notice problem with it being gone
+		// TODO: delete after a while if we dont notice problem with it being gone
 		// neovim.NvimScreen.EmitCurrentState()
 	}
 }

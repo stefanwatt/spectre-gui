@@ -147,7 +147,7 @@ func (p *LayoutContentProjector) projectFloatingWindows(ui *UIProjection, s *mod
 	hasDirtyFloating := false
 
 	for winID, win := range s.Windows {
-		if win == nil || win.Type != "floating" {
+		if win == nil || win.Type != "floating" || win.IsFileExplorer {
 			continue
 		}
 
