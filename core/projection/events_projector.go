@@ -7,7 +7,7 @@ import (
 
 type EventsProjector struct{}
 
-func (EventsProjector) Project(state model.AppState) UIProjection {
+func (EventsProjector) Project(state *model.AppState) UIProjection {
 	s := state.Editor.Screen
 	result := UIProjection{Events: []EmittedEvent{{Name: "state-updated", Payload: struct{}{}}}}
 

@@ -42,7 +42,12 @@ func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOpt
 	utils.SetupLog()
 	a.runtime = appruntime.New(nil)
 	a.runtime.SetEmitter(wailsUIEmitter{app: a.App})
-	a.runtime.SetProjector(projection.EventsProjector{})
+	a.runtime.SetProjector(projection.CompositeProjector{
+		Projectors: []projection.Projector{
+			projection.NewLayoutContentProjector(),
+			projection.EventsProjector{},
+		},
+	})
 	a.runtime.Start(ctx)
 	neovim.SetEventSink(a.runtime)
 

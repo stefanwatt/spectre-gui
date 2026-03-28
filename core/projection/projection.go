@@ -14,5 +14,5 @@ type EmittedEvent struct {
 }
 
 type Projector interface {
-	Project(state model.AppState) UIProjection
+	Project(state *model.AppState) UIProjection
 }

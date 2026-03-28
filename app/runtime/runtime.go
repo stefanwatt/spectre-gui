@@ -83,7 +83,7 @@ func (r *Runtime) handle(event events.Event) {
 		if projector == nil {
 			projector = projection.NoopProjector{}
 		}
-		ui := projector.Project(*r.state)
+		ui := projector.Project(r.state)
 		for _, emitted := range ui.Events {
 			r.emitter.Emit(emitted.Name, emitted.Payload)
 		}

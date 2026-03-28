@@ -1,5 +1,5 @@
-import { SendKey, Paste } from '@bindings/nvim-gui/app.js';
 import { Clipboard } from '@wailsio/runtime';
+import { Call } from '@wailsio/runtime';
 import { getKeymapMode } from '$lib/state.svelte';
 
 let activeKeymaps = new Map<string, App.Keymap>();
@@ -31,10 +31,14 @@ export function handleKeypress(event: KeyboardEvent) {
 	if (pickerModes.includes(keymapMode)) return;
 	event.preventDefault();
 	if (event.ctrlKey && event.shiftKey && event.key === 'V') {
-		Clipboard.Text().then((text: string) => Paste(text));
+		Clipboard.Text().then((text: string) =>
+			Call.ByName('main.App.Paste', text).catch((err) => console.error('Paste failed', err))
+		);
 		return;
 	}
-	SendKey(event.key, event.ctrlKey, event.altKey, event.shiftKey, keymapMode);
+	Call.ByName('main.App.SendKey', event.key, event.ctrlKey, event.altKey, event.shiftKey, keymapMode).catch(
+		(err) => console.error('SendKey failed', err)
+	);
 }
 
 function eventToKeymapString(event: KeyboardEvent) {

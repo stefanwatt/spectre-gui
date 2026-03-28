@@ -1,8 +1,11 @@
 package reducer
 
 import (
+	"strings"
+
 	"nvim-gui/core/events"
 	"nvim-gui/core/model"
+	"nvim-gui/rendering"
 )
 
 func Apply(state *model.AppState, event events.Event) {
@@ -23,11 +26,18 @@ func Apply(state *model.AppState, event events.Event) {
 		}
 		grid := s.Grids[payload.GridID]
 		if grid == nil {
-			grid = &model.GridState{ID: payload.GridID, Lines: make(map[int]model.LineState)}
+			grid = &model.GridState{ID: payload.GridID}
 			s.Grids[payload.GridID] = grid
 		}
 		grid.Width = payload.Width
 		grid.Height = payload.Height
+		grid.EnsureCells()
+		if payload.GridID == 1 {
+			s.Width = payload.Width
+			s.Height = payload.Height
+		}
+		// Mark the window dirty if there is one
+		markWindowDirtyByGrid(s, payload.GridID)
 
 	case events.EventGridCursorGoto:
 		payload, ok := event.Payload.(events.GridCursorGoto)
@@ -36,14 +46,21 @@ func Apply(state *model.AppState, event events.Event) {
 		}
 		grid := s.Grids[payload.GridID]
 		if grid == nil {
-			grid = &model.GridState{ID: payload.GridID, Lines: make(map[int]model.LineState)}
+			grid = &model.GridState{ID: payload.GridID}
+			grid.Width = 0
+			grid.Height = 0
 			s.Grids[payload.GridID] = grid
 		}
+		// Mark old cursor row dirty (to remove cursor highlight)
+		grid.MarkRowDirty(grid.CursorRow)
 		grid.CursorRow = payload.Row
 		grid.CursorCol = payload.Col
+		// Mark new cursor row dirty (to add cursor highlight)
+		grid.MarkRowDirty(grid.CursorRow)
 		if winID, ok := s.GridToWindow[payload.GridID]; ok {
 			s.ActiveWindow = winID
 		}
+		markWindowDirtyByGrid(s, payload.GridID)
 
 	case events.EventGridLine:
 		payload, ok := event.Payload.(events.GridLine)
@@ -52,17 +69,17 @@ func Apply(state *model.AppState, event events.Event) {
 		}
 		grid := s.Grids[payload.GridID]
 		if grid == nil {
-			grid = &model.GridState{ID: payload.GridID, Lines: make(map[int]model.LineState)}
+			grid = &model.GridState{ID: payload.GridID}
 			s.Grids[payload.GridID] = grid
 		}
-		if grid.Lines == nil {
-			grid.Lines = make(map[int]model.LineState)
+		// Ensure cells are allocated
+		if len(grid.Cells) == 0 && grid.Width > 0 && grid.Height > 0 {
+			grid.EnsureCells()
 		}
-		grid.Lines[payload.Row] = model.LineState{
-			Row:   payload.Row,
-			Col:   payload.Col,
-			Cells: payload.Cells,
-		}
+		// Parse raw cell arrays and populate the Cell grid
+		applyGridLine(grid, payload.Row, payload.Col, payload.Cells)
+		grid.MarkRowDirty(payload.Row)
+		markWindowDirtyByGrid(s, payload.GridID)
 
 	case events.EventGridClear:
 		payload, ok := event.Payload.(events.GridClear)
@@ -73,7 +90,16 @@ func Apply(state *model.AppState, event events.Event) {
 		if grid == nil {
 			return
 		}
-		grid.Lines = make(map[int]model.LineState)
+		// Clear all cells to blank spaces
+		for row := 0; row < grid.Height; row++ {
+			for col := 0; col < grid.Width; col++ {
+				if row < len(grid.Cells) && col < len(grid.Cells[row]) {
+					grid.Cells[row][col] = &model.Cell{Char: " ", Highlight: 0, Classes: map[string]bool{}}
+				}
+			}
+		}
+		grid.MarkAllDirty()
+		markWindowDirtyByGrid(s, payload.GridID)
 
 	case events.EventGridScroll:
 		payload, ok := event.Payload.(events.GridScroll)
@@ -84,22 +110,8 @@ func Apply(state *model.AppState, event events.Event) {
 		if grid == nil {
 			return
 		}
-		for row := payload.Top; row < payload.Bottom; row++ {
-			line, exists := grid.Lines[row]
-			if !exists {
-				continue
-			}
-			newRow := row - payload.Rows
-			if newRow < payload.Top || newRow >= payload.Bottom {
-				delete(grid.Lines, row)
-				continue
-			}
-			line.Row = newRow
-			grid.Lines[newRow] = line
-			if newRow != row {
-				delete(grid.Lines, row)
-			}
-		}
+		applyGridScroll(grid, payload.Top, payload.Bottom, payload.Rows, payload.Left, payload.Right)
+		markWindowDirtyByGrid(s, payload.GridID)
 
 	case events.EventWinPos:
 		payload, ok := event.Payload.(events.WindowPosition)
@@ -118,6 +130,7 @@ func Apply(state *model.AppState, event events.Event) {
 		win.Width = payload.Width
 		win.Height = payload.Height
 		win.Hidden = false
+		win.Dirty = true
 		s.GridToWindow[payload.GridID] = payload.WindowID
 
 	case events.EventWinFloatPos:
@@ -138,15 +151,28 @@ func Apply(state *model.AppState, event events.Event) {
 		win.StartCol = int(payload.AnchorCol)
 		win.Focusable = payload.Focusable
 		win.ZIndex = payload.ZIndex
+		win.Hidden = false
+		win.Dirty = true
 		s.GridToWindow[payload.GridID] = payload.WindowID
+		// Set width/height from grid if available
+		if grid := s.Grids[payload.GridID]; grid != nil {
+			win.Width = grid.Width
+			win.Height = grid.Height
+		}
 
 	case events.EventWinHide:
 		payload, ok := event.Payload.(int)
 		if !ok {
 			return
 		}
-		if win, exists := s.Windows[payload]; exists {
+		if winID, exists := s.GridToWindow[payload]; exists {
+			if win, ok := s.Windows[winID]; ok {
+				win.Hidden = true
+				win.Dirty = true
+			}
+		} else if win, exists := s.Windows[payload]; exists {
 			win.Hidden = true
+			win.Dirty = true
 		}
 
 	case events.EventWinClose:
@@ -154,7 +180,12 @@ func Apply(state *model.AppState, event events.Event) {
 		if !ok {
 			return
 		}
-		if win, exists := s.Windows[payload]; exists {
+		if winID, exists := s.GridToWindow[payload]; exists {
+			if win, ok := s.Windows[winID]; ok {
+				delete(s.GridToWindow, win.GridID)
+				delete(s.Windows, winID)
+			}
+		} else if win, exists := s.Windows[payload]; exists {
 			delete(s.GridToWindow, win.GridID)
 			delete(s.Windows, payload)
 		}
@@ -171,7 +202,7 @@ func Apply(state *model.AppState, event events.Event) {
 		s.Viewport.ScrollDelta = payload.ScrollDelta
 		grid := s.Grids[payload.GridID]
 		if grid == nil {
-			grid = &model.GridState{ID: payload.GridID, Lines: make(map[int]model.LineState)}
+			grid = &model.GridState{ID: payload.GridID}
 			s.Grids[payload.GridID] = grid
 		}
 		grid.TopLine = payload.TopLine
@@ -224,5 +255,149 @@ func Apply(state *model.AppState, event events.Event) {
 			return
 		}
 		s.Highlights.Definitions = append(s.Highlights.Definitions, payload.Args)
+	}
+}
+
+// applyGridLine parses raw Neovim cell arrays and writes proper *Cell objects into the grid.
+// Each cell in cells is []interface{}{text, [hlID], [repeat]}.
+// The highlight ID is "sticky" — it carries forward from cell to cell within a grid_line event.
+func applyGridLine(grid *model.GridState, row, startCol int, cells []any) {
+	if row < 0 || row >= len(grid.Cells) {
+		return
+	}
+	col := startCol
+	lastHL := 0
+
+	for _, raw := range cells {
+		cell, ok := raw.([]interface{})
+		if !ok || len(cell) == 0 {
+			continue
+		}
+		text, _ := cell[0].(string)
+		if len(cell) > 1 {
+			lastHL = toInt(cell[1])
+		}
+		repeat := 1
+		if len(cell) > 2 {
+			repeat = toInt(cell[2])
+		}
+		if repeat < 1 {
+			repeat = 1
+		}
+
+		classes := classesForHL(lastHL)
+		for i := 0; i < repeat; i++ {
+			if col >= len(grid.Cells[row]) {
+				break
+			}
+			grid.Cells[row][col] = &model.Cell{
+				Char:      text,
+				Highlight: lastHL,
+				Classes:   classes,
+			}
+			col++
+		}
+	}
+}
+
+// classesForHL resolves a highlight ID to a map[string]bool CSS class set.
+func classesForHL(hlID int) map[string]bool {
+	classStr := rendering.ClassesForHighlightID(hlID)
+	classes := map[string]bool{}
+	if classStr == "" {
+		return classes
+	}
+	for _, c := range strings.Split(classStr, " ") {
+		if c != "" {
+			classes[c] = true
+		}
+	}
+	return classes
+}
+
+// applyGridScroll shifts lines in the scrolling region.
+// rows > 0 means scroll up (content moves up), rows < 0 means scroll down.
+func applyGridScroll(grid *model.GridState, top, bottom, rows, left, right int) {
+	if len(grid.Cells) == 0 {
+		return
+	}
+
+	if rows > 0 {
+		// Scroll up: iterate from top to bottom (forward)
+		for row := top; row < bottom; row++ {
+			srcRow := row + rows
+			if srcRow >= top && srcRow < bottom && srcRow < len(grid.Cells) && row < len(grid.Cells) {
+				if left == 0 && (right == 0 || right >= grid.Width) {
+					// Full-width scroll: just swap the row slice
+					grid.Cells[row] = grid.Cells[srcRow]
+				} else {
+					// Partial horizontal scroll
+					for col := left; col < right && col < grid.Width; col++ {
+						grid.Cells[row][col] = grid.Cells[srcRow][col]
+					}
+				}
+			} else if row < len(grid.Cells) {
+				// Source row is out of bounds, fill with blanks
+				if left == 0 && (right == 0 || right >= grid.Width) {
+					for col := 0; col < grid.Width; col++ {
+						grid.Cells[row][col] = &model.Cell{Char: " ", Highlight: 0, Classes: map[string]bool{}}
+					}
+				} else {
+					for col := left; col < right && col < grid.Width; col++ {
+						grid.Cells[row][col] = &model.Cell{Char: " ", Highlight: 0, Classes: map[string]bool{}}
+					}
+				}
+			}
+			grid.MarkRowDirty(row)
+		}
+	} else if rows < 0 {
+		// Scroll down: iterate from bottom to top (backward)
+		for row := bottom - 1; row >= top; row-- {
+			srcRow := row + rows // rows is negative, so srcRow < row
+			if srcRow >= top && srcRow < bottom && srcRow < len(grid.Cells) && row < len(grid.Cells) {
+				if left == 0 && (right == 0 || right >= grid.Width) {
+					grid.Cells[row] = grid.Cells[srcRow]
+				} else {
+					for col := left; col < right && col < grid.Width; col++ {
+						grid.Cells[row][col] = grid.Cells[srcRow][col]
+					}
+				}
+			} else if row < len(grid.Cells) {
+				if left == 0 && (right == 0 || right >= grid.Width) {
+					for col := 0; col < grid.Width; col++ {
+						grid.Cells[row][col] = &model.Cell{Char: " ", Highlight: 0, Classes: map[string]bool{}}
+					}
+				} else {
+					for col := left; col < right && col < grid.Width; col++ {
+						grid.Cells[row][col] = &model.Cell{Char: " ", Highlight: 0, Classes: map[string]bool{}}
+					}
+				}
+			}
+			grid.MarkRowDirty(row)
+		}
+	}
+}
+
+// markWindowDirtyByGrid marks the window associated with a grid as dirty.
+func markWindowDirtyByGrid(s *model.ScreenState, gridID int) {
+	if winID, exists := s.GridToWindow[gridID]; exists {
+		if win, ok := s.Windows[winID]; ok {
+			win.Dirty = true
+		}
+	}
+}
+
+func toInt(v any) int {
+	switch n := v.(type) {
+	case int:
+		return n
+	case int64:
+		return int(n)
+	case uint64:
+		return int(n)
+	case float64:
+		return int(n)
+	default:
+		return 0
 	}
 }

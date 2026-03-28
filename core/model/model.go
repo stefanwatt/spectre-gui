@@ -37,13 +37,11 @@ type GridState struct {
 	TopLine   int
 	CursorRow int
 	CursorCol int
-	Lines     map[int]LineState
-}
 
-type LineState struct {
-	Row   int
-	Col   int
-	Cells []any
+	// Proper cell storage for the rendering pipeline.
+	// Cells[row][col] is a *Cell with resolved highlight classes.
+	Cells     [][]*Cell
+	DirtyRows []bool
 }
 
 type WindowState struct {
@@ -61,6 +59,7 @@ type WindowState struct {
 	ZIndex     int
 	Filetype   string
 	Filepath   string
+	Dirty      bool // set by reducer when window content may have changed
 }
 
 type ViewportState struct {
@@ -99,6 +98,42 @@ type MarkdownState struct{}
 type CompletionState struct{}
 type FileExplorerState struct{}
 type PickerState struct{}
+
+// EnsureCells allocates or resizes the Cells and DirtyRows arrays to match Width x Height.
+// Existing cell data is preserved where possible.
+func (g *GridState) EnsureCells() {
+	if len(g.Cells) == g.Height && (g.Height == 0 || len(g.Cells[0]) == g.Width) {
+		return
+	}
+	oldCells := g.Cells
+	g.Cells = make([][]*Cell, g.Height)
+	g.DirtyRows = make([]bool, g.Height)
+	for row := 0; row < g.Height; row++ {
+		g.Cells[row] = make([]*Cell, g.Width)
+		for col := 0; col < g.Width; col++ {
+			if row < len(oldCells) && col < len(oldCells[row]) && oldCells[row][col] != nil {
+				g.Cells[row][col] = oldCells[row][col]
+			} else {
+				g.Cells[row][col] = &Cell{Char: " ", Highlight: 0, Classes: map[string]bool{}}
+			}
+		}
+		g.DirtyRows[row] = true
+	}
+}
+
+// MarkRowDirty marks a specific row as needing re-rendering.
+func (g *GridState) MarkRowDirty(row int) {
+	if row >= 0 && row < len(g.DirtyRows) {
+		g.DirtyRows[row] = true
+	}
+}
+
+// MarkAllDirty marks every row as dirty.
+func (g *GridState) MarkAllDirty() {
+	for i := range g.DirtyRows {
+		g.DirtyRows[i] = true
+	}
+}
 
 func NewAppState() *AppState {
 	return &AppState{

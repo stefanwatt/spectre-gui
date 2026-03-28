@@ -12,20 +12,24 @@ import (
 func HandleRedraw(updates [][]interface{}) {
 	mapped := neovimtransport.MapRedrawBatch(updates)
 	if len(mapped) > 0 {
-		counts := make(map[events.Name]int)
+		hasFlush := false
 		for _, ev := range mapped {
-			counts[ev.Name]++
+			if ev.Name == events.EventFlush {
+				hasFlush = true
+				break
+			}
 		}
-		log.Debug("redraw batch mapped", "raw_updates", len(updates), "mapped_events", len(mapped), "counts", counts)
+		if hasFlush {
+			counts := make(map[events.Name]int)
+			for _, ev := range mapped {
+				counts[ev.Name]++
+			}
+			log.Debug("redraw batch mapped", "raw_updates", len(updates), "mapped_events", len(mapped), "counts", counts)
+		}
 	}
 
 	for _, ev := range mapped {
 		handleCanonicalSideEffects(ev)
-		applyMappedEventToScreen(ev)
-		if ev.Name == events.EventFlush && NvimScreen != nil {
-			log.Debug("redraw flush -> screen render")
-			NvimScreen.Render()
-		}
 		EnqueueCanonicalEvent(ev)
 	}
 }

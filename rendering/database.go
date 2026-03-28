@@ -117,3 +117,16 @@ func AddIdClasses(id int, classes []string) {
 
 	idClasses[id] = classes
 }
+
+func ClassesForHighlightID(id int) string {
+	idClassesMu.Lock()
+	classes, exists := idClasses[id]
+	if !exists {
+		classes = idClasses[0]
+	}
+	idClassesMu.Unlock()
+	if len(classes) == 0 {
+		return ""
+	}
+	return strings.Join(classes, " ")
+}

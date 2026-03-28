@@ -4,13 +4,16 @@ import {
   cursorToPrevMatch,
   state
 } from '$lib/picker/live-grep-results/results.service.svelte';
-import { SendKey, CreateQuickfixList } from '@bindings/nvim-gui/app.js';
-import { OpenFile } from '@bindings/nvim-gui/features/picker/picker.js'
-import { GetLiveGrepOpts, GetNextPage, GetPrevPage } from '@bindings/nvim-gui/features/picker/livegreppicker.js'
+import { CreateQuickfixList } from '$lib/wailsjs/go/main/App.js';
+import { OpenFile } from '$lib/wailsjs/go/picker/Picker.js'
+import { GetLiveGrepOpts, GetNextPage, GetPrevPage } from '$lib/wailsjs/go/picker/LiveGrepPicker.js'
+import { Call } from '@wailsio/runtime';
 
 function sendKey(e: KeyboardEvent) {
   e.preventDefault()
-  SendKey(e.key, e.ctrlKey, e.altKey, e.shiftKey, 'live-grep');
+  Call.ByName('main.App.SendKey', e.key, e.ctrlKey, e.altKey, e.shiftKey, 'live-grep').catch((err) =>
+    console.error('SendKey failed', err)
+  );
 }
 
 export const keymaps: App.Keymap[] = [

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { FindHelp } from '@bindings/nvim-gui/features/picker/picker.js';
+	import { FindHelp } from '$lib/wailsjs/go/picker/Picker.js';
 	import Picker from './Picker.svelte';
 	import { nestedState } from '$lib/state.svelte';
 
