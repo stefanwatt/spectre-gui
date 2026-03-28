@@ -5,11 +5,27 @@ import (
 	neovimtransport "nvim-gui/transport/neovim"
 
 	"nvim-gui/core/events"
+
+	"github.com/charmbracelet/log"
 )
 
 func HandleRedraw(updates [][]interface{}) {
-	for _, ev := range neovimtransport.MapRedrawBatch(updates) {
+	mapped := neovimtransport.MapRedrawBatch(updates)
+	if len(mapped) > 0 {
+		counts := make(map[events.Name]int)
+		for _, ev := range mapped {
+			counts[ev.Name]++
+		}
+		log.Debug("redraw batch mapped", "raw_updates", len(updates), "mapped_events", len(mapped), "counts", counts)
+	}
+
+	for _, ev := range mapped {
 		handleCanonicalSideEffects(ev)
+		applyMappedEventToScreen(ev)
+		if ev.Name == events.EventFlush && NvimScreen != nil {
+			log.Debug("redraw flush -> screen render")
+			NvimScreen.Render()
+		}
 		EnqueueCanonicalEvent(ev)
 	}
 }

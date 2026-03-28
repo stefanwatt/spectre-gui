@@ -1,6 +1,10 @@
 package neovim
 
-import "nvim-gui/rendering"
+import (
+	"nvim-gui/rendering"
+
+	"github.com/charmbracelet/log"
+)
 
 func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr, cursorLine int) []rendering.ContentRow {
 	data := s.toRenderingGridData(grid)
@@ -12,6 +16,15 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr, cursorLine int
 		Grid:       data,
 		Meta:       s,
 	})
+	if grid != nil {
+		dirtyCount := 0
+		for _, dirty := range grid.DirtyRows {
+			if dirty {
+				dirtyCount++
+			}
+		}
+		log.Debug("optimizeGrid payload", "grid_id", grid.ID, "filetype", filetype, "buf_nr", bufNr, "cursor_line", cursorLine, "rows_out", len(payload.Content), "dirty_rows", dirtyCount)
+	}
 	return payload.Content
 }
 

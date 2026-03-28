@@ -558,6 +558,7 @@ func (s *Screen) updateLayout() {
 	prev := s.layout
 	s.CalculateGridLayout()
 	if prev == nil || !rendering.LayoutEqual(prev, s.layout) {
+		log.Debug("emit layout-updated", "windows", len(s.layout.Windows), "active_window", s.layout.ActiveWindowId, "cols", s.layout.Cols, "rows", s.layout.Rows)
 		EmitEvent("layout-updated", s.layout)
 	}
 }

@@ -1,6 +1,10 @@
 package neovim
 
-import "nvim-gui/rendering"
+import (
+	"nvim-gui/rendering"
+
+	"github.com/charmbracelet/log"
+)
 
 func (s *Screen) buildLayoutInput() rendering.LayoutInput {
 	windows := make([]rendering.LayoutWindow, 0, len(s.Windows))
@@ -52,10 +56,13 @@ func (s *Screen) CalculateGridLayout() {
 	next := rendering.CalculateGridLayout(s.buildLayoutInput())
 	if s.layout == nil {
 		s.layout = next
+		log.Debug("layout calculated (init)", "windows", len(next.Windows), "cols", next.Cols, "rows", next.Rows, "active_window", next.ActiveWindowId)
 		return
 	}
 	if rendering.LayoutEqual(s.layout, next) {
+		log.Debug("layout unchanged", "windows", len(next.Windows), "active_window", next.ActiveWindowId)
 		return
 	}
+	log.Debug("layout changed", "old_windows", len(s.layout.Windows), "new_windows", len(next.Windows), "old_active", s.layout.ActiveWindowId, "new_active", next.ActiveWindowId)
 	s.layout = next
 }

@@ -19,7 +19,6 @@ import {
 } from '$lib/state.svelte';
 import { state as liveGrepState } from '$lib/picker/live-grep-results/results.service.svelte';
 
-export async function init() {}
 export function startListening() {
 	window.addEventListener('resize', function () {
 		App.OnResize(window.innerWidth, window.innerHeight);
@@ -114,6 +113,12 @@ export function startListening() {
 
 	Events.On('layout-updated', (ev) => {
 		const updatedLayout = ev.data;
+		console.debug('[runtime-events] layout-updated', {
+			activeWindowId: updatedLayout?.activeWindowId,
+			windows: updatedLayout?.windows?.length,
+			cols: updatedLayout?.cols,
+			rows: updatedLayout?.rows
+		});
 		layout.cols = updatedLayout.cols;
 		layout.rows = updatedLayout.rows;
 		layout.activeWindowId = updatedLayout?.activeWindowId;
@@ -124,6 +129,11 @@ export function startListening() {
 		const data: any = ev.data;
 		const winId = data.winId;
 		const updatedContent = data.updatedContent;
+		console.debug('[runtime-events] content-updated', {
+			winId,
+			rows: updatedContent?.length,
+			firstRowTokens: updatedContent?.[0]?.tokens?.length
+		});
 		const existing = windowContentRowMap.get(winId);
 		if (existing && existing.length === updatedContent.length) {
 			for (let i = 0; i < updatedContent.length; i++) {

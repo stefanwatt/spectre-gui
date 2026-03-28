@@ -2,6 +2,7 @@ package utils
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -20,11 +21,27 @@ func SetupLog() {
 		panic(err)
 	}
 
+	level := log.InfoLevel
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("NVIM_GUI_LOG_LEVEL"))) {
+	case "debug":
+		level = log.DebugLevel
+	case "warn", "warning":
+		level = log.WarnLevel
+	case "error":
+		level = log.ErrorLevel
+	case "fatal":
+		level = log.FatalLevel
+	case "info", "":
+		level = log.InfoLevel
+	}
+
 	Logger = log.NewWithOptions(f, log.Options{
 		ReportCaller:    true,
 		ReportTimestamp: true,
 		TimeFormat:      time.Kitchen,
 		Prefix:          "nvim-gui",
+		Level:           level,
 	})
 	log.SetDefault(Logger)
+	log.Info("logger initialized", "level", level.String(), "path", "/tmp/nvim-gui.log")
 }

@@ -8,13 +8,12 @@
 	import FileExplorer from '$lib/file-explorer/FileExplorer.svelte';
 	import FileExplorerConfirmPrompt from '$lib/file-explorer/FileExplorerConfirmPrompt.svelte';
 	import { cmdline, windowContentRowMap, layout, cursor, nestedState, getFloatingWindows, completion } from '$lib/state.svelte';
-	import { init, startListening } from '$lib/runtime-events-service';
+	import { startListening } from '$lib/runtime-events-service';
 	import { handleKeypress, registerKeymap } from '$lib/keymaps/keymap-service';
 	import { keymaps as liveGrepKeymaps } from '$lib/keymaps/live-grep';
 	import { keymaps as cmdlineKeymaps } from '$lib/keymaps/cmdline';
 
 	onMount(async () => {
-		await init();
 		startListening();
 		const allKeymaps: App.Keymap[] = [...liveGrepKeymaps, ...cmdlineKeymaps];
 		allKeymaps.forEach((keymap) => {
