@@ -26,6 +26,11 @@ export function startListening() {
 		});
 	});
 
+	// Send initial window dimensions so Neovim grid matches actual window size
+	Call.ByName('main.App.OnResize', window.innerWidth, window.innerHeight).catch((err) => {
+		console.error('Initial OnResize failed', err);
+	});
+
 	// Request current state from backend (for late-connecting clients like tests)
 	Call.ByName('main.App.RequestState').catch((err) => {
 		console.error('RequestState failed', err);

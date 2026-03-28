@@ -42,7 +42,7 @@ func CalculateGridSize(windowWidth, windowHeight int) (rows, cols int) {
 func StartListening(ctx context.Context) {
 	var err error
 	// Use default grid size for initial creation
-	// The frontend will call OnResize() once mounted
+	// The frontend calls OnResize() once mounted to set correct dimensions
 	rows, cols := 24, 80
 	log.Debug(fmt.Sprintf("StartListening initializing screen with default rows=%d cols=%d", rows, cols))
 	NvimScreen = NewScreen(ctx, cols, rows, App)
