@@ -19,6 +19,8 @@ var (
 	bgColorClasses   = make(map[string]string)
 	effectiveHlIdsMu sync.Mutex
 	effectiveHlIds   = make(map[string]int)
+	// hlIdToEffective maps each original highlight ID to its effective (deduplicated) ID.
+	hlIdToEffective = make(map[int]int)
 )
 
 func UpdateEffectiveHlId(hlClassesStr string, hlId int) int {
@@ -29,6 +31,8 @@ func UpdateEffectiveHlId(hlClassesStr string, hlId int) int {
 		effectiveHlIds[hlClassesStr] = hlId
 		effectiveHlId = hlId
 	}
+	// Always record the mapping from this hlId to the effective ID
+	hlIdToEffective[hlId] = effectiveHlId
 	effectiveHlIdsMu.Unlock()
 	return effectiveHlId
 }
@@ -122,7 +126,15 @@ func ClassesForHighlightID(id int) string {
 	idClassesMu.Lock()
 	classes, exists := idClasses[id]
 	if !exists {
-		classes = idClasses[0]
+		// Try resolving via the effective ID mapping (deduplication)
+		effectiveHlIdsMu.Lock()
+		if effID, ok := hlIdToEffective[id]; ok && effID != id {
+			classes, exists = idClasses[effID]
+		}
+		effectiveHlIdsMu.Unlock()
+		if !exists {
+			classes = idClasses[0]
+		}
 	}
 	idClassesMu.Unlock()
 	if len(classes) == 0 {

@@ -165,18 +165,21 @@ func mapLayoutWindows(s *model.ScreenState) []rendering.LayoutWindow {
 		if win == nil {
 			continue
 		}
+		isFloating := win.Type == "floating"
 		result = append(result, rendering.LayoutWindow{
-			ID:       win.ID,
-			Type:     win.Type,
-			Hidden:   win.Hidden,
-			Floating: win.Type == "floating",
-			StartRow: win.StartRow,
-			StartCol: win.StartCol,
-			Width:    win.Width,
-			Height:   win.Height,
-			Mode:     s.Mode,
-			Filetype: win.Filetype,
-			Filepath: win.Filepath,
+			ID:                  win.ID,
+			Type:                win.Type,
+			Hidden:              win.Hidden,
+			Floating:            isFloating,
+			StartRow:            win.StartRow,
+			StartCol:            win.StartCol,
+			Width:               win.Width,
+			Height:              win.Height,
+			LineNumbers:         !isFloating,
+			RelativeLineNumbers: !isFloating,
+			Mode:                s.Mode,
+			Filetype:            win.Filetype,
+			Filepath:            win.Filepath,
 		})
 	}
 	return result

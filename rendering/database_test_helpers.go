@@ -17,6 +17,7 @@ func ResetHighlightStateForTest() {
 
 	effectiveHlIdsMu.Lock()
 	effectiveHlIds = make(map[string]int)
+	hlIdToEffective = make(map[int]int)
 	effectiveHlIdsMu.Unlock()
 
 	currentFgColorId = 1
