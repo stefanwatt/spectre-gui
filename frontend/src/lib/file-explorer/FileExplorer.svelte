@@ -191,9 +191,6 @@
 	:global(.preview-pane .flex.overflow-hidden.whitespace-pre.leading-none span) {
 		background-color: #181825 !important;
 	}
-	.bg-very-dark {
-		background-color: #181825;
-	}
 	.panes {
 		grid-template-columns: 3fr 3fr 6fr;
 	}

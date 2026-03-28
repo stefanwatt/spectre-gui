@@ -178,7 +178,7 @@
 				</div>
 			</div>
 			{#if nestedState.previewWindow}
-				<div class="h-full w-1/2 overflow-hidden bg-mantle p-4">
+				<div class="h-full w-1/2 overflow-hidden bg-pretty-dark p-4">
 					<FloatingGrid content={previewContent} />
 				</div>
 			{/if}

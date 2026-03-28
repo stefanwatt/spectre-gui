@@ -175,14 +175,17 @@ func (p *LayoutContentProjector) projectFloatingWindows(ui *UIProjection, s *mod
 			continue
 		}
 
+		// Capture dirty state before projectWindowContent clears it
+		isDirty := win.Dirty || gridHasDirtyRows(grid)
+
 		// Emit content for dirty floating windows
-		if win.Dirty || gridHasDirtyRows(grid) {
+		if isDirty {
 			p.projectWindowContent(ui, win, s)
 		}
 
 		if win.ZIndex == previewWindowZIndex {
 			// Preview windows are emitted separately
-			if win.Dirty {
+			if isDirty {
 				previewInfo := mapFloatingWindowInfo(win, winID, s)
 				ui.Events = append(ui.Events, EmittedEvent{
 					Name:    "preview-window",
@@ -193,7 +196,7 @@ func (p *LayoutContentProjector) projectFloatingWindows(ui *UIProjection, s *mod
 		}
 
 		// Collect non-preview floating windows
-		if win.Dirty {
+		if isDirty {
 			hasDirtyFloating = true
 		}
 		floatingInfos = append(floatingInfos, mapFloatingWindowInfo(win, winID, s))

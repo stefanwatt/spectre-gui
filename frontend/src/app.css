@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind base;
 
+.bg-very-dark {
+  background-color: #181825;
+}
+
+.bg-pretty-dark {
+  background-color: #1e1e2e;
+}
+
 .font-bold {
   text-shadow:
     0.5px 0 currentColor,
