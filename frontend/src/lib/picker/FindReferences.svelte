@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { FindReferences } from '$lib/wailsjs/go/picker/LspReferencesPicker.js';
+	import { FindReferences } from '@bindings/nvim-gui/features/picker/lspreferencespicker';
 	import Picker from './Picker.svelte';
 	import { nestedState } from '$lib/state.svelte';
 
-	$effect(() => {});
-
 	function onQueryChanged(query: string) {
 		FindReferences(query).then((updatedResults) => {
-			nestedState.pickerResults = updatedResults;
+			nestedState.pickerResults = updatedResults.filter((r): r is NonNullable<typeof r> => r != null);
+		}).catch((err) => {
+			console.error('FindReferences RPC failed', err);
 		});
 	}
 </script>

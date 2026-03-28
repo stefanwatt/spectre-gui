@@ -1,4 +1,4 @@
-import { LiveGrep } from "$lib/wailsjs/go/picker/LiveGrepPicker";
+import { LiveGrep } from "@bindings/nvim-gui/features/picker/livegreppicker";
 export interface ResultsState {
   selectedMatch: App.RipgrepMatch | null;
   results: App.RipgrepResult[];

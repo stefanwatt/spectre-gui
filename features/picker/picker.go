@@ -58,20 +58,25 @@ func (p *Picker) ServiceStartup(ctx context.Context, options application.Service
 }
 
 func (p *Picker) FindFiles(query string) []*PickerResult {
+	log.Debug("FindFiles called", "query", query)
 	if strings.TrimSpace(query) == "" {
+		log.Debug("FindFiles: empty query, returning empty")
 		return []*PickerResult{}
 	}
 	if p.cwd == nil {
 		cwd := neovim.GetCwd()
+		log.Debug("FindFiles: got cwd", "cwd", cwd)
 		p.cwd = &cwd
 	}
 	assert(p.cwd != nil, "cannot find git files without cwd")
 	dir := utils.GetGitRepoRoot(*p.cwd)
+	log.Debug("FindFiles: git repo root", "dir", dir)
 	results, err := FindFiles(dir, query)
 	if err != nil {
-		log.Debug("FindFiles error getting results:\n", err.Error())
+		log.Debug("FindFiles error getting results", "err", err.Error())
 		return []*PickerResult{}
 	}
+	log.Debug("FindFiles: got results", "count", len(results))
 	for _, result := range results {
 		result.AbsolutePath = dir + "/" + result.RelativePath
 	}
@@ -84,7 +89,8 @@ func (p *Picker) ClosePreview(winId int) {
 
 func (p *Picker) GetPreview(filepath string, row int, col int) {
 	neovim.ShowPreview(filepath, row, col)
-	neovim.NvimScreen.EmitFloatingWindows()
+	// Preview window events are emitted through the canonical pipeline
+	// when Neovim sends win_float_pos on the next redraw flush.
 }
 
 func (p *Picker) OpenFile(path string, row int, col int) {

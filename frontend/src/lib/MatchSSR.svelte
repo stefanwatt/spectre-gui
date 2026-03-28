@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { GetReplacementText } from '$lib/wailsjs/go/main/App.js';
-	import { OpenFile } from '$lib/wailsjs/go/picker/Picker.js';
+	import { GetReplacementText } from '@bindings/nvim-gui/app';
+	import { OpenFile } from '@bindings/nvim-gui/features/picker/picker';
 
 	let {
 		match,

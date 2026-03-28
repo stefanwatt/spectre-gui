@@ -5,17 +5,21 @@ import (
 	"nvim-gui/rendering"
 )
 
+const previewWindowZIndex = 69420
+
 // LayoutContentProjector computes layout and content projections.
 // It maintains a cache of rendering.GridData per grid to support
 // incremental (dirty-row-only) content updates.
 type LayoutContentProjector struct {
-	gridDataCache map[int]*rendering.GridData
-	lastLayout    *rendering.GridLayout
+	gridDataCache    map[int]*rendering.GridData
+	lastLayout       *rendering.GridLayout
+	lastFloatingWins map[int]int // winID -> zIndex, tracks previous floating windows for close detection
 }
 
 func NewLayoutContentProjector() *LayoutContentProjector {
 	return &LayoutContentProjector{
-		gridDataCache: make(map[int]*rendering.GridData),
+		gridDataCache:    make(map[int]*rendering.GridData),
+		lastFloatingWins: make(map[int]int),
 	}
 }
 
@@ -37,7 +41,7 @@ func (p *LayoutContentProjector) Project(state *model.AppState) UIProjection {
 		p.lastLayout = layout
 	}
 
-	// --- Content for each visible window ---
+	// --- Content for each visible normal window ---
 	for _, win := range s.Windows {
 		if win == nil || win.Hidden {
 			continue
@@ -45,54 +49,13 @@ func (p *LayoutContentProjector) Project(state *model.AppState) UIProjection {
 		if win.Type == "floating" {
 			continue
 		}
-		grid := s.Grids[win.GridID]
-		if grid == nil || grid.Height == 0 || grid.Width == 0 {
-			continue
-		}
-
-		// Check if any rows are dirty for this grid
-		hasDirty := false
-		for _, d := range grid.DirtyRows {
-			if d {
-				hasDirty = true
-				break
-			}
-		}
-		if !hasDirty && !win.Dirty {
-			continue
-		}
-
-		// Get or create cached GridData for this grid
-		gd := p.getOrCreateGridData(win.GridID, grid)
-
-		// Sync dirty rows from model to GridData
-		syncGridData(gd, grid)
-
-		// Build content payload using the existing pure rendering pipeline
-		output := rendering.BuildContentPayload(rendering.ContentInput{
-			WindowID:   win.ID,
-			Filetype:   win.Filetype,
-			CursorLine: -1, // no markdown cursor suppression for now
-			Grid:       gd,
-			Meta:       nil, // no markdown meta for now
-		})
-
-		ui.Events = append(ui.Events, EmittedEvent{
-			Name:    "content-updated",
-			Payload: output,
-		})
-
-		// Reset dirty flags on the model
-		for i := range grid.DirtyRows {
-			grid.DirtyRows[i] = false
-		}
-		win.Dirty = false
+		p.projectWindowContent(&ui, win, s)
 	}
 
+	// --- Floating windows ---
+	p.projectFloatingWindows(&ui, s)
+
 	// --- Cursor ---
-	// Emit cursor position using the active window's grid cursor data.
-	// The frontend expects buffer-line coordinates (1-indexed row from WindowCursor RPC).
-	// We approximate using viewport.CursorLine when available, falling back to grid cursor + topLine.
 	cursorRow := s.Viewport.CursorLine
 	cursorCol := 0
 	if activeWin, exists := s.Windows[s.ActiveWindow]; exists {
@@ -119,6 +82,204 @@ func (p *LayoutContentProjector) Project(state *model.AppState) UIProjection {
 	})
 
 	return ui
+}
+
+// projectWindowContent builds and emits content-updated for a single window.
+func (p *LayoutContentProjector) projectWindowContent(ui *UIProjection, win *model.WindowState, s *model.ScreenState) {
+	grid := s.Grids[win.GridID]
+	if grid == nil || grid.Height == 0 || grid.Width == 0 {
+		return
+	}
+
+	// Check if any rows are dirty for this grid
+	hasDirty := false
+	for _, d := range grid.DirtyRows {
+		if d {
+			hasDirty = true
+			break
+		}
+	}
+	if !hasDirty && !win.Dirty {
+		return
+	}
+
+	// Get or create cached GridData for this grid
+	gd := p.getOrCreateGridData(win.GridID, grid)
+
+	// Sync dirty rows from model to GridData
+	syncGridData(gd, grid)
+
+	// Build content payload using the existing pure rendering pipeline
+	output := rendering.BuildContentPayload(rendering.ContentInput{
+		WindowID:   win.ID,
+		Filetype:   win.Filetype,
+		CursorLine: -1, // no markdown cursor suppression for now
+		Grid:       gd,
+		Meta:       nil, // no markdown meta for now
+	})
+
+	// For non-preview floating windows, trim the border (perimeter)
+	if win.Type == "floating" && win.ZIndex != previewWindowZIndex {
+		output.Content = trimPerimeter(output.Content)
+	}
+
+	ui.Events = append(ui.Events, EmittedEvent{
+		Name:    "content-updated",
+		Payload: output,
+	})
+
+	// Reset dirty flags on the model
+	for i := range grid.DirtyRows {
+		grid.DirtyRows[i] = false
+	}
+	win.Dirty = false
+}
+
+// projectFloatingWindows handles all floating window events:
+// - "floating_windows": list of non-preview floating windows
+// - "preview-window": preview window (ZIndex == 69420)
+// - "floating_window_closed" / "preview-window-closed": when floating windows disappear
+// - "hide-window": when floating windows become hidden
+// - "content-updated": grid content for floating windows
+func (p *LayoutContentProjector) projectFloatingWindows(ui *UIProjection, s *model.ScreenState) {
+	currentFloatingWins := make(map[int]int) // winID -> zIndex
+	var floatingInfos []map[string]any
+	hasDirtyFloating := false
+
+	for winID, win := range s.Windows {
+		if win == nil || win.Type != "floating" {
+			continue
+		}
+
+		// Track hidden floating windows — emit hide-window
+		if win.Hidden {
+			// If it was previously known and now hidden, emit hide-window
+			if _, wasPrevious := p.lastFloatingWins[winID]; wasPrevious {
+				ui.Events = append(ui.Events, EmittedEvent{
+					Name:    "hide-window",
+					Payload: winID,
+				})
+			}
+			continue
+		}
+
+		currentFloatingWins[winID] = win.ZIndex
+
+		// Skip blink-cmp-menu windows (handled by native completion)
+		if win.Filetype == "blink-cmp-menu" {
+			continue
+		}
+
+		grid := s.Grids[win.GridID]
+		if grid == nil {
+			continue
+		}
+
+		// Emit content for dirty floating windows
+		if win.Dirty || gridHasDirtyRows(grid) {
+			p.projectWindowContent(ui, win, s)
+		}
+
+		if win.ZIndex == previewWindowZIndex {
+			// Preview windows are emitted separately
+			if win.Dirty {
+				previewInfo := mapFloatingWindowInfo(win, winID, s)
+				ui.Events = append(ui.Events, EmittedEvent{
+					Name:    "preview-window",
+					Payload: previewInfo,
+				})
+			}
+			continue
+		}
+
+		// Collect non-preview floating windows
+		if win.Dirty {
+			hasDirtyFloating = true
+		}
+		floatingInfos = append(floatingInfos, mapFloatingWindowInfo(win, winID, s))
+	}
+
+	// Emit full floating_windows list if any are dirty
+	if hasDirtyFloating && len(floatingInfos) > 0 {
+		ui.Events = append(ui.Events, EmittedEvent{
+			Name:    "floating_windows",
+			Payload: floatingInfos,
+		})
+	}
+
+	// Detect closed floating windows by comparing with previous state
+	for prevWinID, prevZIndex := range p.lastFloatingWins {
+		if _, stillExists := currentFloatingWins[prevWinID]; !stillExists {
+			if prevZIndex == previewWindowZIndex {
+				ui.Events = append(ui.Events, EmittedEvent{
+					Name:    "preview-window-closed",
+					Payload: prevWinID,
+				})
+			} else {
+				ui.Events = append(ui.Events, EmittedEvent{
+					Name:    "floating_window_closed",
+					Payload: prevWinID,
+				})
+			}
+		}
+	}
+
+	p.lastFloatingWins = currentFloatingWins
+}
+
+// mapFloatingWindowInfo builds the payload map matching the frontend App.FloatingWindow interface.
+func mapFloatingWindowInfo(win *model.WindowState, winID int, s *model.ScreenState) map[string]any {
+	anchorWindow := 0
+	if resolved, exists := s.GridToWindow[win.AnchorGrid]; exists {
+		anchorWindow = resolved
+	}
+	return map[string]any{
+		"id":           winID,
+		"gridId":       win.GridID,
+		"anchorWindow": anchorWindow,
+		"anchor":       win.Anchor,
+		"row":          win.StartRow,
+		"col":          win.StartCol,
+		"width":        win.Width,
+		"height":       win.Height,
+		"zIndex":       win.ZIndex,
+		"focusable":    win.Focusable,
+		"isPopup":      false, // TODO: derive from model when needed
+		"isHex":        win.Filetype == "blink-cmp-menu",
+		"filetype":     win.Filetype,
+	}
+}
+
+// gridHasDirtyRows checks if any row in the grid is marked dirty.
+func gridHasDirtyRows(grid *model.GridState) bool {
+	for _, d := range grid.DirtyRows {
+		if d {
+			return true
+		}
+	}
+	return false
+}
+
+// trimPerimeter removes the border characters from floating window content.
+// Floating windows rendered by Neovim typically have a 1-cell border around the content.
+func trimPerimeter(contentRows []rendering.ContentRow) []rendering.ContentRow {
+	if len(contentRows) < 3 {
+		return []rendering.ContentRow{}
+	}
+
+	// Remove first and last row (top and bottom border)
+	contentRows = contentRows[1 : len(contentRows)-1]
+
+	for i := range contentRows {
+		if len(contentRows[i].Tokens) < 3 {
+			contentRows[i].Tokens = []*rendering.Token{}
+		} else {
+			// Remove first and last token (left and right border)
+			contentRows[i].Tokens = contentRows[i].Tokens[1 : len(contentRows[i].Tokens)-1]
+		}
+	}
+
+	return contentRows
 }
 
 // getOrCreateGridData returns a cached GridData or creates a new one.

@@ -1,5 +1,5 @@
 <script>
-	import { GetReplacementText } from '$lib/wailsjs/go/main/App.js';
+	import { GetReplacementText } from '@bindings/nvim-gui/app';
 	import { selected_match, regex, search_term, replace_term } from './store';
 	/** @type {App.RipgrepMatch}*/
 	export let match;
