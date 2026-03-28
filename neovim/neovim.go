@@ -3,21 +3,22 @@ package neovim
 import (
 	"context"
 	"fmt"
-	"log"
+	"nvim-gui/features"
 	"nvim-gui/utils"
 	"os"
 	"path/filepath"
 	"runtime/debug"
 	"strconv"
 
+	"github.com/charmbracelet/log"
 	"github.com/neovim/go-client/nvim"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 var (
-	App              *application.App
-	currentMode      string
-	NvimClient       *nvim.Nvim
+	App         *application.App
+	currentMode string
+	NvimClient  *nvim.Nvim
 )
 
 func SetApp(app *application.App) {
@@ -71,7 +72,7 @@ func StartListening(ctx context.Context) {
 	NvimClient.SetVar("keymaps", keymaps)
 
 	if err != nil {
-		log.Println(err)
+		log.Error(err)
 		nvimCancel()
 		if App != nil {
 			App.Quit()
@@ -236,9 +237,7 @@ func StartListening(ctx context.Context) {
 		NvimClient.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data []string) {
 			assert(len(data) == 1, "BufEnter: malformed data")
 			filepath := filepath.Base(data[0])
-			if App != nil {
-				App.Event.Emit("BufEnter", filepath)
-			}
+			EmitEvent("BufEnter", filepath)
 		})
 
 		NvimClient.RegisterHandler("MarkdownTables", func(updates ...[]interface{}) {
@@ -346,22 +345,18 @@ func StartListening(ctx context.Context) {
 				selectedIdx := utils.ReflectToInt(data[1])
 				col := utils.ReflectToInt(data[2])
 
-				items := parseCompletionItems(itemsRaw)
-				state := CompletionState{
+				items := features.ParseCompletionItems(itemsRaw)
+				state := features.CompletionState{
 					Items:         items,
 					SelectedIndex: selectedIdx,
 					Col:           col,
 				}
-				if App != nil {
-					App.Event.Emit("completion-show", state)
-				}
+				EmitEvent("completion-show", state)
 			}
 		})
 
 		NvimClient.RegisterHandler("CompletionHide", func(updates ...[]interface{}) {
-			if App != nil {
-				App.Event.Emit("completion-hide", struct{}{})
-			}
+			EmitEvent("completion-hide", struct{}{})
 		})
 
 		NvimClient.RegisterHandler("CompletionSelect", func(updates ...[]interface{}) {
@@ -370,9 +365,7 @@ func StartListening(ctx context.Context) {
 					continue
 				}
 				idx := utils.ReflectToInt(data[0])
-				if App != nil {
-					App.Event.Emit("completion-select", idx)
-				}
+				EmitEvent("completion-select", idx)
 			}
 		})
 
@@ -386,15 +379,13 @@ func StartListening(ctx context.Context) {
 				docKind, _ := data[1].(string)
 				detail, _ := data[2].(string)
 
-				doc := CompletionDocumentation{
+				doc := features.CompletionDocumentation{
 					Text:   docText,
 					Kind:   docKind,
 					Detail: detail,
 				}
 
-				if App != nil {
-					App.Event.Emit("completion-documentation", doc)
-				}
+				EmitEvent("completion-documentation", doc)
 			}
 		})
 
@@ -449,7 +440,7 @@ func StartListening(ctx context.Context) {
 		}
 
 		// Set up completion bridge for blink.cmp
-		if err := NvimClient.ExecLua(completionLua, nil, NvimClient.ChannelID()); err != nil {
+		if err := NvimClient.ExecLua(features.CompletionLua, nil, NvimClient.ChannelID()); err != nil {
 			log.Debug(fmt.Sprintf("Error loading completion Lua: %v", err))
 		}
 
@@ -474,7 +465,7 @@ func StartListening(ctx context.Context) {
 		nvimCancel()
 	}
 
-	log.Println("listening terminating")
+	log.Debug("listening terminating")
 }
 
 func readColorColumn(screen *Screen) {

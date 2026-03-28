@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"nvim-gui/neovim"
-	"nvim-gui/utils"
 	"strconv"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 

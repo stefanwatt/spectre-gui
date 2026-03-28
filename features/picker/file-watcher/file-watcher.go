@@ -6,9 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"nvim-gui/utils"
-
 	"github.com/bep/debounce"
+	"github.com/charmbracelet/log"
 	"github.com/fsnotify/fsnotify"
 )
 

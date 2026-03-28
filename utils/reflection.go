@@ -3,6 +3,8 @@ package utils
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/charmbracelet/log"
 )
 
 func ReflectToInt(iface interface{}) int {
@@ -26,7 +28,7 @@ func ReflectToInt(iface interface{}) int {
 	if ok {
 		return int(b)
 	}
-	Log(fmt.Sprintf("could not reflect type:%s to int", reflect.TypeOf(iface).String()))
+	log.Debug(fmt.Sprintf("could not reflect type:%s to int", reflect.TypeOf(iface).String()))
 	return 0
 }
 

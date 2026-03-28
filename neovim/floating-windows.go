@@ -1,6 +1,10 @@
 package neovim
 
-import "github.com/charmbracelet/log"
+import (
+	"nvim-gui/rendering"
+
+	"github.com/charmbracelet/log"
+)
 
 func isHex(window *Window) bool {
 	ft := ""
@@ -10,7 +14,7 @@ func isHex(window *Window) bool {
 	return ft == "blink-cmp-menu"
 }
 
-func (s *Screen) renderFloatingWindow(window *Window) []ContentRow {
+func (s *Screen) renderFloatingWindow(window *Window) []rendering.ContentRow {
 	log.Debug("renderFloatingWindow")
 	// if isHex(window) {
 	// 	return window.Grid.toHex()
@@ -19,16 +23,24 @@ func (s *Screen) renderFloatingWindow(window *Window) []ContentRow {
 	// }
 }
 
-func (s *Screen) renderFzfLua(grid *Grid) []ContentRow {
+func (s *Screen) renderFzfLua(grid *Grid) []rendering.ContentRow {
 	log.Debug("renderFzfLua")
-	content := s.optimizeGrid(grid, "fzflua", 0, -1)
+	payload := rendering.BuildContentPayload(rendering.ContentInput{
+		WindowID:   0,
+		Filetype:   "fzflua",
+		BufNr:      0,
+		CursorLine: -1,
+		Grid:       s.toRenderingGridData(grid),
+		Meta:       nil,
+	})
+	content := payload.Content
 	return trimPerimeter(content)
 }
 
-func trimPerimeter(contentRows []ContentRow) []ContentRow {
+func trimPerimeter(contentRows []rendering.ContentRow) []rendering.ContentRow {
 	if len(contentRows) < 3 {
 		// Return an empty slice if there are fewer than 3 rows
-		return []ContentRow{}
+		return []rendering.ContentRow{}
 	}
 
 	// Remove first and last row
@@ -37,7 +49,7 @@ func trimPerimeter(contentRows []ContentRow) []ContentRow {
 	for i := range contentRows {
 		if len(contentRows[i].Tokens) < 3 {
 			// If a row has fewer than 3 cells, make it empty
-			contentRows[i].Tokens = []*Token{}
+			contentRows[i].Tokens = []*rendering.Token{}
 		} else {
 			// Remove first and last cell of the row
 			contentRows[i].Tokens = contentRows[i].Tokens[1 : len(contentRows[i].Tokens)-1]

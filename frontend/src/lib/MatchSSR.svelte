@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { GetReplacementText } from '@bindings/nvim-gui/app.js';
-	import { OpenFile } from '@bindings/nvim-gui/picker/picker.js';
+	import { OpenFile } from '@bindings/nvim-gui/features/picker/picker.js';
 
 	let {
 		match,

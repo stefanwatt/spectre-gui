@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { FindBufferSymbols } from '@bindings/nvim-gui/picker/lspsymbolspicker.js';
+	import { FindBufferSymbols } from '@bindings/nvim-gui/features/picker/lspsymbolspicker.js';
 	import Picker from './Picker.svelte';
 	import { nestedState } from '$lib/state.svelte';
 

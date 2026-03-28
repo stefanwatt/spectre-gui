@@ -65,7 +65,7 @@ func kindNumberToName(kind int) string {
 	return "Text"
 }
 
-func parseCompletionItems(itemsRaw []interface{}) []CompletionItem {
+func ParseCompletionItems(itemsRaw []interface{}) []CompletionItem {
 	var items []CompletionItem
 	for _, raw := range itemsRaw {
 		entry, ok := raw.([]interface{})
@@ -92,7 +92,7 @@ func parseCompletionItems(itemsRaw []interface{}) []CompletionItem {
 }
 
 // Embedded Lua bridge code for blink.cmp integration
-const completionLua = `
+const CompletionLua = `
 local channel = ...
 
 local function setup_completion_bridge()

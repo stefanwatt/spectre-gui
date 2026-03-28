@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 	"unicode"
+
+	"github.com/charmbracelet/log"
 )
 
 func GetGitRepoRoot(dir string) string {
@@ -126,7 +128,7 @@ func GetLastSubdirAndFilename(absolutePath string) string {
 }
 
 func RetryCommand(command string, args []string, retries int, delay time.Duration) (*string, error) {
-	Log(fmt.Sprintf("Attempting to run %s", command))
+	log.Debug(fmt.Sprintf("Attempting to run %s", command))
 	var err error
 	for i := 0; i < retries; i++ {
 		cmd := exec.Command(command, args...)
@@ -135,15 +137,15 @@ func RetryCommand(command string, args []string, retries int, delay time.Duratio
 
 		if cmdErr == nil {
 			output := string(bytes)
-			Log(fmt.Sprintf("Successfully ran %s", command))
-			Log(fmt.Sprintf("Output: %s", output))
+			log.Debug(fmt.Sprintf("Successfully ran %s", command))
+			log.Debug(fmt.Sprintf("Output: %s", output))
 			return &output, nil
 		}
-		Log("Attempt %d failed: %s\n", i+1, cmdErr)
-		Log("Command: %s %s\n", command, strings.Join(args, " "))
+		log.Debug("Attempt %d failed: %s\n", i+1, cmdErr)
+		log.Debug("Command: %s %s\n", command, strings.Join(args, " "))
 
 		if i < retries-1 {
-			Log("Waiting before retry...")
+			log.Debug("Waiting before retry...")
 			time.Sleep(delay)
 		}
 

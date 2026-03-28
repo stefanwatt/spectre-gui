@@ -33,18 +33,14 @@ func makeCell(char string, hl int, classes map[string]bool) *Cell {
 }
 
 func TestOptimizeRow_MergesSameHl(t *testing.T) {
-	s := &Screen{}
 	cells := []*Cell{
 		makeCell("a", 1, map[string]bool{"fg-1": true}),
 		makeCell("b", 1, map[string]bool{"fg-1": true}),
 		makeCell("c", 1, map[string]bool{"fg-1": true}),
 	}
-	cursor := struct {
-		Row int
-		Col int
-	}{Row: -1, Col: -1} // cursor not on this row
+	cursor := CursorPosition{Row: -1, Col: -1} // cursor not on this row
 
-	result := s.optimizeRow(cells, 0, cursor)
+	result := OptimizeRow(cells, 0, cursor)
 
 	if len(result) != 1 {
 		t.Fatalf("got %d tokens, want 1", len(result))
@@ -55,18 +51,14 @@ func TestOptimizeRow_MergesSameHl(t *testing.T) {
 }
 
 func TestOptimizeRow_SplitsDifferentHl(t *testing.T) {
-	s := &Screen{}
 	cells := []*Cell{
 		makeCell("a", 1, map[string]bool{"fg-1": true}),
 		makeCell("b", 2, map[string]bool{"fg-2": true}),
 		makeCell("c", 1, map[string]bool{"fg-1": true}),
 	}
-	cursor := struct {
-		Row int
-		Col int
-	}{Row: -1, Col: -1}
+	cursor := CursorPosition{Row: -1, Col: -1}
 
-	result := s.optimizeRow(cells, 0, cursor)
+	result := OptimizeRow(cells, 0, cursor)
 
 	if len(result) != 3 {
 		t.Fatalf("got %d tokens, want 3", len(result))
@@ -78,18 +70,14 @@ func TestOptimizeRow_SplitsDifferentHl(t *testing.T) {
 }
 
 func TestOptimizeRow_CursorInjection(t *testing.T) {
-	s := &Screen{}
 	cells := []*Cell{
 		makeCell("a", 1, map[string]bool{"fg-1": true}),
 		makeCell("b", 1, map[string]bool{"fg-1": true}),
 		makeCell("c", 1, map[string]bool{"fg-1": true}),
 	}
-	cursor := struct {
-		Row int
-		Col int
-	}{Row: 0, Col: 1} // cursor on cell "b"
+	cursor := CursorPosition{Row: 0, Col: 1} // cursor on cell "b"
 
-	result := s.optimizeRow(cells, 0, cursor)
+	result := OptimizeRow(cells, 0, cursor)
 
 	// Should have: "a", cursor "b", "c"
 	if len(result) != 3 {
@@ -114,19 +102,15 @@ func TestOptimizeRow_CursorInjection(t *testing.T) {
 }
 
 func TestOptimizeRow_CursorSplitsToken(t *testing.T) {
-	s := &Screen{}
 	cells := []*Cell{
 		makeCell("a", 1, map[string]bool{"fg-1": true}),
 		makeCell("b", 1, map[string]bool{"fg-1": true}),
 		makeCell("c", 1, map[string]bool{"fg-1": true}),
 		makeCell("d", 1, map[string]bool{"fg-1": true}),
 	}
-	cursor := struct {
-		Row int
-		Col int
-	}{Row: 0, Col: 2} // cursor on "c"
+	cursor := CursorPosition{Row: 0, Col: 2} // cursor on "c"
 
-	result := s.optimizeRow(cells, 0, cursor)
+	result := OptimizeRow(cells, 0, cursor)
 
 	// "ab" merged, cursor "c", "d"
 	if len(result) != 3 {
@@ -147,19 +131,15 @@ func TestOptimizeRow_CursorSplitsToken(t *testing.T) {
 }
 
 func TestOptimizeRow_TrailingWhitespace(t *testing.T) {
-	s := &Screen{}
 	cells := []*Cell{
 		makeCell("h", 1, map[string]bool{"fg-1": true}),
 		makeCell("i", 1, map[string]bool{"fg-1": true}),
 		makeCell(" ", 1, map[string]bool{"fg-1": true}),
 		makeCell(" ", 1, map[string]bool{"fg-1": true}),
 	}
-	cursor := struct {
-		Row int
-		Col int
-	}{Row: -1, Col: -1}
+	cursor := CursorPosition{Row: -1, Col: -1}
 
-	result := s.optimizeRow(cells, 0, cursor)
+	result := OptimizeRow(cells, 0, cursor)
 
 	if len(result) != 1 {
 		t.Fatalf("got %d tokens, want 1", len(result))
@@ -170,13 +150,9 @@ func TestOptimizeRow_TrailingWhitespace(t *testing.T) {
 }
 
 func TestOptimizeRow_EmptyRow(t *testing.T) {
-	s := &Screen{}
-	cursor := struct {
-		Row int
-		Col int
-	}{Row: -1, Col: -1}
+	cursor := CursorPosition{Row: -1, Col: -1}
 
-	result := s.optimizeRow([]*Cell{}, 0, cursor)
+	result := OptimizeRow([]*Cell{}, 0, cursor)
 
 	if len(result) != 0 {
 		t.Errorf("got %d tokens, want 0", len(result))

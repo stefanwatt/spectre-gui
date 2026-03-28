@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	ext "nvim-gui/picker/external-tools"
+	ext "nvim-gui/features/picker/external-tools"
 	"nvim-gui/utils"
 
 	"github.com/google/uuid"

@@ -2,7 +2,6 @@ package features
 
 import (
 	"fmt"
-	"nvim-gui/utils"
 	"regexp"
 	"sync"
 
@@ -23,20 +22,28 @@ func assert(assertion bool, message string) {
 }
 
 // TODO: i reintroduced the bug when cursor is at the end of the replace field for example
-func HandleSubstituteJump(optionalData ...interface{}) {
+type CmdlineBridge struct {
+	GetCmdline func() (string, error)
+	GetCmdpos  func() (int, error)
+	SetCmdline func(content string, pos int) error
+}
+
+func HandleSubstituteJump(bridge CmdlineBridge, optionalData ...interface{}) {
 	log.Debug("HandleSubstituteJump")
-	var cmdlineContentRes interface{}
-	var cmdlinePosRes interface{}
-
-	NvimClient.ExecLua("return vim.fn.getcmdline()", &cmdlineContentRes)
-	NvimClient.ExecLua("return vim.fn.getcmdpos()", &cmdlinePosRes)
-
-	cmdlineContent, ok := cmdlineContentRes.(string)
-	if !ok {
-		log.Debug("HandleSubstituteJump couldnt reflect cmdline content")
+	if bridge.GetCmdline == nil || bridge.GetCmdpos == nil || bridge.SetCmdline == nil {
 		return
 	}
-	cmdlinePos := utils.ReflectToInt(cmdlinePosRes)
+
+	cmdlineContent, err := bridge.GetCmdline()
+	if err != nil {
+		log.Debug("HandleSubstituteJump failed to get cmdline", "error", err)
+		return
+	}
+	cmdlinePos, err := bridge.GetCmdpos()
+	if err != nil {
+		log.Debug("HandleSubstituteJump failed to get cmdpos", "error", err)
+		return
+	}
 
 	match := regexp.MustCompile(`^(.*?)s\/(.*?)\/(.*?)(?:\/([gicI]*))?$`).FindStringSubmatch(cmdlineContent)
 	if match == nil {
@@ -87,8 +94,9 @@ func HandleSubstituteJump(optionalData ...interface{}) {
 		lastReplacePos = currentPos
 		newPos = lastSearchPos
 	}
-	var res interface{}
 	lastSearchLen = searchLen
-	NvimClient.ExecLua(fmt.Sprintf("return vim.fn.setcmdline('%s',%d)", cmdlineContent, newPos), &res)
-	log.Debug("HandleSubstituteJump response: ", res)
+	err = bridge.SetCmdline(cmdlineContent, newPos)
+	if err != nil {
+		log.Debug("HandleSubstituteJump failed to set cmdline", "error", err)
+	}
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { FindReferences } from '@bindings/nvim-gui/picker/lspreferencespicker.js';
+	import { FindReferences } from '@bindings/nvim-gui/features/picker/lspreferencespicker.js';
 	import Picker from './Picker.svelte';
 	import { nestedState } from '$lib/state.svelte';
 

@@ -1,7 +1,7 @@
 package picker
 
 import (
-	"nvim-gui/picker/match"
+	"nvim-gui/features/picker/match"
 	"nvim-gui/utils"
 )
 

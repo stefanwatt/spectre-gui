@@ -7,10 +7,10 @@ import (
 	"regexp"
 	"strings"
 
-	utils "nvim-gui/utils"
+	"github.com/charmbracelet/log"
 )
 
-func Replace(row int, col int, path string, search_term string, replace_term string) error {
+func Replace(row, col int, path, search_term, replace_term string) error {
 	regex := fmt.Sprintf(
 		`%ds/^(.{%d})%s/\1%s/`,
 		row,

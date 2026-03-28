@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"mime"
+	appruntime "nvim-gui/app/runtime"
+	"nvim-gui/core/projection"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,8 +17,20 @@ import (
 )
 
 type App struct {
-	ctx context.Context
-	App *application.App
+	ctx     context.Context
+	App     *application.App
+	runtime *appruntime.Runtime
+}
+
+type wailsUIEmitter struct {
+	app *application.App
+}
+
+func (w wailsUIEmitter) Emit(name string, payload any) {
+	if w.app == nil {
+		return
+	}
+	w.app.Event.Emit(name, payload)
 }
 
 func NewApp() *App {
@@ -26,6 +40,11 @@ func NewApp() *App {
 func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	a.ctx = ctx
 	utils.SetupLog()
+	a.runtime = appruntime.New(nil)
+	a.runtime.SetEmitter(wailsUIEmitter{app: a.App})
+	a.runtime.SetProjector(projection.EventsProjector{})
+	a.runtime.Start(ctx)
+	neovim.SetEventSink(a.runtime)
 
 	go neovim.StartListening(ctx)
 

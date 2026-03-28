@@ -3,9 +3,12 @@ package neovim
 import (
 	"fmt"
 	"math"
+	"nvim-gui/rendering"
 	"nvim-gui/utils"
 	"path/filepath"
 	"strings"
+
+	"github.com/charmbracelet/log"
 )
 
 type FileExplorerPreview interface {
@@ -38,9 +41,9 @@ func (dp FileExplorerDirectoryPreview) SetWinId(winId int) {
 }
 
 type FileExplorerContentPreview struct {
-	Content []ContentRow `json:"content"`
-	BufNr   int          `json:"bufNr"`
-	WinId   int          `json:"winId"`
+	Content []rendering.ContentRow `json:"content"`
+	BufNr   int                    `json:"bufNr"`
+	WinId   int                    `json:"winId"`
 }
 
 func (FileExplorerContentPreview) isFileExplorerPreview() {}
@@ -90,32 +93,10 @@ type FileExplorer struct {
 
 func NewFileExplorer() *FileExplorer {
 	return &FileExplorer{
-		Parent: FileExplorerDirectory{
-			BufNr:           -1,
-			WinId:           -1,
-			Entries:         []FileExplorerDirectoryEntry{},
-			SelectedEntryId: -1,
-			CursorCol:       0,
-		},
-		Current: FileExplorerDirectory{
-			BufNr:           -1,
-			WinId:           -1,
-			Entries:         []FileExplorerDirectoryEntry{},
-			SelectedEntryId: -1,
-			CursorCol:       0,
-		},
-		Preview: FileExplorerDirectoryPreview{
-			Directory: &FileExplorerDirectory{
-				BufNr:           -1,
-				WinId:           -1,
-				Entries:         []FileExplorerDirectoryEntry{},
-				SelectedEntryId: -1,
-				CursorCol:       0,
-			},
-		},
+		Parent:             FileExplorerDirectory{BufNr: -1, WinId: -1, Entries: []FileExplorerDirectoryEntry{}, SelectedEntryId: -1},
+		Current:            FileExplorerDirectory{BufNr: -1, WinId: -1, Entries: []FileExplorerDirectoryEntry{}, SelectedEntryId: -1},
+		Preview:            FileExplorerDirectoryPreview{Directory: &FileExplorerDirectory{BufNr: -1, WinId: -1, Entries: []FileExplorerDirectoryEntry{}, SelectedEntryId: -1}},
 		CurrentWinMode:     "normal",
-		PreviewTargetRows:  0,
-		PreviewTargetCols:  0,
 		DirectoryLineIsDir: make(map[int]map[int]bool),
 	}
 }
@@ -332,7 +313,6 @@ func (fe *FileExplorer) renderFileExplorerDirectory(grid *Grid, bufNr int) []Fil
 		if len(rowCells) == 0 {
 			continue
 		}
-
 		firstNonEmpty := -1
 		lastNonEmpty := -1
 		for i, cell := range rowCells {
@@ -353,15 +333,11 @@ func (fe *FileExplorer) renderFileExplorerDirectory(grid *Grid, bufNr int) []Fil
 		if lastNonEmpty == -1 {
 			continue
 		}
-
 		leftChar := rowCells[firstNonEmpty].Char
 		rightChar := rowCells[lastNonEmpty].Char
-
-		// Skip border rows (top: ┌...┐, bottom: └...┘)
 		if leftChar == "┌" || leftChar == "└" {
 			continue
 		}
-
 		contentStart := firstNonEmpty
 		contentEnd := lastNonEmpty
 		if leftChar == "│" && rightChar == "│" && contentEnd-contentStart >= 2 {
@@ -372,12 +348,10 @@ func (fe *FileExplorer) renderFileExplorerDirectory(grid *Grid, bufNr int) []Fil
 			continue
 		}
 		contentCells := rowCells[contentStart : contentEnd+1]
-
 		line := strings.TrimSpace(cellsToString(contentCells))
 		if line == "" {
 			continue
 		}
-
 		var icon string
 		var iconClass string
 		text := line
@@ -396,25 +370,15 @@ func (fe *FileExplorer) renderFileExplorerDirectory(grid *Grid, bufNr int) []Fil
 				text = strings.TrimSpace(cellsToString(contentCells[iconCellIndex+1:]))
 			}
 		}
-
 		if icon == "" && text == "" {
 			continue
 		}
-
 		isDir, ok := directoryLineMap[row]
 		if !ok {
 			isDir = strings.HasSuffix(text, "/")
 		}
-
-		entries = append(entries, FileExplorerDirectoryEntry{
-			ID:        row,
-			Icon:      icon,
-			IconClass: iconClass,
-			Text:      text,
-			IsDir:     isDir,
-		})
+		entries = append(entries, FileExplorerDirectoryEntry{ID: row, Icon: icon, IconClass: iconClass, Text: text, IsDir: isDir})
 	}
-
 	return entries
 }
 
@@ -442,17 +406,10 @@ func (fe *FileExplorer) updateDirPreview(grid *Grid, bufNr int) {
 	if bufNr < 1 {
 		bufNr = fe.Preview.GetBufNr()
 	}
-	fe.Preview = FileExplorerDirectoryPreview{
-		Directory: &FileExplorerDirectory{
-			WinId:           winId,
-			BufNr:           bufNr,
-			Entries:         fe.renderFileExplorerDirectory(grid, bufNr),
-			SelectedEntryId: -1,
-		},
-	}
+	fe.Preview = FileExplorerDirectoryPreview{Directory: &FileExplorerDirectory{WinId: winId, BufNr: bufNr, Entries: fe.renderFileExplorerDirectory(grid, bufNr), SelectedEntryId: -1}}
 }
 
-func (fe *FileExplorer) updateContentPreview(content []ContentRow) {
+func (fe *FileExplorer) updateContentPreview(content []rendering.ContentRow) {
 	winId := fe.Preview.GetWinId()
 	bufNr := fe.Preview.GetBufNr()
 	if len(content) > 2 {
@@ -467,29 +424,20 @@ func (fe *FileExplorer) updateContentPreview(content []ContentRow) {
 		}
 	}
 
-	fe.Preview = &FileExplorerContentPreview{
-		Content: content,
-		BufNr:   bufNr,
-		WinId:   winId,
-	}
+	fe.Preview = &FileExplorerContentPreview{Content: content, BufNr: bufNr, WinId: winId}
 }
 
 func (fe *FileExplorer) updateCursor(winId, row, col int) (*FileExplorerDirectoryEntry, error) {
-	// Helper to find the entry ID for a given row in a directory
 	findEntryForRow := func(entries []FileExplorerDirectoryEntry, targetRow int) (*FileExplorerDirectoryEntry, error) {
-		// Find the entry whose ID matches the grid row
 		for _, entry := range entries {
 			if entry.ID == targetRow {
-				log.Debug(fmt.Sprintf("[fileexplorer] found entry with id=%d", winId))
 				return &entry, nil
 			}
 		}
-		log.Debug(fmt.Sprintf("[fileexplorer] could not find entry with id=%d", winId))
 		return nil, fmt.Errorf("[fileexplorer] could not find entry with id=%d", winId)
 	}
 
 	if fe.Parent.WinId == winId {
-		log.Debug("[fileexplorer] updating cursor for parent")
 		entry, err := findEntryForRow(fe.Parent.Entries, row)
 		if err != nil {
 			return nil, err
@@ -497,8 +445,8 @@ func (fe *FileExplorer) updateCursor(winId, row, col int) (*FileExplorerDirector
 		fe.Parent.SelectedEntryId = entry.ID
 		fe.Parent.CursorCol = col
 		return entry, nil
-	} else if fe.Current.WinId == winId {
-		log.Debug("[fileexplorer] updating cursor for current")
+	}
+	if fe.Current.WinId == winId {
 		entry, err := findEntryForRow(fe.Current.Entries, row)
 		if err != nil {
 			return nil, err
@@ -506,8 +454,8 @@ func (fe *FileExplorer) updateCursor(winId, row, col int) (*FileExplorerDirector
 		fe.Current.SelectedEntryId = entry.ID
 		fe.Current.CursorCol = col
 		return entry, nil
-	} else if fe.Preview.GetWinId() == winId {
-		log.Debug("[fileexplorer] updating cursor for preview")
+	}
+	if fe.Preview.GetWinId() == winId {
 		if dirPreview, ok := fe.Preview.(FileExplorerDirectoryPreview); ok {
 			entry, err := findEntryForRow(dirPreview.Directory.Entries, row)
 			if err != nil {

@@ -33,5 +33,12 @@ func (w *WindowAPI) Equal(other *WindowAPI) bool {
 		w.ColStart == other.ColStart &&
 		w.ColEnd == other.ColEnd &&
 		w.RowStart == other.RowStart &&
-		w.RowEnd == other.RowEnd
+		w.RowEnd == other.RowEnd &&
+		w.LineNumbers == other.LineNumbers &&
+		w.RelativeLineNumbers == other.RelativeLineNumbers &&
+		w.Filetype == other.Filetype &&
+		w.Filepath == other.Filepath &&
+		w.Mode == other.Mode &&
+		w.ColorColumnColor == other.ColorColumnColor &&
+		w.CursorLineColor == other.CursorLineColor
 }

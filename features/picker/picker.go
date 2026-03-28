@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	undo "nvim-gui/features/picker/undo"
 	"nvim-gui/neovim"
-	undo "nvim-gui/picker/undo"
 	"nvim-gui/utils"
 	"os/exec"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -92,12 +93,7 @@ func (p *Picker) OpenFile(path string, row int, col int) {
 	if err != nil {
 		log.Error(err.Error())
 	}
-	if p.App != nil {
-		p.App.Event.Emit("hide-live-rep", struct{}{})
-	}
-	if p.App != nil {
-		p.App.Event.Emit("hide-live-rep", struct{}{})
-	}
+	neovim.EmitEvent("hide-live-rep", struct{}{})
 }
 
 func assert(assertion bool, message string) {

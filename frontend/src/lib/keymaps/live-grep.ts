@@ -5,8 +5,8 @@ import {
   state
 } from '$lib/picker/live-grep-results/results.service.svelte';
 import { SendKey, CreateQuickfixList } from '@bindings/nvim-gui/app.js';
-import { OpenFile } from '@bindings/nvim-gui/picker/picker.js'
-import { GetLiveGrepOpts, GetNextPage, GetPrevPage } from '@bindings/nvim-gui/picker/livegreppicker.js'
+import { OpenFile } from '@bindings/nvim-gui/features/picker/picker.js'
+import { GetLiveGrepOpts, GetNextPage, GetPrevPage } from '@bindings/nvim-gui/features/picker/livegreppicker.js'
 
 function sendKey(e: KeyboardEvent) {
   e.preventDefault()

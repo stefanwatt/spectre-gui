@@ -3,8 +3,8 @@ package main
 import (
 	"embed"
 	"fmt"
+	"nvim-gui/features/picker"
 	"nvim-gui/neovim"
-	"nvim-gui/picker"
 	"os"
 
 	"github.com/jessevdk/go-flags"

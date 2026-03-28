@@ -2,8 +2,9 @@ package neovim
 
 import (
 	"fmt"
-	"nvim-gui/utils"
 	"strings"
+
+	"github.com/charmbracelet/log"
 )
 
 type FileExplorerConfirmPrompt struct {
@@ -20,17 +21,10 @@ func detectFileExplorerConfirmPrompt(window *Window) (*FileExplorerConfirmPrompt
 		return nil, false
 	}
 	raw := strings.TrimSpace(window.Grid.toString())
-	if raw == "" {
-		return nil, false
-	}
-	if !strings.Contains(raw, "without synchronization") {
-		return nil, false
-	}
-	if !strings.Contains(raw, "Confirm") {
+	if raw == "" || !strings.Contains(raw, "without synchronization") || !strings.Contains(raw, "Confirm") {
 		return nil, false
 	}
 
-	// Extract text from internal confirm UI by dropping decorative borders and option markers.
 	lines := strings.Split(raw, "\n")
 	cleanLines := make([]string, 0, len(lines))
 	for _, line := range lines {
@@ -64,11 +58,7 @@ func detectFileExplorerConfirmPrompt(window *Window) (*FileExplorerConfirmPrompt
 		message = "Confirm close without synchronization?"
 	}
 
-	return &FileExplorerConfirmPrompt{
-		WinId:   window.ID,
-		Message: message,
-		Choices: []string{"Yes", "No"},
-	}, true
+	return &FileExplorerConfirmPrompt{WinId: window.ID, Message: message, Choices: []string{"Yes", "No"}}, true
 }
 
 func (s *Screen) emitFileExplorerConfirmPrompt(window *Window) bool {
@@ -76,7 +66,7 @@ func (s *Screen) emitFileExplorerConfirmPrompt(window *Window) bool {
 	if !ok {
 		return false
 	}
-	s.emitEvent("file-explorer-confirm-prompt-show", prompt)
+	EmitEvent("file-explorer-confirm-prompt-show", prompt)
 	return true
 }
 
@@ -84,12 +74,9 @@ func (s *Screen) HandleFileExplorerConfirmChoice(winId, choice int) {
 	if NvimClient == nil || winId < 1 {
 		return
 	}
-	var key string
-	switch choice {
-	case 1:
+	key := "<Esc>"
+	if choice == 1 {
 		key = "<CR>"
-	default:
-		key = "<Esc>"
 	}
 	lua := `
 local win_id, feed = ...
@@ -106,6 +93,6 @@ return true
 		return
 	}
 	if ok {
-		s.emitEvent("file-explorer-confirm-prompt-hide", struct{}{})
+		EmitEvent("file-explorer-confirm-prompt-hide", struct{}{})
 	}
 }

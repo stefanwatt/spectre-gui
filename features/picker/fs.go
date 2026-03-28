@@ -2,12 +2,12 @@ package picker
 
 import (
 	"context"
+	"nvim-gui/neovim"
 	"nvim-gui/utils"
 	"time"
 
-	"nvim-gui/neovim"
-
 	"github.com/bep/debounce"
+	"github.com/charmbracelet/log"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -23,9 +23,7 @@ func OnWrite(event fsnotify.Event, ctx context.Context) {
 	debounced_files_changed(func() {
 		log.Debug("on_write")
 		log.Debug(write_event)
-		if neovim.App != nil {
-			neovim.App.Event.Emit(write_event, struct{}{})
-		}
+		neovim.EmitEvent(write_event, struct{}{})
 	})
 }
 
@@ -37,9 +35,7 @@ func OnDelete(event fsnotify.Event, ctx context.Context) {
 
 	log.Debug("on_delete")
 	debounced_files_changed(func() {
-		if neovim.App != nil {
-			neovim.App.Event.Emit(DELETE, struct{}{})
-		}
+		neovim.EmitEvent(DELETE, struct{}{})
 	})
 }
 
@@ -51,9 +47,7 @@ func has_flag(flag string, flags []string) bool {
 }
 
 func spawn_toast(ctx context.Context, level string, message string) {
-	if neovim.App != nil {
-		neovim.App.Event.Emit(TOAST, []interface{}{level, message})
-	}
+	neovim.EmitEvent(TOAST, []interface{}{level, message})
 }
 
 func map_pagination(rg_lines []string) Pagination {

@@ -12,6 +12,7 @@ import (
 
 	utils "nvim-gui/utils"
 
+	"github.com/charmbracelet/log"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )

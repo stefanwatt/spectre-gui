@@ -87,6 +87,26 @@ func AddForegroundColorClass(color string) {
 	fgColorClasses[color] = class
 }
 
+func EnsureForegroundColorClass(color string) string {
+	if color == "" {
+		return ""
+	}
+	AddForegroundColorClass(color)
+	fgColorClassesMu.Lock()
+	defer fgColorClassesMu.Unlock()
+	return fgColorClasses[color]
+}
+
+func EnsureBackgroundColorClass(color string) string {
+	if color == "" {
+		return ""
+	}
+	AddBackgroundColorClass(color)
+	bgColorClassesMu.Lock()
+	defer bgColorClassesMu.Unlock()
+	return bgColorClasses[color]
+}
+
 func AddIdClasses(id int, classes []string) {
 	idClassesMu.Lock()
 	defer idClassesMu.Unlock()

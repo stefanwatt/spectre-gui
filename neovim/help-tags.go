@@ -1,6 +1,6 @@
 package neovim
 
-import "nvim-gui/utils"
+import "github.com/charmbracelet/log"
 
 type HelpTag struct {
 	Tag      string `msgpack:"tag"`

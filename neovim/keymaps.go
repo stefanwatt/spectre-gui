@@ -2,10 +2,10 @@ package neovim
 
 import (
 	"fmt"
-	"log"
 	"nvim-gui/utils"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/neovim/go-client/nvim"
 )
 
@@ -57,33 +57,23 @@ func RegisterKeymap(event, lhs string, cb func(v *nvim.Nvim, data interface{})) 
 
 func SetupKeymaps() {
 	RegisterKeymap("live-grep", keymaps.GuiLiveGrep, func(_ *nvim.Nvim, data interface{}) {
-		if App != nil {
-			App.Event.Emit("show_live_grep", struct{}{})
-		}
+		EmitEvent("show_live_grep", struct{}{})
 	})
 
 	RegisterKeymap("find-files", keymaps.GuiFindFiles, func(_ *nvim.Nvim, data interface{}) {
-		if App != nil {
-			App.Event.Emit("show-find-files", struct{}{})
-		}
+		EmitEvent("show-find-files", struct{}{})
 	})
 
 	RegisterKeymap("find-references", keymaps.GuiFindReferences, func(_ *nvim.Nvim, data interface{}) {
-		if App != nil {
-			App.Event.Emit("show-find-references", struct{}{})
-		}
+		EmitEvent("show-find-references", struct{}{})
 	})
 
 	RegisterKeymap("find-buffer-symbols", keymaps.GuiFindBufferSymbols, func(_ *nvim.Nvim, data interface{}) {
-		if App != nil {
-			App.Event.Emit("show-find-buffer-symbols", struct{}{})
-		}
+		EmitEvent("show-find-buffer-symbols", struct{}{})
 	})
 
 	RegisterKeymap("find-help", keymaps.GuiFindHelp, func(_ *nvim.Nvim, data interface{}) {
-		if App != nil {
-			App.Event.Emit("show-find-help", struct{}{})
-		}
+		EmitEvent("show-find-help", struct{}{})
 	})
 }
 
@@ -151,7 +141,7 @@ var shiftedChars = map[string]bool{
 func Paste(text string) error {
 	_, err := NvimClient.Paste(text, true, -1)
 	if err != nil {
-		log.Println("Error pasting to Neovim:", err)
+		log.Error("Error pasting to Neovim:", err)
 		return err
 	}
 	return nil
@@ -198,7 +188,7 @@ func SendKey(key string, ctrl, alt, shift bool) error {
 
 	_, err = NvimClient.Input(sequence)
 	if err != nil {
-		log.Println("Error feeding keys to Neovim:", err)
+		log.Error("Error feeding keys to Neovim:", err)
 		return err
 	}
 

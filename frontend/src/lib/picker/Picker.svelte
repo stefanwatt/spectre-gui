@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { registerKeymap } from '$lib/keymaps/keymap-service';
 	import { isInBounds } from '$lib/utils.service';
-	import { OpenFile, GetPreview } from '@bindings/nvim-gui/picker/picker.js';
+	import { OpenFile, GetPreview } from '@bindings/nvim-gui/features/picker/picker.js';
 	import NoResults from './live-grep-results/NoResults.svelte';
 	import { nestedState, windowContentRowMap } from '$lib/state.svelte';
 	import FloatingGrid from '$lib/floating-windows/FloatingGrid.svelte';

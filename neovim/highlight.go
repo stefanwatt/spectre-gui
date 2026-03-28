@@ -68,29 +68,13 @@ func (h *Highlight) getClasses() []string {
 
 	fgHex := h.fgHex()
 	if fgHex != "" {
-		fgColorClassesMu.Lock()
-		fgClass, exists := fgColorClasses[fgHex]
-		fgColorClassesMu.Unlock()
-		if !exists {
-			addForegroundColorClass(fgHex)
-			fgColorClassesMu.Lock()
-			fgClass = fgColorClasses[fgHex]
-			fgColorClassesMu.Unlock()
-		}
+		fgClass := rendering.EnsureForegroundColorClass(fgHex)
 		classes = append(classes, fgClass)
 	}
 
 	bgHex := h.bgHex()
 	if bgHex != "" {
-		bgColorClassesMu.Lock()
-		bgClass, exists := bgColorClasses[bgHex]
-		bgColorClassesMu.Unlock()
-		if !exists {
-			addBackgroundColorClass(bgHex)
-			bgColorClassesMu.Lock()
-			bgClass = bgColorClasses[bgHex]
-			bgColorClassesMu.Unlock()
-		}
+		bgClass := rendering.EnsureBackgroundColorClass(bgHex)
 		classes = append(classes, bgClass)
 	}
 

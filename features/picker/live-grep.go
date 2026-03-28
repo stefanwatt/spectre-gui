@@ -3,12 +3,13 @@ package picker
 import (
 	"context"
 	"fmt"
-	ext "nvim-gui/picker/external-tools"
-	filewatcher "nvim-gui/picker/file-watcher"
-	"nvim-gui/picker/highlighting"
-	"nvim-gui/picker/match"
+	ext "nvim-gui/features/picker/external-tools"
+	filewatcher "nvim-gui/features/picker/file-watcher"
+	"nvim-gui/features/picker/highlighting"
+	"nvim-gui/features/picker/match"
 	"nvim-gui/utils"
 
+	"github.com/charmbracelet/log"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 

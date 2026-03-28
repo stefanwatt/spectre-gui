@@ -31,12 +31,25 @@ type Screen struct {
 	ActiveWindow      int
 	Mode              string
 	windowsMu         sync.RWMutex // Mutex for Windows map
-	layout            *GridLayout
+	layout            *rendering.GridLayout
 	ColorColumns      []int  // columns where colorcolumn should render (e.g. [80])
 	ColorColumnColor  string // hex color e.g. "#2a2a3a"
 	CursorLineEnabled bool
 	CursorLineColor   string // hex color e.g. "#2a2a3a"
 	FileExplorer      *FileExplorer
+
+	tableMetadata        map[int][]rendering.TableMeta
+	tableMetadataMu      sync.RWMutex
+	imageMetadata        map[int][]rendering.ImageMeta
+	imageMetadataMu      sync.RWMutex
+	headingMetadata      map[int]map[int]int
+	headingMetadataMu    sync.RWMutex
+	taskMetadata         map[int]map[int]bool
+	taskMetadataMu       sync.RWMutex
+	codeBlockMetadata    map[int][]rendering.CodeBlockMeta
+	codeBlockMetadataMu  sync.RWMutex
+	inlineCodeMetadata   map[int]map[int][]rendering.ColRange
+	inlineCodeMetadataMu sync.RWMutex
 }
 
 func (s *Screen) syncFileExplorerMode() {
@@ -62,7 +75,14 @@ func NewScreen(ctx context.Context, cols, rows int, app *application.App) *Scree
 		GridToWindow: make(map[int]int),
 		Mode:         "normal",
 		margins:      make([]int, 4), // Initialize margins slice
-		layout:       NewGridLayout(),
+		layout:       rendering.NewGridLayout(),
+
+		tableMetadata:      make(map[int][]rendering.TableMeta),
+		imageMetadata:      make(map[int][]rendering.ImageMeta),
+		headingMetadata:    make(map[int]map[int]int),
+		taskMetadata:       make(map[int]map[int]bool),
+		codeBlockMetadata:  make(map[int][]rendering.CodeBlockMeta),
+		inlineCodeMetadata: make(map[int]map[int][]rendering.ColRange),
 	}
 }
 
@@ -234,47 +254,19 @@ func (s *Screen) GridLine(gridId, row, col int, cells []interface{}) {
 					hl = lastHl
 				}
 
-				// Ensure hl is valid
-				s.highlightsMu.RLock()
-				if _, exists := s.Highlights[hl]; !exists {
-					hl = 0 // Default to 0 if the highlight ID doesn't exist
+				highlightsMu.RLock()
+				highlight, exists := highlights[hl]
+				if !exists || highlight == nil {
+					highlight = highlights[0]
+					hl = 0
 				}
-				highlight := s.Highlights[hl]
-				s.highlightsMu.RUnlock()
-				hlStr := mapClassesString(highlight.getClasses())
-				effectiveHlIdsMu.Lock()
-				effectiveHlId, existsHlId := effectiveHlIds[hlStr]
-				effectiveHlIdsMu.Unlock()
-				if !existsHlId {
-					classesMap := make(map[string]bool)
-					for _, class := range highlight.getClasses() {
-						classesMap[class] = true
-					}
-					newCell := Cell{
-						Char:      char,
-						Highlight: hl,
-						Classes:   classesMap,
-					}
-					grid.Cells[row][currentCol] = &newCell
-					currentCol++
-					continue // Skip the rest of the loop for this cell
-				}
-
-				// Retrieve pre-calculated classes using the effective ID
-				classes, exists := idClasses[effectiveHlId]
-				if !exists {
-					// Log error and use default classes
-					log.Debug(fmt.Sprintf("Error: Classes not found for effectiveHlId=%d (original hl=%d). Using default.", effectiveHlId, hl))
-					classes = idClasses[0] // Use default classes
-				}
+				highlightsMu.RUnlock()
 
 				classesMap := make(map[string]bool)
-				for _, class := range classes {
-					if class == "fg-4" || class == "fg-15" {
-						log.Debug(fmt.Sprintf("gridLine found weird turquoise fg color char=%s highlight.fgHex=%s", char, highlight.fgHex()))
-					}
+				for _, class := range highlight.getClasses() {
 					classesMap[class] = true
 				}
+
 				newCell := Cell{
 					Char:      char,
 					Highlight: hl,
@@ -382,7 +374,7 @@ func (s *Screen) GridResize(gridId, width, height int) {
 	}
 	grid, exists := s.Grids[gridId]
 	if !exists {
-		grid = neovim.NewGrid(0, 0)
+		grid = NewGrid(0, 0)
 		grid.ID = gridId
 		s.Grids[gridId] = grid
 	}
@@ -563,14 +555,10 @@ func (s *Screen) WinPos(args []interface{}) {
 }
 
 func (s *Screen) updateLayout() {
+	prev := s.layout
 	s.CalculateGridLayout()
-	if s.layout.ActiveWindowId != s.ActiveWindow {
-		s.layout.ActiveWindowId = s.ActiveWindow
-		s.layout.dirty = true
-	}
-	if s.layout.dirty {
+	if prev == nil || !rendering.LayoutEqual(prev, s.layout) {
 		EmitEvent("layout-updated", s.layout)
-		s.layout.dirty = false
 	}
 }
 
@@ -773,9 +761,17 @@ func (s *Screen) EmitCurrentState() {
 		if window.Cursor != nil {
 			cursorLine = window.Cursor.Row - 1
 		}
+		payload := rendering.BuildContentPayload(rendering.ContentInput{
+			WindowID:   winId,
+			Filetype:   filetype,
+			BufNr:      bufNr,
+			CursorLine: cursorLine,
+			Grid:       s.toRenderingGridData(grid),
+			Meta:       nil,
+		})
 		EmitEvent("content-updated", map[string]interface{}{
-			"winId":          winId,
-			"updatedContent": s.optimizeGrid(grid, filetype, bufNr, cursorLine),
+			"winId":          payload.WindowID,
+			"updatedContent": payload.Content,
 		})
 	}
 }

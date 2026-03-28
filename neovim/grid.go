@@ -17,8 +17,8 @@ type Grid struct {
 	TopLine       int // first visible buffer line (0-indexed), from win_viewport
 	DirtyRows     []bool
 	OptimizedRows [][]*Cell
-	CachedTokens  [][]*Token // cached token slices for non-dirty rows
-	MarkdownOpts  map[int]*MarkdownOpts
+	CachedTokens  [][]*rendering.Token // cached token slices for non-dirty rows
+	MarkdownOpts  map[int]*rendering.MarkdownOpts
 }
 
 func NewGrid(rows, cols int) *Grid {
@@ -37,7 +37,7 @@ func NewGrid(rows, cols int) *Grid {
 		Width:        cols,
 		Height:       rows,
 		Cells:        content,
-		MarkdownOpts: make(map[int]*MarkdownOpts),
+		MarkdownOpts: make(map[int]*rendering.MarkdownOpts),
 	}
 }
 

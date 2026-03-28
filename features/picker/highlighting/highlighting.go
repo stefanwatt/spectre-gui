@@ -3,7 +3,6 @@ package highlighting
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	html_formatter "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/alecthomas/chroma/v2/styles"
+	"github.com/charmbracelet/log"
 )
 
 func Highlight(code, filename, matched_text, replacement string) (string, string) {

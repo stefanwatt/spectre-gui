@@ -12,7 +12,34 @@ type GridLayout struct {
 	Rows           string       `json:"rows"`
 	ActiveWindowId int          `json:"activeWindowId"`
 	Windows        []*WindowAPI `json:"windows"`
-	dirty          bool
+}
+
+type LayoutWindow struct {
+	ID                  int
+	Type                string
+	Hidden              bool
+	Floating            bool
+	StartRow            int
+	StartCol            int
+	Width               int
+	Height              int
+	LineNumbers         bool
+	RelativeLineNumbers bool
+	Mode                string
+	Cursor              *Cursor
+	Filetype            string
+	Filepath            string
+}
+
+type LayoutInput struct {
+	ScreenWidth       int
+	ScreenHeight      int
+	ActiveWindowID    int
+	ColorColumns      []int
+	ColorColumnColor  string
+	CursorLineEnabled bool
+	CursorLineColor   string
+	Windows           []LayoutWindow
 }
 
 func NewGridLayout() *GridLayout {
@@ -21,17 +48,16 @@ func NewGridLayout() *GridLayout {
 		Rows:           "1fr",
 		ActiveWindowId: 1000,
 		Windows:        []*WindowAPI{},
-		dirty:          true,
 	}
 }
 
-func (s *Screen) CalculateGridLayout() {
+func CalculateGridLayout(input LayoutInput) *GridLayout {
 	// Step 1: Collect all unique row and column positions
 	rowPositions := make(map[int]bool)
 	colPositions := make(map[int]bool)
 
-	for _, window := range s.Windows {
-		if window.IsFloating() {
+	for _, window := range input.Windows {
+		if window.Floating || window.Hidden {
 			continue
 		}
 		rowPositions[window.StartRow] = true
@@ -53,24 +79,24 @@ func (s *Screen) CalculateGridLayout() {
 	sort.Ints(cols)
 
 	// subtract statusline
-	totalHeight := s.Height - 1
+	totalHeight := input.ScreenHeight - 1
+	if totalHeight < 1 {
+		totalHeight = 1
+	}
 	// Step 3: Calculate the CSS grid template strings
-	colsFractions := calculateFractions(cols, s.Width)
+	colsFractions := calculateFractions(cols, input.ScreenWidth)
 	rowsFractions := calculateFractions(rows, totalHeight)
 	colsStr := strings.Join(utils.MapArray(colsFractions, func(i int) string { return strconv.Itoa(i) }), "fr ") + "fr"
 	rowsStr := strings.Join(utils.MapArray(rowsFractions, func(i int) string { return strconv.Itoa(i) }), "fr ") + "fr"
 
 	// Step 4: Calculate the grid position for each window
-	windowAPIs := make([]*WindowAPI, 0, len(s.Windows))
+	windowAPIs := make([]*WindowAPI, 0, len(input.Windows))
 
-	var windows []*Window
-	var floatingWindows []*Window
-	for winId, window := range s.Windows {
-		if window.Hidden || window.IsFloating() {
-			floatingWindows = append(floatingWindows, window)
+	for _, window := range input.Windows {
+		if window.Hidden || window.Floating {
 			continue
 		}
-		windows = append(windows, window)
+		winID := window.ID
 
 		// Find grid indices for this window
 		// colStart := findIndex(cols, window.StartCol)
@@ -79,61 +105,70 @@ func (s *Screen) CalculateGridLayout() {
 		// window.EndCol == s.Width -> colStart len(colsFractions)+1
 		colStart := findStartIndex(colsFractions, window.StartCol)
 		rowStart := findStartIndex(rowsFractions, window.StartRow)
-		colEnd := findEndIndex(colsFractions, window.StartCol+window.Width, s.Width)
+		colEnd := findEndIndex(colsFractions, window.StartCol+window.Width, input.ScreenWidth)
 		rowEnd := findEndIndex(rowsFractions, window.StartRow+window.Height, totalHeight)
 
 		width := window.Width
 		height := window.Height
 
 		w := &WindowAPI{
-			ID:                  winId,
+			ID:                  winID,
 			Type:                window.Type,
-			Width:               utils.CalculatePercentage(width, s.Width),
-			Height:              utils.CalculatePercentage(height, s.Height),
+			Width:               utils.CalculatePercentage(width, input.ScreenWidth),
+			Height:              utils.CalculatePercentage(height, input.ScreenHeight),
 			ColStart:            colStart,
 			ColEnd:              colEnd,
 			RowStart:            rowStart,
 			RowEnd:              rowEnd,
-			Filetype:            "",
-			Filepath:            "",
-			LineNumbers:         window.lineNumbers,
-			RelativeLineNumbers: window.relativeLineNumbers,
+			Filetype:            window.Filetype,
+			Filepath:            window.Filepath,
+			LineNumbers:         window.LineNumbers,
+			RelativeLineNumbers: window.RelativeLineNumbers,
 			Mode:                window.Mode,
 			Cursor:              window.Cursor,
 		}
-		if window.Buffer != nil {
-			buf := *window.Buffer
-			w.Filetype = buf.Filetype
-			w.Filepath = buf.Filepath
-		}
-		w.ColorColumns = s.ColorColumns
-		w.ColorColumnColor = s.ColorColumnColor
-		if s.CursorLineEnabled {
-			w.CursorLineColor = s.CursorLineColor
+		w.ColorColumns = input.ColorColumns
+		w.ColorColumnColor = input.ColorColumnColor
+		if input.CursorLineEnabled {
+			w.CursorLineColor = input.CursorLineColor
 		}
 
 		windowAPIs = append(windowAPIs, w)
 	}
 	sort.SliceStable(windowAPIs, func(i, j int) bool { return windowAPIs[i].ID < windowAPIs[j].ID })
 
-	windowAPIsChanged := false
-	if len(s.layout.Windows) == len(windowAPIs) {
-		for i, windowAPI := range windowAPIs {
-			if s.layout.Windows[i].Filepath != windowAPI.Filepath {
-				windowAPIsChanged = true
-				break
+	return &GridLayout{
+		Cols:           colsStr,
+		Rows:           rowsStr,
+		ActiveWindowId: input.ActiveWindowID,
+		Windows:        windowAPIs,
+	}
+}
+
+func LayoutEqual(a, b *GridLayout) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	if a.Cols != b.Cols || a.Rows != b.Rows || a.ActiveWindowId != b.ActiveWindowId {
+		return false
+	}
+	if len(a.Windows) != len(b.Windows) {
+		return false
+	}
+	for i := range a.Windows {
+		if !a.Windows[i].Equal(b.Windows[i]) {
+			return false
+		}
+		if len(a.Windows[i].ColorColumns) != len(b.Windows[i].ColorColumns) {
+			return false
+		}
+		for j := range a.Windows[i].ColorColumns {
+			if a.Windows[i].ColorColumns[j] != b.Windows[i].ColorColumns[j] {
+				return false
 			}
 		}
-	} else {
-		windowAPIsChanged = true
 	}
-	if s.layout.Cols != colsStr || s.layout.Rows != rowsStr || windowAPIsChanged {
-		s.layout.dirty = true
-	}
-
-	s.layout.Cols = colsStr
-	s.layout.Rows = rowsStr
-	s.layout.Windows = windowAPIs
+	return true
 }
 
 // calculateFractions constructs CSS grid-template string

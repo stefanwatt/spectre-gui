@@ -1,7 +1,6 @@
 package rendering
 
 import (
-	"nvim-gui/features"
 	"nvim-gui/utils"
 	"regexp"
 	"strings"
@@ -24,11 +23,31 @@ type CodeBlockOpts struct {
 	Position string `json:"position"` // "first", "middle", "last"
 }
 
+type MarkdownMetaProvider interface {
+	HeadingLevel(bufNr, bufferLine int) int
+	TableMetaForLine(bufNr, bufferLine int) *TableMeta
+	ImageMetaForLine(bufNr, bufferLine int) *ImageMeta
+	TaskMetaForLine(bufNr, bufferLine int) (checked bool, isTask bool)
+	CodeBlockMetaForLine(bufNr, bufferLine int) *CodeBlockMeta
+	InlineCodeRanges(bufNr, bufferLine int) []ColRange
+}
+
+type GridData struct {
+	Height        int
+	TopLine       int
+	DirtyRows     []bool
+	Cells         [][]*Cell
+	OptimizedRows [][]*Cell
+	CachedTokens  [][]*Token
+	MarkdownOpts  map[int]*MarkdownOpts
+	Cursor        CursorPosition
+}
+
 type ContentRow struct {
-	Index        int                    `json:"index" msgpack:"row"` // basically the line number
-	Tokens       []*Token               `json:"tokens" msgpack:"tokens"`
-	MarkdownOpts *features.MarkdownOpts `json:"markdownOpts"`
-	Dirty        bool                   `json:"dirty,omitempty"`
+	Index        int           `json:"index" msgpack:"row"` // basically the line number
+	Tokens       []*Token      `json:"tokens" msgpack:"tokens"`
+	MarkdownOpts *MarkdownOpts `json:"markdownOpts,omitempty"`
+	Dirty        bool          `json:"dirty,omitempty"`
 }
 
 func (cr *ContentRow) ToString() string {
@@ -39,7 +58,7 @@ func (cr *ContentRow) ToString() string {
 	return sb.String()
 }
 
-//TODO: create mapper
+// TODO: create mapper
 func fromCell(cell *Cell) *Token {
 	return &Token{
 		Text:      cell.Char,
@@ -56,7 +75,7 @@ func MapTokens(cells []*Cell) []*Token {
 
 // cursorLine is the 0-indexed buffer line of the cursor, or -1 if unknown.
 // When the cursor falls within a table, table rendering is suppressed (conceal/reveal).
-func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr, cursorLine int) []ContentRow {
+func OptimizeGrid(grid *GridData, filetype string, bufNr, cursorLine int, meta MarkdownMetaProvider) []ContentRow {
 	contentRows := make([]ContentRow, grid.Height)
 	// Ensure CachedTokens slice exists
 	if len(grid.CachedTokens) != grid.Height {
@@ -70,7 +89,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr, cursorLine int
 		rowCells := grid.Cells[row]
 
 		if grid.DirtyRows[row] {
-			cells := s.optimizeRow(rowCells, row, grid.Cursor)
+			cells := OptimizeRow(rowCells, row, CursorPosition{Row: grid.Cursor.Row, Col: grid.Cursor.Col})
 			tokens := MapTokens(cells)
 			contentRows[row].Tokens = tokens
 			contentRows[row].Index = lineNumber
@@ -79,23 +98,23 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr, cursorLine int
 			grid.CachedTokens[row] = tokens
 			grid.DirtyRows[row] = false
 
-			if filetype == "markdown" {
+			if filetype == "markdown" && meta != nil {
 				markdownOpts := getMarkdownOpts(contentRows[row])
-				if headingLevel := s.getHeadingLevel(bufNr, bufferLine); headingLevel > 0 {
+				if headingLevel := meta.HeadingLevel(bufNr, bufferLine); headingLevel > 0 {
 					markdownOpts.HeadingLevel = headingLevel
 				}
-				tableMeta := s.getTableMetaForLine(bufNr, bufferLine)
+				tableMeta := meta.TableMetaForLine(bufNr, bufferLine)
 				if tableMeta != nil {
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
 				}
-				imageMeta := s.getImageMetaForLine(bufNr, bufferLine)
+				imageMeta := meta.ImageMetaForLine(bufNr, bufferLine)
 				if imageMeta != nil {
 					markdownOpts.Image = &ImageOpts{URL: imageMeta.URL, AltText: imageMeta.AltText}
 				}
-				if checked, isTask := s.getTaskMetaForLine(bufNr, bufferLine); isTask && cursorLine != bufferLine {
+				if checked, isTask := meta.TaskMetaForLine(bufNr, bufferLine); isTask && cursorLine != bufferLine {
 					markdownOpts.Task = &TaskOpts{Checked: checked}
 				}
-				if cbMeta := s.getCodeBlockMetaForLine(bufNr, bufferLine); cbMeta != nil {
+				if cbMeta := meta.CodeBlockMetaForLine(bufNr, bufferLine); cbMeta != nil {
 					position := "middle"
 					if bufferLine == cbMeta.StartLine {
 						position = "first"
@@ -104,7 +123,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr, cursorLine int
 					}
 					markdownOpts.CodeBlock = &CodeBlockOpts{Position: position}
 				}
-				if inlineRanges := s.getInlineCodeRanges(bufNr, bufferLine); len(inlineRanges) > 0 && cursorLine != bufferLine {
+				if inlineRanges := meta.InlineCodeRanges(bufNr, bufferLine); len(inlineRanges) > 0 && cursorLine != bufferLine {
 					applyInlineCodeClass(contentRows[row].Tokens, inlineRanges)
 				}
 				contentRows[row].MarkdownOpts = markdownOpts
@@ -118,24 +137,24 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr, cursorLine int
 				contentRows[row].Tokens = MapTokens(grid.OptimizedRows[row])
 			}
 			contentRows[row].Index = lineNumber
-			if filetype == "markdown" {
+			if filetype == "markdown" && meta != nil {
 				// Must recompute table opts even for non-dirty rows because TopLine changes on scroll
 				markdownOpts := getMarkdownOpts(contentRows[row])
-				if headingLevel := s.getHeadingLevel(bufNr, bufferLine); headingLevel > 0 {
+				if headingLevel := meta.HeadingLevel(bufNr, bufferLine); headingLevel > 0 {
 					markdownOpts.HeadingLevel = headingLevel
 				}
-				tableMeta := s.getTableMetaForLine(bufNr, bufferLine)
+				tableMeta := meta.TableMetaForLine(bufNr, bufferLine)
 				if tableMeta != nil {
 					markdownOpts.Table = buildTableRowOpts(tableMeta, bufferLine, contentRows[row].Tokens)
 				}
-				imageMeta := s.getImageMetaForLine(bufNr, bufferLine)
+				imageMeta := meta.ImageMetaForLine(bufNr, bufferLine)
 				if imageMeta != nil {
 					markdownOpts.Image = &ImageOpts{URL: imageMeta.URL, AltText: imageMeta.AltText}
 				}
-				if checked, isTask := s.getTaskMetaForLine(bufNr, bufferLine); isTask && cursorLine != bufferLine {
+				if checked, isTask := meta.TaskMetaForLine(bufNr, bufferLine); isTask && cursorLine != bufferLine {
 					markdownOpts.Task = &TaskOpts{Checked: checked}
 				}
-				if cbMeta := s.getCodeBlockMetaForLine(bufNr, bufferLine); cbMeta != nil {
+				if cbMeta := meta.CodeBlockMetaForLine(bufNr, bufferLine); cbMeta != nil {
 					position := "middle"
 					if bufferLine == cbMeta.StartLine {
 						position = "first"
@@ -144,7 +163,7 @@ func (s *Screen) optimizeGrid(grid *Grid, filetype string, bufNr, cursorLine int
 					}
 					markdownOpts.CodeBlock = &CodeBlockOpts{Position: position}
 				}
-				if inlineRanges := s.getInlineCodeRanges(bufNr, bufferLine); len(inlineRanges) > 0 && cursorLine != bufferLine {
+				if inlineRanges := meta.InlineCodeRanges(bufNr, bufferLine); len(inlineRanges) > 0 && cursorLine != bufferLine {
 					applyInlineCodeClass(contentRows[row].Tokens, inlineRanges)
 				}
 				contentRows[row].MarkdownOpts = markdownOpts
@@ -307,11 +326,7 @@ func isBorderRow(tokens []*Token) bool {
 	return true
 }
 
-func (s *Screen) optimizeRow(rowCells []*Cell, currentRow int, cursor struct {
-	Row int
-	Col int
-},
-) []*Cell {
+func OptimizeRow(rowCells []*Cell, currentRow int, cursor CursorPosition) []*Cell {
 	optimizedRow := make([]*Cell, 0)
 
 	if len(rowCells) == 0 {

@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"nvim-gui/features"
+	ext "nvim-gui/features/picker/external-tools"
 	"nvim-gui/neovim"
-	ext "nvim-gui/picker/external-tools"
-	"nvim-gui/utils"
+
+	"github.com/charmbracelet/log"
 )
 
 func (a *App) Paste(text string) {
@@ -27,7 +29,11 @@ func (a *App) SendKey(key string, ctrl bool, alt bool, shift bool, keymapMode st
 }
 
 func (a *App) SubstituteJump() {
-	neovim.HandleSubstituteJump()
+	features.HandleSubstituteJump(features.CmdlineBridge{
+		GetCmdline: neovim.GetCmdline,
+		GetCmdpos:  neovim.GetCmdpos,
+		SetCmdline: neovim.SetCmdline,
+	})
 }
 
 func (a *App) CreateQuickfixList(entries []*neovim.QuickfixEntry) {
