@@ -21,7 +21,7 @@ type LspSymbolItem struct {
 
 func GetReferencesUnderCursor() []*LspReferenceItem {
 	var references []*LspReferenceItem
-	err := NvimInstance.ExecLua(`
+	err := NvimClient.ExecLua(`
         local items = {}
         local done = false
         
@@ -49,7 +49,7 @@ func GetReferencesUnderCursor() []*LspReferenceItem {
 
 func GetDocumentSymbols() []*LspSymbolItem {
 	var symbols []*LspSymbolItem
-	err := NvimInstance.ExecLua(`
+	err := NvimClient.ExecLua(`
         local items = {}
         local done = false
         

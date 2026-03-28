@@ -1,8 +1,7 @@
 package neovim
 
 import (
-	"fmt"
-	"nvim-gui/utils"
+	"github.com/charmbracelet/log"
 )
 
 type Cursor struct {
@@ -28,7 +27,7 @@ type NvimRange struct {
 func (s *Screen) UpdateCursor() {
 	nvimWindow, err := getWindow(s.ActiveWindow)
 	if err == nil && nvimWindow != nil {
-		windowCursor, err := NvimInstance.WindowCursor(*nvimWindow)
+		windowCursor, err := NvimClient.WindowCursor(*nvimWindow)
 		if err == nil {
 			activeWin, exists := s.Windows[s.ActiveWindow]
 			if exists {
@@ -40,10 +39,9 @@ func (s *Screen) UpdateCursor() {
 				Col:            uint64(windowCursor[1]),
 				ActiveWindowId: s.ActiveWindow,
 			}
-			s.emitEvent("cursor-changed", cursorMoveEvent)
+			EmitEvent("cursor-changed", cursorMoveEvent)
 		}
 	} else {
-		utils.Log(fmt.Sprintf("UpdateCursor could not get nvimWindow\nerror:%s", err.Error()))
+		log.Debugf("UpdateCursor could not get nvimWindow\nerror:%s", err.Error())
 	}
-
 }

@@ -9,20 +9,21 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"strconv"
-	"sync"
 
 	"github.com/neovim/go-client/nvim"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 var (
+	App              *application.App
 	currentMode      string
-	NvimInstance     *nvim.Nvim
-	fgColorClasses   = make(map[string]string)
-	bgColorClasses   = make(map[string]string)
-	idClasses        = make(map[int][]string)
-	effectiveHlIds   = make(map[string]int)
-	effectiveHlIdsMu sync.Mutex
+	NvimClient       *nvim.Nvim
 )
+
+func SetApp(app *application.App) {
+	App = app
+	SetEventEmitter(wailsEventEmitter{app: app})
+}
 
 var NvimScreen *Screen
 
@@ -33,7 +34,7 @@ func CalculateGridSize(windowWidth, windowHeight int) (rows, cols int) {
 	availableHeight := windowHeight - statusLineHeight
 	cols = windowWidth / cellWidth
 	rows = availableHeight / cellHeight
-	utils.Log(fmt.Sprintf("CalculateGridSize rows=%d cols=%d windowHeight=%d windowWidth=%d", rows, cols, windowHeight, windowWidth))
+	log.Debug(fmt.Sprintf("CalculateGridSize rows=%d cols=%d windowHeight=%d windowWidth=%d", rows, cols, windowHeight, windowWidth))
 	return rows, cols
 }
 
@@ -42,7 +43,7 @@ func StartListening(ctx context.Context) {
 	// Use default grid size for initial creation
 	// The frontend will call OnResize() once mounted
 	rows, cols := 24, 80
-	utils.Log(fmt.Sprintf("StartListening initializing screen with default rows=%d cols=%d", rows, cols))
+	log.Debug(fmt.Sprintf("StartListening initializing screen with default rows=%d cols=%d", rows, cols))
 	NvimScreen = NewScreen(ctx, cols, rows, App)
 
 	// Note: resize and request-state handlers are now service methods on App:
@@ -60,14 +61,14 @@ func StartListening(ctx context.Context) {
 		nvimArgs = nvim.ChildProcessArgs("--embed")
 	}
 
-	NvimInstance, err = nvim.NewChildProcess(
+	NvimClient, err = nvim.NewChildProcess(
 		nvim.ChildProcessCommand("nvim"),
 		nvimArgs,
 		nvim.ChildProcessContext(nvimCtx),
 	)
-	NvimInstance.SetVar("nvim_gui", true)
-	NvimInstance.SetVar("nvim_gui_channel", NvimInstance.ChannelID())
-	NvimInstance.SetVar("keymaps", keymaps)
+	NvimClient.SetVar("nvim_gui", true)
+	NvimClient.SetVar("nvim_gui_channel", NvimClient.ChannelID())
+	NvimClient.SetVar("keymaps", keymaps)
 
 	if err != nil {
 		log.Println(err)
@@ -81,16 +82,16 @@ func StartListening(ctx context.Context) {
 	// Run a goroutine to handle Neovim serving and exit
 	go func() {
 		defer close(nvimExitChan)
-		defer NvimInstance.Close()
+		defer NvimClient.Close()
 
 		// Register all handlers BEFORE AttachUI so no events are missed.
 		// The go-client's internal goroutine dispatches notifications immediately;
 		// if handlers aren't registered when hl_attr_define arrives, highlights are lost.
-		NvimInstance.RegisterHandler("redraw", func(updates ...[]interface{}) {
-			NvimScreen.handleRedraw(updates)
+		NvimClient.RegisterHandler("redraw", func(updates ...[]interface{}) {
+			HandleRedraw(updates)
 		})
 
-		channelID := NvimInstance.ChannelID()
+		channelID := NvimClient.ChannelID()
 
 		// The Lua script creates a User autocmd that matches the mini.files patterns.
 		// When triggered, it fires vim.rpcnotify to send the data to your Go channel.
@@ -114,39 +115,39 @@ func StartListening(ctx context.Context) {
 
 		// Execute the Lua script, passing the channelID as the argument (...)
 		var result interface{}
-		err := NvimInstance.ExecLua(luaScript, &result, channelID)
+		err := NvimClient.ExecLua(luaScript, &result, channelID)
 		if err != nil {
-			utils.Log(fmt.Sprintf("Failed to setup autocmd bridge: %v", err))
+			log.Debug(fmt.Sprintf("Failed to setup autocmd bridge: %v", err))
 		}
 		err = EnsureMiniFilesPatched()
 		if err != nil {
-			utils.Log(fmt.Sprintf("[minifiles] failed to load patched mini.files: %v", err))
+			log.Debug(fmt.Sprintf("[minifiles] failed to load patched mini.files: %v", err))
 		}
 
-		NvimInstance.RegisterHandler("MiniFilesBridge", func(eventName string, data interface{}) {
-			utils.Log(fmt.Sprintf("[minifiles] MiniFilesBridge received event=%s", eventName))
+		NvimClient.RegisterHandler("MiniFilesBridge", func(eventName string, data interface{}) {
+			log.Debug(fmt.Sprintf("[minifiles] MiniFilesBridge received event=%s", eventName))
 			switch eventName {
 			case "MiniFilesExplorerOpen":
 				if NvimScreen.FileExplorer == nil {
 					NvimScreen.FileExplorer = NewFileExplorer()
 				}
 				NvimScreen.FileExplorer.CurrentWinMode = NvimScreen.Mode
-				utils.Log("[minifiles] MiniFilesExplorerOpen: FileExplorer initialized")
+				log.Debug("[minifiles] MiniFilesExplorerOpen: FileExplorer initialized")
 			case "MiniFilesExplorerClose":
 				NvimScreen.FileExplorer = nil
-				utils.Log("[minifiles] MiniFilesExplorerClose: FileExplorer reset")
+				log.Debug("[minifiles] MiniFilesExplorerClose: FileExplorer reset")
 			case "MiniFilesBufferCreate":
 				if NvimScreen.FileExplorer == nil {
 					NvimScreen.FileExplorer = NewFileExplorer()
 				}
 				dataMap, ok := data.(map[string]interface{})
 				if !ok {
-					utils.Log("[minifiles] MiniFilesBufferCreate: invalid data format")
+					log.Debug("[minifiles] MiniFilesBufferCreate: invalid data format")
 					return
 				}
 				bufNr := utils.ReflectToInt(dataMap["buf_id"])
 				column, _ := dataMap["column"].(string)
-				utils.Log(fmt.Sprintf("[minifiles] MiniFilesBufferCreate: column=%s bufNr=%d", column, bufNr))
+				log.Debug(fmt.Sprintf("[minifiles] MiniFilesBufferCreate: column=%s bufNr=%d", column, bufNr))
 				switch column {
 				case "parent":
 					// TODO: there is a bug: this is emitted twice when opening and only the first one is the correct parent bufnr
@@ -159,19 +160,19 @@ func StartListening(ctx context.Context) {
 					NvimScreen.FileExplorer.Preview.SetBufNr(bufNr)
 				}
 			case "MiniFilesWindowOpen":
-				utils.Log("[minifiles] MiniFilesWindowOpen")
+				log.Debug("[minifiles] MiniFilesWindowOpen")
 				if NvimScreen.FileExplorer == nil {
 					NvimScreen.FileExplorer = NewFileExplorer()
 				}
 				dataMap, ok := data.(map[string]interface{})
 				if !ok {
-					utils.Log("[minifiles] MiniFilesWindowOpen: invalid data format")
+					log.Debug("[minifiles] MiniFilesWindowOpen: invalid data format")
 					return
 				}
 				winId := utils.ReflectToInt(dataMap["win_id"])
 				bufNr := utils.ReflectToInt(dataMap["buf_id"])
 				column, _ := dataMap["column"].(string)
-				utils.Log(fmt.Sprintf("[minifiles] MiniFilesWindowOpen: column=%s winId=%d bufNr=%d", column, winId, bufNr))
+				log.Debug(fmt.Sprintf("[minifiles] MiniFilesWindowOpen: column=%s winId=%d bufNr=%d", column, winId, bufNr))
 				switch column {
 				case "parent":
 					NvimScreen.FileExplorer.Parent.WinId = winId
@@ -190,12 +191,12 @@ func StartListening(ctx context.Context) {
 				}
 				dataMap, ok := data.(map[string]interface{})
 				if !ok {
-					utils.Log("[minifiles] MiniFilesWindowUpdate: invalid data format")
+					log.Debug("[minifiles] MiniFilesWindowUpdate: invalid data format")
 					return
 				}
 				column, _ := dataMap["column"].(string)
 				if column == "" {
-					utils.Log("[minifiles] MiniFilesWindowUpdate: missing column")
+					log.Debug("[minifiles] MiniFilesWindowUpdate: missing column")
 					return
 				}
 				winId := utils.ReflectToInt(dataMap["win_id"])
@@ -212,7 +213,7 @@ func StartListening(ctx context.Context) {
 					NvimScreen.FileExplorer.Preview.SetBufNr(bufNr)
 					NvimScreen.applyFileExplorerPreviewSize()
 				default:
-					utils.Log(fmt.Sprintf("[minifiles] MiniFilesWindowUpdate: unsupported column=%s", column))
+					log.Debug(fmt.Sprintf("[minifiles] MiniFilesWindowUpdate: unsupported column=%s", column))
 				}
 			case "MiniFilesBufferUpdate":
 				if NvimScreen.FileExplorer == nil {
@@ -220,7 +221,7 @@ func StartListening(ctx context.Context) {
 				}
 				dataMap, ok := data.(map[string]interface{})
 				if !ok {
-					utils.Log("MiniFilesBufferUpdate: invalid data format")
+					log.Debug("MiniFilesBufferUpdate: invalid data format")
 					return
 				}
 				bufNr := utils.ReflectToInt(dataMap["buf_id"])
@@ -228,11 +229,11 @@ func StartListening(ctx context.Context) {
 					return
 				}
 				NvimScreen.FileExplorer.RefreshDirectoryLineMap(bufNr)
-				utils.Log(fmt.Sprintf("[minifiles] MiniFilesBufferUpdate: refreshed fs_type map for buf=%d", bufNr))
+				log.Debug(fmt.Sprintf("[minifiles] MiniFilesBufferUpdate: refreshed fs_type map for buf=%d", bufNr))
 			}
 		})
 
-		NvimInstance.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data []string) {
+		NvimClient.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data []string) {
 			assert(len(data) == 1, "BufEnter: malformed data")
 			filepath := filepath.Base(data[0])
 			if App != nil {
@@ -240,7 +241,7 @@ func StartListening(ctx context.Context) {
 			}
 		})
 
-		NvimInstance.RegisterHandler("MarkdownTables", func(updates ...[]interface{}) {
+		NvimClient.RegisterHandler("MarkdownTables", func(updates ...[]interface{}) {
 			for _, data := range updates {
 				if len(data) < 2 {
 					continue
@@ -251,12 +252,12 @@ func StartListening(ctx context.Context) {
 					continue
 				}
 				tables := parseMarkdownTables(tablesRaw)
-				utils.Log(fmt.Sprintf("MarkdownTables received: bufNr=%d, tables=%d", bufNr, len(tables)))
+				log.Debug(fmt.Sprintf("MarkdownTables received: bufNr=%d, tables=%d", bufNr, len(tables)))
 				NvimScreen.setTableMetadata(bufNr, tables)
 			}
 		})
 
-		NvimInstance.RegisterHandler("MarkdownImages", func(updates ...[]interface{}) {
+		NvimClient.RegisterHandler("MarkdownImages", func(updates ...[]interface{}) {
 			for _, data := range updates {
 				if len(data) < 2 {
 					continue
@@ -267,12 +268,12 @@ func StartListening(ctx context.Context) {
 					continue
 				}
 				images := parseMarkdownImages(imagesRaw)
-				utils.Log(fmt.Sprintf("MarkdownImages received: bufNr=%d, images=%d", bufNr, len(images)))
+				log.Debug(fmt.Sprintf("MarkdownImages received: bufNr=%d, images=%d", bufNr, len(images)))
 				NvimScreen.setImageMetadata(bufNr, images)
 			}
 		})
 
-		NvimInstance.RegisterHandler("MarkdownHeadings", func(updates ...[]interface{}) {
+		NvimClient.RegisterHandler("MarkdownHeadings", func(updates ...[]interface{}) {
 			for _, data := range updates {
 				if len(data) < 2 {
 					continue
@@ -287,7 +288,7 @@ func StartListening(ctx context.Context) {
 			}
 		})
 
-		NvimInstance.RegisterHandler("MarkdownTasks", func(updates ...[]interface{}) {
+		NvimClient.RegisterHandler("MarkdownTasks", func(updates ...[]interface{}) {
 			for _, data := range updates {
 				if len(data) < 2 {
 					continue
@@ -302,7 +303,7 @@ func StartListening(ctx context.Context) {
 			}
 		})
 
-		NvimInstance.RegisterHandler("MarkdownCodeBlocks", func(updates ...[]interface{}) {
+		NvimClient.RegisterHandler("MarkdownCodeBlocks", func(updates ...[]interface{}) {
 			for _, data := range updates {
 				if len(data) < 2 {
 					continue
@@ -313,12 +314,12 @@ func StartListening(ctx context.Context) {
 					continue
 				}
 				blocks := parseMarkdownCodeBlocks(blocksRaw)
-				utils.Log(fmt.Sprintf("MarkdownCodeBlocks: bufNr=%d blocks=%v", bufNr, blocks))
+				log.Debug(fmt.Sprintf("MarkdownCodeBlocks: bufNr=%d blocks=%v", bufNr, blocks))
 				NvimScreen.setCodeBlockMetadata(bufNr, blocks)
 			}
 		})
 
-		NvimInstance.RegisterHandler("MarkdownInlineCode", func(updates ...[]interface{}) {
+		NvimClient.RegisterHandler("MarkdownInlineCode", func(updates ...[]interface{}) {
 			for _, data := range updates {
 				if len(data) < 2 {
 					continue
@@ -333,7 +334,7 @@ func StartListening(ctx context.Context) {
 			}
 		})
 
-		NvimInstance.RegisterHandler("CompletionShow", func(updates ...[]interface{}) {
+		NvimClient.RegisterHandler("CompletionShow", func(updates ...[]interface{}) {
 			for _, data := range updates {
 				if len(data) < 3 {
 					continue
@@ -357,13 +358,13 @@ func StartListening(ctx context.Context) {
 			}
 		})
 
-		NvimInstance.RegisterHandler("CompletionHide", func(updates ...[]interface{}) {
+		NvimClient.RegisterHandler("CompletionHide", func(updates ...[]interface{}) {
 			if App != nil {
 				App.Event.Emit("completion-hide", struct{}{})
 			}
 		})
 
-		NvimInstance.RegisterHandler("CompletionSelect", func(updates ...[]interface{}) {
+		NvimClient.RegisterHandler("CompletionSelect", func(updates ...[]interface{}) {
 			for _, data := range updates {
 				if len(data) < 1 {
 					continue
@@ -375,10 +376,10 @@ func StartListening(ctx context.Context) {
 			}
 		})
 
-		NvimInstance.RegisterHandler("CompletionDocumentation", func(updates ...[]interface{}) {
+		NvimClient.RegisterHandler("CompletionDocumentation", func(updates ...[]interface{}) {
 			for _, data := range updates {
 				if len(data) < 3 {
-					utils.Log("CompletionDocumentation: insufficient data")
+					log.Debug("CompletionDocumentation: insufficient data")
 					continue
 				}
 				docText, _ := data[0].(string)
@@ -409,9 +410,9 @@ func StartListening(ctx context.Context) {
 			// "ext_messages":   true,
 		}
 
-		err = NvimInstance.AttachUI(cols, rows, opts)
+		err = NvimClient.AttachUI(cols, rows, opts)
 		if err != nil {
-			utils.Log(err.Error())
+			log.Error(err.Error())
 			nvimCancel()
 			return
 		}
@@ -421,7 +422,7 @@ func StartListening(ctx context.Context) {
 		readCursorLine(NvimScreen)
 
 		// Disable neovim's gutter, wrapping, colorcolumn, and cursorline — we render these ourselves.
-		NvimInstance.Command("set nonumber norelativenumber signcolumn=no foldcolumn=0 nowrap colorcolumn= nocursorline conceallevel=0")
+		NvimClient.Command("set nonumber norelativenumber signcolumn=no foldcolumn=0 nowrap colorcolumn= nocursorline conceallevel=0")
 
 		// Open test file if env var is set (used by e2e tests)
 		if testFile := os.Getenv("NVIM_GUI_TEST_FILE"); testFile != "" {
@@ -433,38 +434,38 @@ func StartListening(ctx context.Context) {
 					absPath = filepath.Join(cwd, testFile)
 				}
 			}
-			utils.Log(fmt.Sprintf("Opening test file: %s", absPath))
-			err := NvimInstance.Command(fmt.Sprintf("edit %s", absPath))
+			log.Debug(fmt.Sprintf("Opening test file: %s", absPath))
+			err := NvimClient.Command(fmt.Sprintf("edit %s", absPath))
 			if err != nil {
-				utils.Log(fmt.Sprintf("Error opening test file: %v", err))
+				log.Debug(fmt.Sprintf("Error opening test file: %v", err))
 			}
 		}
 
 		SetupKeymaps()
 
 		// Set up markdown table detection via treesitter
-		if err := NvimInstance.ExecLua(markdownTablesLua, nil, NvimInstance.ChannelID()); err != nil {
-			utils.Log(fmt.Sprintf("Error loading markdown tables Lua: %v", err))
+		if err := NvimClient.ExecLua(markdownTablesLua, nil, NvimClient.ChannelID()); err != nil {
+			log.Debug(fmt.Sprintf("Error loading markdown tables Lua: %v", err))
 		}
 
 		// Set up completion bridge for blink.cmp
-		if err := NvimInstance.ExecLua(completionLua, nil, NvimInstance.ChannelID()); err != nil {
-			utils.Log(fmt.Sprintf("Error loading completion Lua: %v", err))
+		if err := NvimClient.ExecLua(completionLua, nil, NvimClient.ChannelID()); err != nil {
+			log.Debug(fmt.Sprintf("Error loading completion Lua: %v", err))
 		}
 
-		if err := NvimInstance.Serve(); err != nil {
-			utils.Log(fmt.Sprintf("Neovim process terminated: %v\n%s", err, debug.Stack()))
+		if err := NvimClient.Serve(); err != nil {
+			log.Debug(fmt.Sprintf("Neovim process terminated: %v\n%s", err, debug.Stack()))
 		}
 
 		// Neovim has exited, signal to quit the app
-		utils.Log("Neovim process has terminated, quitting application")
+		log.Debug("Neovim process has terminated, quitting application")
 	}()
 
 	// Wait for Neovim to exit or context to be cancelled
 	select {
 	case <-nvimExitChan:
 		// Neovim exited, quit the app
-		utils.Log("Detected Neovim exit, shutting down application")
+		log.Debug("Detected Neovim exit, shutting down application")
 		if App != nil {
 			App.Quit()
 		}
@@ -479,9 +480,9 @@ func StartListening(ctx context.Context) {
 func readColorColumn(screen *Screen) {
 	// Read colorcolumn setting (returns a list of strings like {"80"} or {"+1", "120"})
 	var ccValues []interface{}
-	err := NvimInstance.ExecLua("return vim.opt.colorcolumn:get()", &ccValues)
+	err := NvimClient.ExecLua("return vim.opt.colorcolumn:get()", &ccValues)
 	if err != nil {
-		utils.Log(fmt.Sprintf("Error reading colorcolumn: %v", err))
+		log.Debug(fmt.Sprintf("Error reading colorcolumn: %v", err))
 		return
 	}
 
@@ -502,9 +503,9 @@ func readColorColumn(screen *Screen) {
 
 	// Read ColorColumn highlight group color
 	var hlResult map[string]interface{}
-	err = NvimInstance.ExecLua("return vim.api.nvim_get_hl(0, {name='ColorColumn'})", &hlResult)
+	err = NvimClient.ExecLua("return vim.api.nvim_get_hl(0, {name='ColorColumn'})", &hlResult)
 	if err != nil {
-		utils.Log(fmt.Sprintf("Error reading ColorColumn highlight: %v", err))
+		log.Debug(fmt.Sprintf("Error reading ColorColumn highlight: %v", err))
 		return
 	}
 
@@ -512,14 +513,14 @@ func readColorColumn(screen *Screen) {
 		bgInt := utils.ReflectToInt(bg)
 		screen.ColorColumnColor = fmt.Sprintf("#%06x", bgInt)
 	}
-	utils.Log(fmt.Sprintf("ColorColumn: columns=%v color=%s", screen.ColorColumns, screen.ColorColumnColor))
+	log.Debug(fmt.Sprintf("ColorColumn: columns=%v color=%s", screen.ColorColumns, screen.ColorColumnColor))
 }
 
 func readCursorLine(screen *Screen) {
 	var enabled bool
-	err := NvimInstance.ExecLua("return vim.opt.cursorline:get()", &enabled)
+	err := NvimClient.ExecLua("return vim.opt.cursorline:get()", &enabled)
 	if err != nil {
-		utils.Log(fmt.Sprintf("Error reading cursorline: %v", err))
+		log.Debug(fmt.Sprintf("Error reading cursorline: %v", err))
 		return
 	}
 	screen.CursorLineEnabled = enabled
@@ -529,9 +530,9 @@ func readCursorLine(screen *Screen) {
 	}
 
 	var hlResult map[string]interface{}
-	err = NvimInstance.ExecLua("return vim.api.nvim_get_hl(0, {name='CursorLine'})", &hlResult)
+	err = NvimClient.ExecLua("return vim.api.nvim_get_hl(0, {name='CursorLine'})", &hlResult)
 	if err != nil {
-		utils.Log(fmt.Sprintf("Error reading CursorLine highlight: %v", err))
+		log.Debug(fmt.Sprintf("Error reading CursorLine highlight: %v", err))
 		return
 	}
 
@@ -539,7 +540,7 @@ func readCursorLine(screen *Screen) {
 		bgInt := utils.ReflectToInt(bg)
 		screen.CursorLineColor = fmt.Sprintf("#%06x", bgInt)
 	}
-	utils.Log(fmt.Sprintf("CursorLine: enabled=%v color=%s", screen.CursorLineEnabled, screen.CursorLineColor))
+	log.Debug(fmt.Sprintf("CursorLine: enabled=%v color=%s", screen.CursorLineEnabled, screen.CursorLineColor))
 }
 
 func isVisualMode(mode string) bool {

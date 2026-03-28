@@ -1,6 +1,6 @@
 package neovim
 
-import "nvim-gui/utils"
+import "github.com/charmbracelet/log"
 
 func isHex(window *Window) bool {
 	ft := ""
@@ -11,16 +11,16 @@ func isHex(window *Window) bool {
 }
 
 func (s *Screen) renderFloatingWindow(window *Window) []ContentRow {
-	utils.Log("renderFloatingWindow")
-	if isHex(window) {
-		return window.Grid.toHex()
-	} else {
-		return s.renderFzfLua(window.Grid)
-	}
+	log.Debug("renderFloatingWindow")
+	// if isHex(window) {
+	// 	return window.Grid.toHex()
+	// } else {
+	return s.renderFzfLua(window.Grid)
+	// }
 }
 
 func (s *Screen) renderFzfLua(grid *Grid) []ContentRow {
-	utils.Log("renderFzfLua")
+	log.Debug("renderFzfLua")
 	content := s.optimizeGrid(grid, "fzflua", 0, -1)
 	return trimPerimeter(content)
 }

@@ -1,9 +1,11 @@
 package neovim
 
 import (
-	"context"
 	"fmt"
+	"nvim-gui/rendering"
+	"nvim-gui/utils"
 	"strings"
+	"sync"
 )
 
 type Highlight struct {
@@ -27,7 +29,17 @@ var (
 	UNDERLINE     = "underline"
 	UNDERCURL     = "underline decoration-wavy"
 	STRIKETHROUGH = "line-through"
+	highlights    = make(map[int]*Highlight)
+	highlightsMu  sync.RWMutex // Mutex for Highlights map
 )
+
+func Init() {
+	highlights[0] = &Highlight{
+		Foreground: 0xffffff,
+		Background: 0x000000,
+		Special:    0xffffff,
+	}
+}
 
 func mapClassesString(classes []string) string {
 	return strings.Join(classes, "-")
@@ -105,22 +117,84 @@ func (h *Highlight) getClasses() []string {
 	return classes
 }
 
-func emitHighlightCSS(ctx context.Context) {
-	var cssBuilder strings.Builder
-
-	fgColorClassesMu.Lock()
-	for color, class := range fgColorClasses {
-		cssBuilder.WriteString(fmt.Sprintf(".%s{color:%s}", class, color))
+func DefaultColorsSet(fg, bg, sp int) {
+	defaultFg := 0xffffff
+	defaultBg := 0x000000
+	defaultSp := defaultFg
+	if fg >= 0 {
+		defaultFg = fg
 	}
-	fgColorClassesMu.Unlock()
-
-	bgColorClassesMu.Lock()
-	for color, class := range bgColorClasses {
-		cssBuilder.WriteString(fmt.Sprintf(".%s{background-color:%s}", class, color))
+	if bg >= 0 {
+		defaultBg = bg
 	}
-	bgColorClassesMu.Unlock()
+	if sp >= 0 {
+		defaultSp = sp
+	}
+	highlightsMu.Lock()
+	highlights[0] = &Highlight{
+		Foreground: defaultFg,
+		Background: defaultBg,
+		Special:    defaultSp,
+	}
+	highlightsMu.Unlock()
+}
 
-	if NvimScreen != nil {
-		NvimScreen.emitEvent("highlight-css", cssBuilder.String())
+func HlAttrDefine(args []interface{}) {
+	for _, attr := range args {
+		attrData := attr.([]interface{})
+		id := utils.ReflectToInt(attrData[0])
+		rgbAttrs := attrData[1].(map[string]interface{})
+
+		highlight := &Highlight{}
+
+		if fg, ok := rgbAttrs["foreground"]; ok {
+			highlight.Foreground = utils.ReflectToInt(fg)
+			highlight.HasForeground = true
+		}
+
+		if bg, ok := rgbAttrs["background"]; ok {
+			highlight.Background = utils.ReflectToInt(bg)
+			highlight.HasBackground = true
+		}
+
+		if sp, ok := rgbAttrs["special"]; ok {
+			highlight.Special = utils.ReflectToInt(sp)
+		}
+
+		if reverse, ok := rgbAttrs["reverse"]; ok {
+			highlight.Reverse = reverse.(bool)
+		}
+
+		if italic, ok := rgbAttrs["italic"]; ok {
+			highlight.Italic = italic.(bool)
+		}
+
+		if bold, ok := rgbAttrs["bold"]; ok {
+			highlight.Bold = bold.(bool)
+		}
+
+		if underline, ok := rgbAttrs["underline"]; ok {
+			highlight.Underline = underline.(bool)
+		}
+
+		if undercurl, ok := rgbAttrs["undercurl"]; ok {
+			highlight.Undercurl = undercurl.(bool)
+		}
+
+		if strikethrough, ok := rgbAttrs["strikethrough"]; ok {
+			highlight.Strikethrough = strikethrough.(bool)
+		}
+
+		highlightsMu.Lock()
+		highlights[id] = highlight
+		highlightsMu.Unlock()
+
+		rendering.AddForegroundColorClass(highlight.fgHex())
+		rendering.AddBackgroundColorClass(highlight.bgHex())
+
+		hlClasses := highlight.getClasses()
+		hlClassesStr := mapClassesString(hlClasses)
+		effectiveHlId := rendering.UpdateEffectiveHlId(hlClassesStr, id)
+		rendering.AddIdClasses(effectiveHlId, hlClasses)
 	}
 }

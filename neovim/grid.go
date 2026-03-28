@@ -2,8 +2,7 @@ package neovim
 
 import (
 	"fmt"
-	"sort"
-	"strings"
+	"nvim-gui/rendering"
 )
 
 type Grid struct {
@@ -22,7 +21,7 @@ type Grid struct {
 	MarkdownOpts  map[int]*MarkdownOpts
 }
 
-func NewGrid(rows int, cols int) *Grid {
+func NewGrid(rows, cols int) *Grid {
 	content := make([][]*Cell, rows)
 	for i := range content {
 		content[i] = make([]*Cell, cols)
@@ -74,30 +73,36 @@ func toHexCells(cells [][]*Cell) [][]Cell {
 	return newCells
 }
 
-type Cell struct {
-	Char      string
-	Highlight int
-	Dirty     bool
-	Classes   map[string]bool
-}
+func (g *Grid) Resize(width, height int) {
+	g.Height = height
+	g.Width = width
 
-func (c *Cell) ClassesToString() string {
-	var builder strings.Builder
-	var classes []string
-	for class, _ := range c.Classes {
-		classes = append(classes, class)
+	newCells := make([][]*Cell, height)
+	for i := range newCells {
+		newCells[i] = make([]*Cell, width)
+		for j := range newCells[i] {
+			// Copy existing cell if available
+			if i < len(g.Cells) && j < len(g.Cells[i]) && g.Cells[i][j] != nil {
+				newCells[i][j] = &Cell{
+					Char:      g.Cells[i][j].Char,
+					Highlight: g.Cells[i][j].Highlight,
+					Classes:   g.Cells[i][j].Classes,
+				}
+			} else {
+				newCells[i][j] = &Cell{
+					Char:      " ",
+					Highlight: 0,
+				}
+			}
+		}
 	}
-	sort.Strings(classes)
-	for _, class := range classes {
-		builder.WriteString(class)
-		builder.WriteString(" ")
-	}
-	return strings.TrimRight(builder.String(), " ")
-}
 
-func (c *Cell) Equals(other *Cell) bool {
-	if c == nil || other == nil {
-		return c == other
+	g.Cells = newCells
+
+	g.DirtyRows = make([]bool, height)
+	g.OptimizedRows = make([][]*Cell, height)
+	g.CachedTokens = make([][]*rendering.Token, height)
+	for i := range g.DirtyRows {
+		g.DirtyRows[i] = true
 	}
-	return c.Char == other.Char && c.ClassesToString() == other.ClassesToString() && c.Highlight == other.Highlight
 }

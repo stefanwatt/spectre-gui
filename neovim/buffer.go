@@ -3,11 +3,11 @@ package neovim
 import (
 	"errors"
 	"fmt"
-	"nvim-gui/utils"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/neovim/go-client/nvim"
 )
 
@@ -16,8 +16,9 @@ type Buffer struct {
 	Filetype string
 	BufNr    int
 }
-func GetCurrentBuffer()(*Buffer,error){
-	win, err := NvimInstance.CurrentWindow()
+
+func GetCurrentBuffer() (*Buffer, error) {
+	win, err := NvimClient.CurrentWindow()
 	if err != nil {
 		return nil, err
 	}
@@ -29,12 +30,12 @@ func GetCurrentBuffer()(*Buffer,error){
 	if err != nil {
 		return nil, err
 	}
-	return buf,nil
+	return buf, nil
 }
 
 func GetWindowBuffer(winId int) (*Buffer, error) {
-	utils.Log(fmt.Sprintf("[minifiles] GetWindowBuffer: fetching windows for winId=%d", winId))
-	windows, error := NvimInstance.Windows()
+	log.Debug(fmt.Sprintf("[minifiles] GetWindowBuffer: fetching windows for winId=%d", winId))
+	windows, error := NvimClient.Windows()
 	if error != nil {
 		return nil, error
 	}
@@ -49,27 +50,27 @@ func GetWindowBuffer(winId int) (*Buffer, error) {
 	if foundWindow == nil {
 		return nil, errors.New("couldnt find window")
 	}
-	utils.Log(fmt.Sprintf("[minifiles] GetWindowBuffer: found window, fetching buffer for winId=%d", winId))
-	buffer, error := NvimInstance.WindowBuffer(*foundWindow)
+	log.Debug(fmt.Sprintf("[minifiles] GetWindowBuffer: found window, fetching buffer for winId=%d", winId))
+	buffer, error := NvimClient.WindowBuffer(*foundWindow)
 
 	if error != nil {
 		return nil, error
 	}
 
 	var filetype string
-	error = NvimInstance.BufferOption(buffer, "filetype", &filetype)
+	error = NvimClient.BufferOption(buffer, "filetype", &filetype)
 
 	if error != nil {
 		return nil, error
 	}
-	utils.Log(fmt.Sprintf("[minifiles] GetWindowBuffer: winId=%d filetype=%s", winId, filetype))
+	log.Debug(fmt.Sprintf("[minifiles] GetWindowBuffer: winId=%d filetype=%s", winId, filetype))
 	if filetype == "" {
 		var treesitterContext bool
-		NvimInstance.WindowVar(*foundWindow, "treesitter_context", &treesitterContext)
+		NvimClient.WindowVar(*foundWindow, "treesitter_context", &treesitterContext)
 		filetype = "treesitter_context"
 	}
 
-	buffername, err := NvimInstance.BufferName(buffer)
+	buffername, err := NvimClient.BufferName(buffer)
 	assert(err == nil, "error getting bufname")
 
 	// Extract buffer number from buffer.String() which returns "buffer:N"

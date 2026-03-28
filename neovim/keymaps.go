@@ -49,17 +49,13 @@ var keymapOpts = map[string]bool{
 	"noremap": false,
 }
 
+// NOTE: we register the keymaps in neovim like this because i dont want to implement my own chords
 func RegisterKeymap(event, lhs string, cb func(v *nvim.Nvim, data interface{})) {
-	NvimInstance.SetKeyMap("n", lhs, fmt.Sprintf("<cmd>lua vim.fn.rpcrequest(%d,'%s',{})<cr>", NvimInstance.ChannelID(), event), keymapOpts)
-	NvimInstance.RegisterHandler(event, cb)
+	NvimClient.SetKeyMap("n", lhs, fmt.Sprintf("<cmd>lua vim.fn.rpcrequest(%d,'%s',{})<cr>", NvimClient.ChannelID(), event), keymapOpts)
+	NvimClient.RegisterHandler(event, cb)
 }
 
 func SetupKeymaps() {
-	// RegisterKeymap("file-explorer", keymaps.GuiFileExplorer, func(_ *nvim.Nvim, data interface{}) {
-	// 	if App != nil {
-	// 		App.Event.Emit("show-file-explorer", struct{}{})
-	// 	}
-	// })
 	RegisterKeymap("live-grep", keymaps.GuiLiveGrep, func(_ *nvim.Nvim, data interface{}) {
 		if App != nil {
 			App.Event.Emit("show_live_grep", struct{}{})
@@ -153,7 +149,7 @@ var shiftedChars = map[string]bool{
 }
 
 func Paste(text string) error {
-	_, err := NvimInstance.Paste(text, true, -1)
+	_, err := NvimClient.Paste(text, true, -1)
 	if err != nil {
 		log.Println("Error pasting to Neovim:", err)
 		return err
@@ -198,9 +194,9 @@ func SendKey(key string, ctrl, alt, shift bool) error {
 	} else {
 		sequence = key
 	}
-	utils.Log("SendKey sequence:", sequence)
+	log.Debug("SendKey sequence:", sequence)
 
-	_, err = NvimInstance.Input(sequence)
+	_, err = NvimClient.Input(sequence)
 	if err != nil {
 		log.Println("Error feeding keys to Neovim:", err)
 		return err

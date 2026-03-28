@@ -1,14 +1,13 @@
 package utils
 
 import (
-	"log"
 	"os"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 )
 
-var do_log = true
+var Logger *log.Logger
 
 var (
 	StartTime time.Time
@@ -16,37 +15,16 @@ var (
 )
 
 func SetupLog() {
-	LOG_FILE := "/tmp/nvim-gui.log"
-	// open log file
-	logFile, err := os.OpenFile(LOG_FILE, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0o644)
+	f, err := os.OpenFile("/tmp/nvim-gui.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
-	log.SetOutput(logFile)
-	log.SetFlags(log.Lshortfile | log.LstdFlags)
-}
 
-func Log(text string, args ...interface{}) {
-	if do_log {
-		message := "\n" + text + "\n"
-		log.Println(message, args)
-	}
-}
-
-func LogTime(text string) {
-	if do_log {
-		duration := time.Since(StartTime)
-		LastTime = time.Now()
-		message := "\n" + lipgloss.NewStyle().Background(lipgloss.Color("#fff")).Foreground(lipgloss.Color("#000")).Render(text) + "\n"
-		log.Println(message+" took ", duration)
-	}
-}
-
-func LogTimeSinceLast(text string) {
-	if do_log {
-		duration := time.Since(LastTime)
-		message := "\n" + lipgloss.NewStyle().Background(lipgloss.Color("#fff")).Foreground(lipgloss.Color("#000")).Render(text) + "\n"
-		log.Printf("\noperation '%s' took %v", message, duration)
-		LastTime = time.Now()
-	}
+	Logger = log.NewWithOptions(f, log.Options{
+		ReportCaller:    true,
+		ReportTimestamp: true,
+		TimeFormat:      time.Kitchen,
+		Prefix:          "nvim-gui",
+	})
+	log.SetDefault(Logger)
 }

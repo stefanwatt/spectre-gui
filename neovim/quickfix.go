@@ -12,14 +12,14 @@ type QuickfixEntry struct {
 }
 
 func SetQuickfixList(entries []*QuickfixEntry) {
-	// utils.Log(fmt.Sprintf("AppendToQuickfixList filepath=%s row=%d col=%d text=%s", entry.Filepath, entry.Row, entry.Col, entry.Text))
-	err := NvimInstance.Command("copen")
+	// log.Debug(fmt.Sprintf("AppendToQuickfixList filepath=%s row=%d col=%d text=%s", entry.Filepath, entry.Row, entry.Col, entry.Text))
+	err := NvimClient.Command("copen")
 	assert(err == nil, "error opening qfl")
 	var res interface{}
 	for _, entry := range entries {
 		entry.Text = strings.TrimSpace(strings.ReplaceAll(entry.Text, "\x00", ""))
 	}
-	err = NvimInstance.ExecLua(`
+	err = NvimClient.ExecLua(`
         local entries = ...
         return vim.fn.setqflist(entries, 'r')
     `, &res, entries)

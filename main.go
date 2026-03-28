@@ -81,13 +81,6 @@ func init() {
 }
 
 func main() {
-	// WebKitGTK on Wayland uses DMABuf for hardware-accelerated rendering, but the
-	// DMABuf surface doesn't resize correctly when the compositor resizes the window,
-	// leaving transparent gaps. Disabling it forces WebKit to use a software surface
-	// that resizes properly.
-	os.Setenv("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
-
-	// Parse command line options
 	var opts Options
 	parser := flags.NewParser(&opts, flags.Default)
 	_, err := parser.Parse()
@@ -109,7 +102,6 @@ func main() {
 	referencesPicker := picker.NewReferencesPicker()
 	symbolsPicker := picker.NewSymbolsPicker()
 
-	// Create application
 	app := application.New(application.Options{
 		Name:        "nvim-gui",
 		Description: "Neovim GUI with Wails + Svelte",

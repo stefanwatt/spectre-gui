@@ -12,8 +12,8 @@ type HelpTag struct {
 
 func GetHelpTags() []*HelpTag {
 	var helpTags []*HelpTag
-	err := NvimInstance.ExecLua("return require('config.help-tags').get_help_tags()", &helpTags)
+	err := NvimClient.ExecLua("return require('config.help-tags').get_help_tags()", &helpTags)
 	assert(err == nil, "error getting help tags")
-	utils.Log("GetHelpTags", helpTags)
+	log.Debug("GetHelpTags", helpTags)
 	return helpTags
 }

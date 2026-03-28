@@ -25,9 +25,6 @@ export function OnFileExplorerPreviewResize(width: number, height: number): $Can
     return $Call.ByID(70856491, width, height);
 }
 
-/**
- * OnResize handles window resize events from the frontend
- */
 export function OnResize(width: number, height: number): $CancellablePromise<void> {
     return $Call.ByID(1493062928, width, height);
 }

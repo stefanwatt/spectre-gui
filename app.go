@@ -27,13 +27,11 @@ func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOpt
 	a.ctx = ctx
 	utils.SetupLog()
 
-	// Start neovim after app is ready
 	go neovim.StartListening(ctx)
 
 	return nil
 }
 
-// OnResize handles window resize events from the frontend
 func (a *App) OnResize(width, height int) {
 	rows, cols := neovim.CalculateGridSize(width, height)
 	if neovim.NvimScreen != nil {
@@ -58,7 +56,8 @@ func (a *App) OnFileExplorerConfirmChoice(winId, choice int) {
 // RequestState triggers emission of current state to frontend
 func (a *App) RequestState() {
 	if neovim.NvimScreen != nil {
-		neovim.NvimScreen.EmitCurrentState()
+		//TODO: delete after a while if we dont notice problem with it being gone
+		// neovim.NvimScreen.EmitCurrentState()
 	}
 }
 

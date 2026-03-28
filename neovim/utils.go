@@ -4,23 +4,29 @@ import (
 	"bufio"
 	"fmt"
 	"math"
-	"nvim-gui/utils"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/neovim/go-client/nvim"
 )
 
+func assert(assertion bool, message string) {
+	if !assertion {
+		panic(message)
+	}
+}
+
 func GetFileIcon(filename string) (string, string) {
 	extension := strings.TrimLeft(filepath.Ext(filename), ".")
-	var iconRes = struct {
+	iconRes := struct {
 		Icon string `msgpack:"icon"`
 		Hl   string `msgpack:"hl"`
 	}{}
 
-	err := NvimInstance.ExecLua(
+	err := NvimClient.ExecLua(
 		fmt.Sprintf(
 			"local icon, hl = require('nvim-web-devicons').get_icon('%s', '%s', {default=true}); return {icon=icon, hl=hl}",
 			filename,
@@ -31,7 +37,7 @@ func GetFileIcon(filename string) (string, string) {
 	if err != nil {
 		panic("could not get icon\n" + err.Error())
 	}
-	hl, err := NvimInstance.HLByName(iconRes.Hl, true)
+	hl, err := NvimClient.HLByName(iconRes.Hl, true)
 	if err != nil {
 		panic("could not get icon highlight\n" + err.Error())
 	}
@@ -42,7 +48,7 @@ func GetFileIcon(filename string) (string, string) {
 
 func GetCwd() string {
 	var cwd string
-	err := NvimInstance.ExecLua("return vim.fn.getcwd()", &cwd)
+	err := NvimClient.ExecLua("return vim.fn.getcwd()", &cwd)
 	if err != nil {
 		panic("could not get neovim cwd")
 	}
@@ -59,19 +65,20 @@ func FileExists(filePath string) bool {
 	}
 	return false
 }
-func OpenFileAt(path string, row int, col int) error {
-	utils.Log("[NEOVIM] Opening file at", path, row, col)
+
+func OpenFileAt(path string, row, col int) error {
+	log.Debug("[NEOVIM] Opening file at", path, row, col)
 
 	assert(FileExists(path), "tried to open file that doesnt exist: "+path)
-	err := NvimInstance.Command(fmt.Sprintf("e %s", path))
+	err := NvimClient.Command(fmt.Sprintf("e %s", path))
 	if err != nil {
-		utils.Log("Error opening file:", err)
+		log.Debug("Error opening file:", err)
 		return err
 	}
 
-	err = NvimInstance.Command(fmt.Sprintf("call cursor(%d, %d)", row, col))
+	err = NvimClient.Command(fmt.Sprintf("call cursor(%d, %d)", row, col))
 	if err != nil {
-		utils.Log("Error setting cursor:", err)
+		log.Debug("Error setting cursor:", err)
 		return err
 	}
 	return nil
@@ -95,19 +102,19 @@ func ClosePreview(winId int) {
 		previewWinId, err := strconv.Atoi(strings.Split(previewWin.String(), ":")[1])
 		assert(err == nil, "ClosePreview error getting previewWinId")
 		if previewWinId == winId {
-			err = NvimInstance.CloseWindow(*previewWin, true)
+			err = NvimClient.CloseWindow(*previewWin, true)
 			assert(err == nil, "ClosePreview error closing preview window")
 			previewWin = nil
 			return
 		}
 	}
-	windows, err := NvimInstance.Windows()
+	windows, err := NvimClient.Windows()
 	assert(err == nil, "ClosePreview error getting windows")
 	for _, win := range windows {
 		previewWinId, err := strconv.Atoi(strings.Split(win.String(), ":")[1])
 		assert(err == nil, "ClosePreview error getting previewWinId")
 		if previewWinId == winId {
-			err = NvimInstance.CloseWindow(win, true)
+			err = NvimClient.CloseWindow(win, true)
 			assert(err == nil, "ClosePreview error closing preview window")
 			previewWin = nil
 			break
@@ -130,6 +137,7 @@ func calculatePreviewRange(row int) (int, int) {
 	}
 	return start, end
 }
+
 func getPreviewMatchOpts(col int) map[string]any {
 	return map[string]any{
 		"hl_group": "CurSearch",
@@ -138,39 +146,38 @@ func getPreviewMatchOpts(col int) map[string]any {
 	}
 }
 
-func ShowPreview(absolutePath string, row int, col int) {
+func ShowPreview(absolutePath string, row, col int) {
 	startRow, endRow := calculatePreviewRange(row)
 	assert(FileExists(absolutePath), "tried to get highlighted content for file that doesnt exist: "+absolutePath)
 	lines, err := ReadFileLines(absolutePath, startRow, endRow)
 	assert(err == nil, "ShowPreview error reading lines")
-	buf, err := NvimInstance.CreateBuffer(false, true)
+	buf, err := NvimClient.CreateBuffer(false, true)
 	assert(err == nil, "ShowPreview error creating buffer")
-	utils.Log(fmt.Sprintf("ShowPreview buffer created: %s", buf.String()))
-	err = NvimInstance.SetBufferLines(buf, 1, previewLines, false, lines)
+	log.Debug(fmt.Sprintf("ShowPreview buffer created: %s", buf.String()))
+	err = NvimClient.SetBufferLines(buf, 1, previewLines, false, lines)
 	assert(err == nil, "ShowPreview error setting bufferlines")
 	bufId, err := strconv.Atoi(strings.Split(buf.String(), ":")[1])
 	assert(err == nil, "ShowPreview error getting buf id")
 	var filetype string
 	filename := filepath.Base(absolutePath)
 	cmd := fmt.Sprintf("return vim.filetype.match({buf=%d, filename='%s'})", bufId, filename)
-	err = NvimInstance.ExecLua(cmd, &filetype)
+	err = NvimClient.ExecLua(cmd, &filetype)
 	if err != nil {
 		filetype = filepath.Ext(absolutePath)
-
 	}
 	if nsId == 0 {
-		nsId, err = NvimInstance.CreateNamespace("nvim-gui-preview")
+		nsId, err = NvimClient.CreateNamespace("nvim-gui-preview")
 		assert(err == nil, "ShowPreview error creating namespace")
 	}
 	relativeRow := row + 1 - startRow
-	_, err = NvimInstance.SetBufferExtmark(buf, nsId, relativeRow, col-1, getPreviewMatchOpts(col))
+	_, err = NvimClient.SetBufferExtmark(buf, nsId, relativeRow, col-1, getPreviewMatchOpts(col))
 	if err != nil {
 		panic(fmt.Sprintf("error setting extmark on row=%d col=%d error:\n%s", relativeRow, col, err.Error()))
 	}
-	err = NvimInstance.SetBufferOption(buf, "filetype", filetype)
+	err = NvimClient.SetBufferOption(buf, "filetype", filetype)
 	assert(err == nil, "ShowPreview error setting filetype")
 	if previewWin == nil {
-		win, err := NvimInstance.OpenWindow(buf, false, &nvim.WindowConfig{
+		win, err := NvimClient.OpenWindow(buf, false, &nvim.WindowConfig{
 			Relative: "editor",
 			Row:      3,
 			Col:      50,
@@ -181,7 +188,7 @@ func ShowPreview(absolutePath string, row int, col int) {
 		assert(err == nil, "ShowPreview error opening window")
 		previewWin = &win
 	} else {
-		err = NvimInstance.SetBufferToWindow(*previewWin, buf)
+		err = NvimClient.SetBufferToWindow(*previewWin, buf)
 		assert(err == nil, "ShowPreview error setting buffer on window")
 	}
 }
@@ -217,9 +224,9 @@ func ReadFileLines(filename string, startRow, endRow int) ([][]byte, error) {
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("error reading file: %w", err)
 	}
-	utils.Log(fmt.Sprintf("ReadFileLines lines:"))
+	log.Debug(fmt.Sprintf("ReadFileLines lines:"))
 	for _, line := range lines {
-		utils.Log(string(line))
+		log.Debug(string(line))
 	}
 	return lines, nil
 }
