@@ -98,3 +98,9 @@ type DefaultColorsSet struct {
 type HighlightAttrDefine struct {
 	Args []any
 }
+
+type BufEnter struct {
+	BufNr    int    `json:"bufnr" msgpack:"buf"`
+	Filepath string `json:"filepath" msgpack:"file"`
+	WinID    int    `json:"winId" msgpack:"winId"`
+}

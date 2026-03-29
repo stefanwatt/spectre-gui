@@ -143,6 +143,10 @@ func (r *Reducer) Apply(state *model.AppState, event events.Event) {
 		win.Hidden = false
 		win.Dirty = true
 		s.GridToWindow[payload.GridID] = payload.WindowID
+		if fp, ok := s.PendingFilepaths[payload.WindowID]; ok {
+			win.Filepath = fp
+			delete(s.PendingFilepaths, payload.WindowID)
+		}
 
 	case events.EventWinFloatPos:
 		payload, ok := event.Payload.(events.FloatingWindowPosition)
@@ -287,6 +291,19 @@ func (r *Reducer) Apply(state *model.AppState, event events.Event) {
 			return
 		}
 		s.Highlights.Definitions = append(s.Highlights.Definitions, payload.Args)
+	case events.EventBufEnter:
+		payload, ok := event.Payload.(events.BufEnter)
+		if !ok {
+			return
+		}
+		window := s.Windows[payload.WinID]
+		if window != nil {
+			window.Filepath = payload.Filepath
+			window.Dirty = true
+		} else {
+			s.PendingFilepaths[payload.WinID] = payload.Filepath
+		}
+
 	}
 }
 

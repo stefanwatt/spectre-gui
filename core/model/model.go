@@ -17,17 +17,18 @@ type FeatureState struct {
 }
 
 type ScreenState struct {
-	Width        int
-	Height       int
-	Mode         string
-	ActiveWindow int
-	Grids        map[int]*GridState
-	Windows      map[int]*WindowState
-	GridToWindow map[int]int
-	Viewport     ViewportState
-	Layout       LayoutState
-	Cmdline      CmdlineState
-	Highlights   HighlightState
+	Width            int
+	Height           int
+	Mode             string
+	ActiveWindow     int
+	Grids            map[int]*GridState
+	Windows          map[int]*WindowState
+	GridToWindow     map[int]int
+	PendingFilepaths map[int]string // winID -> filepath, for BufEnter events that arrive before win_pos
+	Viewport         ViewportState
+	Layout           LayoutState
+	Cmdline          CmdlineState
+	Highlights       HighlightState
 }
 
 type GridState struct {
@@ -145,10 +146,11 @@ func NewAppState() *AppState {
 	return &AppState{
 		Editor: EditorState{
 			Screen: ScreenState{
-				Mode:         "normal",
-				Grids:        make(map[int]*GridState),
-				Windows:      make(map[int]*WindowState),
-				GridToWindow: make(map[int]int),
+				Mode:             "normal",
+				Grids:            make(map[int]*GridState),
+				Windows:          make(map[int]*WindowState),
+				GridToWindow:     make(map[int]int),
+				PendingFilepaths: make(map[int]string),
 				Layout: LayoutState{
 					Cols: "1fr",
 					Rows: "1fr",

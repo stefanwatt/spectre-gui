@@ -14,6 +14,7 @@ type GridLayout struct {
 	Windows        []*WindowAPI `json:"windows"`
 }
 
+//TODO: check if this isnt just a stupid duplication of windowapi
 type LayoutWindow struct {
 	ID                  int
 	Type                string

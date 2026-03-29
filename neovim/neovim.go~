@@ -108,13 +108,21 @@ func StartListening(ctx context.Context) {
             vim.rpcnotify(chan_id, "MiniFilesBridge", args.match, args.data or {})
         end
     })
+
+		vim.api.nvim_create_autocmd("BufEnter" , {
+			group = vim.api.nvim_create_augroup("nvim-gui-buf-enter" , { clear = true }),
+			callback = function(args) 
+            vim.rpcnotify(chan_id, "BufEnter", {buf=args.buf or -1, file=args.file or ""})
+			end,
+		})
+
 `
 
 		// Execute the Lua script, passing the channelID as the argument (...)
 		var result interface{}
 		err := NvimClient.ExecLua(luaScript, &result, channelID)
 		if err != nil {
-			log.Debug(fmt.Sprintf("Failed to setup autocmd bridge: %v", err))
+			log.Errorf("Failed to setup autocmd bridge: %v", err)
 		}
 		err = EnsureMiniFilesPatched()
 		if err != nil {
@@ -211,10 +219,13 @@ func StartListening(ctx context.Context) {
 			}
 		})
 
-		NvimClient.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data []string) {
-			assert(len(data) == 1, "BufEnter: malformed data")
-			filepath := filepath.Base(data[0])
-			EmitEvent("BufEnter", filepath)
+		NvimClient.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data interface{}) {
+			log.Infof("[BufEnter]", data)
+			// EnqueueCanonicalEvent(events.Event{
+			// 	Name:    "BufEnter",
+			// 	Payload: data,
+			// 	Source:  "",
+			// })
 		})
 
 		NvimClient.RegisterHandler("MarkdownTables", func(updates ...[]interface{}) {
