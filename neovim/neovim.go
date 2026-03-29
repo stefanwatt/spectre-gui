@@ -54,17 +54,14 @@ func StartListening(ctx context.Context) {
 	nvimCtx, nvimCancel := context.WithCancel(ctx)
 	nvimExitChan := make(chan struct{})
 
-	var nvimArgs nvim.ChildProcessOption
+	nvimArgs := []string{"--embed", "+\"set nonumber\"", "+\"set norelativenumber\""}
 	if len(os.Args) > 1 {
-		filepath := os.Args[1]
-		nvimArgs = nvim.ChildProcessArgs("--embed", filepath)
-	} else {
-		nvimArgs = nvim.ChildProcessArgs("--embed")
+		nvimArgs = append(nvimArgs, os.Args[1])
 	}
 
 	NvimClient, err = nvim.NewChildProcess(
 		nvim.ChildProcessCommand("nvim"),
-		nvimArgs,
+		nvim.ChildProcessArgs(nvimArgs...),
 		nvim.ChildProcessContext(nvimCtx),
 	)
 	NvimClient.SetVar("nvim_gui", true)
@@ -192,7 +189,7 @@ func StartListening(ctx context.Context) {
 					fileExplorerRegistry.AssignCurrentPane(winId, bufNr)
 				case "preview":
 					fileExplorerRegistry.AssignPreviewPane(winId, bufNr)
-					//TODO: what about preview HasPreviewTargetSize and previewTargetCols
+					// TODO: what about preview HasPreviewTargetSize and previewTargetCols
 					NvimScreen.applyFileExplorerPreviewSize()
 				default:
 					log.Debug(fmt.Sprintf("[minifiles] MiniFilesWindowUpdate: unsupported column=%s", column))
@@ -395,6 +392,30 @@ func StartListening(ctx context.Context) {
 
 		// Disable neovim's gutter, wrapping, colorcolumn, and cursorline — we render these ourselves.
 		NvimClient.Command("set nonumber norelativenumber signcolumn=no foldcolumn=0 nowrap colorcolumn= nocursorline conceallevel=0")
+		// Use autocmds so these stay enforced:
+		// 1. On every new/entered window (user config autocmds can re-enable them).
+		// 2. On VimEnter, apply to ALL existing windows (handles startup with multiple splits).
+		NvimClient.ExecLua(`
+			local function disable_gutter()
+				vim.wo.number = false
+				vim.wo.relativenumber = false
+				vim.wo.signcolumn = "no"
+				vim.wo.foldcolumn = "0"
+			end
+
+			vim.api.nvim_create_autocmd({"WinNew", "WinEnter", "BufWinEnter"}, {
+				callback = disable_gutter,
+			})
+
+			vim.api.nvim_create_autocmd("VimEnter", {
+				once = true,
+				callback = function()
+					for _, win in ipairs(vim.api.nvim_list_wins()) do
+						vim.api.nvim_win_call(win, disable_gutter)
+					end
+				end,
+			})
+		`, nil)
 
 		// Open test file if env var is set (used by e2e tests)
 		if testFile := os.Getenv("NVIM_GUI_TEST_FILE"); testFile != "" {
