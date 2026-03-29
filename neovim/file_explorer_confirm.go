@@ -2,7 +2,6 @@ package neovim
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/log"
 )
@@ -11,63 +10,6 @@ type FileExplorerConfirmPrompt struct {
 	WinId   int      `json:"winId"`
 	Message string   `json:"message"`
 	Choices []string `json:"choices"`
-}
-
-func detectFileExplorerConfirmPrompt(window *Window) (*FileExplorerConfirmPrompt, bool) {
-	if window == nil || window.Buffer == nil || window.Grid == nil {
-		return nil, false
-	}
-	if (*window.Buffer).Filetype != "" {
-		return nil, false
-	}
-	raw := strings.TrimSpace(window.Grid.toString())
-	if raw == "" || !strings.Contains(raw, "without synchronization") || !strings.Contains(raw, "Confirm") {
-		return nil, false
-	}
-
-	lines := strings.Split(raw, "\n")
-	cleanLines := make([]string, 0, len(lines))
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			continue
-		}
-		if strings.Contains(trimmed, "│") || strings.Contains(trimmed, "─") || strings.Contains(trimmed, "┌") || strings.Contains(trimmed, "└") {
-			trimmed = strings.Map(func(r rune) rune {
-				switch r {
-				case '│', '─', '┌', '┐', '└', '┘':
-					return -1
-				default:
-					return r
-				}
-			}, trimmed)
-			trimmed = strings.TrimSpace(trimmed)
-		}
-		if trimmed == "" {
-			continue
-		}
-		trimmed = strings.ReplaceAll(trimmed, "&", "")
-		if trimmed == "Yes" || trimmed == "No" || strings.HasPrefix(trimmed, "Yes") || strings.HasPrefix(trimmed, "No") {
-			continue
-		}
-		cleanLines = append(cleanLines, trimmed)
-	}
-
-	message := strings.Join(cleanLines, "\n")
-	if strings.TrimSpace(message) == "" {
-		message = "Confirm close without synchronization?"
-	}
-
-	return &FileExplorerConfirmPrompt{WinId: window.ID, Message: message, Choices: []string{"Yes", "No"}}, true
-}
-
-func (s *Screen) emitFileExplorerConfirmPrompt(window *Window) bool {
-	prompt, ok := detectFileExplorerConfirmPrompt(window)
-	if !ok {
-		return false
-	}
-	EmitEvent("file-explorer-confirm-prompt-show", prompt)
-	return true
 }
 
 func (s *Screen) HandleFileExplorerConfirmChoice(winId, choice int) {

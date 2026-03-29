@@ -189,11 +189,17 @@ func (p *FileExplorerProjector) buildPreview(
 // renderContentPreview builds ContentRow[] for a file preview grid,
 // stripping the border (first/last row, first/last token per row).
 func (p *FileExplorerProjector) renderContentPreview(grid *model.GridState) []rendering.ContentRow {
+	// Copy cells to avoid aliasing the model's live slices.
+	cellsCopy := make([][]*rendering.Cell, len(grid.Cells))
+	for i, row := range grid.Cells {
+		cellsCopy[i] = make([]*rendering.Cell, len(row))
+		copy(cellsCopy[i], row)
+	}
 	gd := &rendering.GridData{
 		Height:        grid.Height,
 		TopLine:       grid.TopLine,
 		DirtyRows:     make([]bool, grid.Height),
-		Cells:         grid.Cells,
+		Cells:         cellsCopy,
 		OptimizedRows: make([][]*rendering.Cell, grid.Height),
 		CachedTokens:  make([][]*rendering.Token, grid.Height),
 		MarkdownOpts:  make(map[int]*rendering.MarkdownOpts),

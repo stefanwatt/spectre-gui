@@ -15,7 +15,6 @@ import (
 type Window struct {
 	ID                  int // Window ID
 	Dirty               bool
-	Grid                *Grid
 	Type                string // "normal" or "floating"
 	Anchor              string // Anchor position for floating windows
 	AnchorGrid          int    // Grid ID this window is anchored to
@@ -36,12 +35,11 @@ type Window struct {
 	Mode                string
 }
 
-// NewWindow creates a new window with the given ID and grid ID
-func NewWindow(id int, grid *Grid) *Window {
+// NewWindow creates a new window with the given ID
+func NewWindow(id int) *Window {
 	return &Window{
 		ID:                  id,
 		Dirty:               true,
-		Grid:                grid,
 		Type:                "normal",
 		Anchor:              "",
 		AnchorGrid:          0,

@@ -312,12 +312,15 @@ func syncGridData(gd *rendering.GridData, grid *model.GridState) {
 	gd.Height = grid.Height
 	gd.Cursor = rendering.CursorPosition{Row: grid.CursorRow, Col: grid.CursorCol}
 
-	// Sync cells — model.Cell and rendering.Cell are the same type (via alias)
+	// Sync cells — model.Cell and rendering.Cell are the same type (via alias).
+	// Copy the inner slice to avoid aliasing (the model may mutate its rows
+	// between projection cycles, e.g. during scroll or grid_line events).
 	for row := 0; row < grid.Height; row++ {
 		if row < len(grid.DirtyRows) && grid.DirtyRows[row] {
 			gd.DirtyRows[row] = true
 			if row < len(grid.Cells) {
-				gd.Cells[row] = grid.Cells[row]
+				gd.Cells[row] = make([]*rendering.Cell, len(grid.Cells[row]))
+				copy(gd.Cells[row], grid.Cells[row])
 			}
 		}
 	}

@@ -317,7 +317,6 @@ func applyGridLine(grid *model.GridState, row, startCol int, cells []any) {
 			repeat = 1
 		}
 
-		classes := classesForHL(lastHL)
 		for i := 0; i < repeat; i++ {
 			if col >= len(grid.Cells[row]) {
 				break
@@ -325,7 +324,7 @@ func applyGridLine(grid *model.GridState, row, startCol int, cells []any) {
 			grid.Cells[row][col] = &model.Cell{
 				Char:      text,
 				Highlight: lastHL,
-				Classes:   classes,
+				Classes:   classesForHL(lastHL),
 			}
 			col++
 		}
@@ -360,8 +359,9 @@ func applyGridScroll(grid *model.GridState, top, bottom, rows, left, right int) 
 			srcRow := row + rows
 			if srcRow >= top && srcRow < bottom && srcRow < len(grid.Cells) && row < len(grid.Cells) {
 				if left == 0 && (right == 0 || right >= grid.Width) {
-					// Full-width scroll: just swap the row slice
-					grid.Cells[row] = grid.Cells[srcRow]
+					// Full-width scroll: copy the row slice (not assign, to avoid aliasing)
+					grid.Cells[row] = make([]*model.Cell, len(grid.Cells[srcRow]))
+					copy(grid.Cells[row], grid.Cells[srcRow])
 				} else {
 					// Partial horizontal scroll
 					for col := left; col < right && col < grid.Width; col++ {
@@ -388,7 +388,9 @@ func applyGridScroll(grid *model.GridState, top, bottom, rows, left, right int) 
 			srcRow := row + rows // rows is negative, so srcRow < row
 			if srcRow >= top && srcRow < bottom && srcRow < len(grid.Cells) && row < len(grid.Cells) {
 				if left == 0 && (right == 0 || right >= grid.Width) {
-					grid.Cells[row] = grid.Cells[srcRow]
+					// Full-width scroll: copy the row slice (not assign, to avoid aliasing)
+					grid.Cells[row] = make([]*model.Cell, len(grid.Cells[srcRow]))
+					copy(grid.Cells[row], grid.Cells[srcRow])
 				} else {
 					for col := left; col < right && col < grid.Width; col++ {
 						grid.Cells[row][col] = grid.Cells[srcRow][col]
