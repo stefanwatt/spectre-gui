@@ -50,6 +50,7 @@ export let completion = $state<App.CompletionState>({
   items: [],
   selectedIndex: -1,
   col: 0,
+  row: 0,
 });
 
 let _completionDocumentation = $state<App.CompletionDocumentation | null>(null);

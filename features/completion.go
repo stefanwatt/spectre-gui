@@ -19,6 +19,7 @@ type CompletionState struct {
 	Items         []CompletionItem `json:"items"`
 	SelectedIndex int              `json:"selectedIndex"` // -1 if none (using 1-indexed to match blink.cmp)
 	Col           int              `json:"col"`           // cursor col for positioning
+	Row           int              `json:"row"`           // 1-based buffer line number for positioning
 }
 
 // CompletionDocumentation represents documentation for the selected item
@@ -125,10 +126,12 @@ local function setup_completion_bridge()
       })
     end
 
-    -- Get cursor col at trigger point for horizontal positioning
-    local cursor_col = vim.api.nvim_win_get_cursor(0)[2]
+    -- Get cursor position for positioning
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+    local cursor_row = cursor_pos[1] -- 1-based buffer line number
+    local cursor_col = cursor_pos[2]
 
-    vim.rpcnotify(channel, 'CompletionShow', {compact_items, selected_idx, cursor_col})
+    vim.rpcnotify(channel, 'CompletionShow', {compact_items, selected_idx, cursor_col, cursor_row})
   end)
 
   -- Register listener for hide events

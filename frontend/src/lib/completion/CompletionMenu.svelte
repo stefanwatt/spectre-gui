@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { cursor } from '$lib/state.svelte';
 	import DocumentationWindow from './DocumentationWindow.svelte';
 
 	interface CompletionMenuProps {
@@ -36,36 +35,28 @@
 		TypeParameter: '󰬛'
 	};
 
-	// Position: find the DOM row element for the cursor line
-	let domTop: number | null = $state(null);
 	let menuRef: HTMLDivElement | undefined = $state(undefined);
-	let flipAbove = $state(false);
 
 	const lineHeight = 28; // 22px font + 3px padding top + 3px padding bottom
 	const offsetLeft = 6; // line number gutter width in ch units
 
-	$effect(() => {
-		if (!completion.visible) {
-			domTop = null;
-			return;
-		}
-		const el = document.getElementById(`row-${cursor.row}`);
-		if (el) {
-			domTop = el.offsetTop + lineHeight; // position below the cursor line
-		} else {
-			domTop = null;
-		}
-	});
+	// Derive position from completion.row — no dependency on cursor state
+	let rowElement = $derived(
+		completion.visible && completion.row > 0
+			? document.getElementById(`row-${completion.row}`)
+			: null
+	);
 
-	// Check if menu should flip above cursor
-	$effect(() => {
-		if (domTop === null || !menuRef) return;
+	let domTop = $derived(rowElement ? rowElement.offsetTop + lineHeight : null);
+
+	let flipAbove = $derived.by(() => {
+		if (domTop === null || !menuRef) return false;
 		const parentEl = menuRef.closest('.nvim-window');
-		if (!parentEl) return;
+		if (!parentEl) return false;
 		const parentRect = parentEl.getBoundingClientRect();
 		const menuHeight = menuRef.offsetHeight;
 		const spaceBelow = parentRect.bottom - (parentRect.top + domTop);
-		flipAbove = menuHeight > spaceBelow;
+		return menuHeight > spaceBelow;
 	});
 
 	let topPx = $derived.by(() => {
@@ -77,6 +68,9 @@
 	});
 
 	let leftCh = $derived(`${completion.col + offsetLeft}ch`);
+
+	// Only render visible if we have a valid position
+	let positionValid = $derived(domTop !== null);
 
 	// Scroll selected item into view
 	$effect(() => {
@@ -92,7 +86,7 @@
 	<div
 		bind:this={menuRef}
 		class="completion-menu absolute z-[210] overflow-y-auto rounded-md border border-surface0 bg-base-100 text-text drop-shadow-lg"
-		style="top: {topPx}; left: {leftCh}; max-height: {10 * lineHeight}px;"
+		style="top: {topPx}; left: {leftCh}; max-height: {10 * lineHeight}px; visibility: {positionValid ? 'visible' : 'hidden'};"
 	>
 		{#each completion.items as item, i (i)}
 			<div

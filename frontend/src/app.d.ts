@@ -225,6 +225,7 @@ declare global {
 			items: CompletionItem[];
 			selectedIndex: number; // -1 if none selected (1-indexed to match blink.cmp)
 			col: number; // cursor col at trigger for positioning
+			row: number; // 1-based buffer line number for positioning
 		}
 
 		interface CompletionDocumentation {

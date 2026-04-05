@@ -330,7 +330,7 @@ func StartListening(ctx context.Context) {
 
 		NvimClient.RegisterHandler("CompletionShow", func(updates ...[]interface{}) {
 			for _, data := range updates {
-				if len(data) < 3 {
+				if len(data) < 4 {
 					continue
 				}
 				itemsRaw, ok := data[0].([]interface{})
@@ -339,12 +339,14 @@ func StartListening(ctx context.Context) {
 				}
 				selectedIdx := utils.ReflectToInt(data[1])
 				col := utils.ReflectToInt(data[2])
+				row := utils.ReflectToInt(data[3])
 
 				items := features.ParseCompletionItems(itemsRaw)
 				state := features.CompletionState{
 					Items:         items,
 					SelectedIndex: selectedIdx,
 					Col:           col,
+					Row:           row,
 				}
 				EmitEvent("completion-show", state)
 			}

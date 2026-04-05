@@ -55,6 +55,7 @@ func (p *LayoutContentProjector) Project(state *model.AppState) UIProjection {
 	// --- Floating windows ---
 	p.projectFloatingWindows(&ui, s)
 
+
 	// --- Cursor ---
 	cursorRow := s.Viewport.CursorLine +1
 	cursorCol := 0

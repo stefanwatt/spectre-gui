@@ -193,6 +193,7 @@ export function startListening() {
 		completion.items = state.items;
 		completion.selectedIndex = state.selectedIndex;
 		completion.col = state.col;
+		completion.row = state.row;
 	});
 
 	Events.On('completion-hide', (ev) => {
