@@ -104,3 +104,9 @@ type BufEnter struct {
 	Filepath string `json:"filepath" msgpack:"file"`
 	WinID    int    `json:"winId" msgpack:"winId"`
 }
+
+type WindowBufferInfo struct {
+	WindowID int
+	Filetype string
+	Filepath string
+}

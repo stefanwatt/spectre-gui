@@ -58,5 +58,40 @@ func handleCanonicalSideEffects(ev events.Event) {
 		HlAttrDefine(args)
 		css := rendering.BuildHighlightCSS()
 		EmitEvent("highlight-css", css)
+
+	case events.EventWinPos:
+		payload, ok := ev.Payload.(events.WindowPosition)
+		if !ok || payload.WindowID == 0 {
+			return
+		}
+		go fetchAndEnqueueBufferInfo(payload.WindowID)
+
+	case events.EventWinFloatPos:
+		payload, ok := ev.Payload.(events.FloatingWindowPosition)
+		if !ok || payload.WindowID == 0 {
+			return
+		}
+		go fetchAndEnqueueBufferInfo(payload.WindowID)
 	}
+}
+
+// fetchAndEnqueueBufferInfo calls GetWindowBuffer asynchronously and enqueues
+// an EventWindowBufferInfo event with the result. This enriches window state
+// with buffer metadata (filetype, filepath) that is not part of the Neovim
+// redraw protocol.
+func fetchAndEnqueueBufferInfo(windowID int) {
+	buf, err := GetWindowBuffer(windowID)
+	if err != nil {
+		log.Debug("fetchAndEnqueueBufferInfo: failed", "windowID", windowID, "err", err)
+		return
+	}
+	EnqueueCanonicalEvent(events.Event{
+		Name: events.EventWindowBufferInfo,
+		Payload: events.WindowBufferInfo{
+			WindowID: windowID,
+			Filetype: buf.Filetype,
+			Filepath: buf.Filepath,
+		},
+		Source: "neovim-api",
+	})
 }

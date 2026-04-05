@@ -22,6 +22,7 @@ const (
 	EventHighlightDefine   Name = "hl_attr_define"
 	EventDefaultColorsSet  Name = "default_colors_set"
 	EventBufEnter          Name = "BufEnter"
+	EventWindowBufferInfo  Name = "window_buffer_info"
 )
 
 type Event struct {

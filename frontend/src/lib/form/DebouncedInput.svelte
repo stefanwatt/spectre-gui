@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { debounce } from '$lib/utils.service';
+	import { createDebounce } from '$lib/utils.service';
 	import type { KeyboardEventHandler } from 'svelte/elements';
 
 	interface DebouncedInputProps {
@@ -13,10 +13,12 @@
 	let { value, placeholder, withLabel, autofocus, updateValue, debounceMs }: DebouncedInputProps =
 		$props();
 
+	const debounce = createDebounce(debounceMs);
+
 	const debouncedUpdate: KeyboardEventHandler<HTMLInputElement> = function (e) {
 		if (!e?.target) return;
 		const target: HTMLInputElement = e.target as HTMLInputElement;
-		debounce(target.value, debounceMs).then((updatedValue) => {
+		debounce(target.value).then((updatedValue) => {
 			updateValue(updatedValue);
 		});
 	};

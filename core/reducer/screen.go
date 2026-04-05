@@ -304,6 +304,17 @@ func (r *Reducer) Apply(state *model.AppState, event events.Event) {
 			s.PendingFilepaths[payload.WinID] = payload.Filepath
 		}
 
+	case events.EventWindowBufferInfo:
+		payload, ok := event.Payload.(events.WindowBufferInfo)
+		if !ok {
+			return
+		}
+		if win, exists := s.Windows[payload.WindowID]; exists {
+			win.Filetype = payload.Filetype
+			win.Filepath = payload.Filepath
+			win.Dirty = true
+		}
+
 	}
 }
 

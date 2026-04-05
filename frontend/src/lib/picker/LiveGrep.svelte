@@ -24,7 +24,10 @@
 	});
 	onMount(async () => {
 		console.log('getting LiveGrepOpts');
-		state = await GetLiveGrepOpts();
+		const opts = await GetLiveGrepOpts();
+		// Spread into a plain object so Svelte 5's $state can deep-proxy
+		// property mutations (class instances from Wails v3 bindings are not proxied).
+		state = { ...opts };
 		console.log('got LiveGrepOpts', state);
 	});
 </script>

@@ -1,5 +1,5 @@
 <script>
-	import { debounce } from '$lib/utils.service.js';
+	import { createDebounce } from '$lib/utils.service.js';
 
 	export let autofocus = false;
 	export let with_label = false;
@@ -9,6 +9,8 @@
 	export let value;
 	/** @type {import("svelte/store").Writable<string>}*/
 	export let store;
+
+	const debounce = createDebounce();
 
 	/**
 	 * @param {KeyboardEvent & { target: HTMLInputElement }} e

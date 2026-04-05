@@ -4,9 +4,9 @@ import {
   cursorToPrevMatch,
   state
 } from '$lib/picker/live-grep-results/results.service.svelte';
-import { CreateQuickfixList } from '$lib/wailsjs/go/main/App.js';
-import { OpenFile } from '$lib/wailsjs/go/picker/Picker.js'
-import { GetLiveGrepOpts, GetNextPage, GetPrevPage } from '$lib/wailsjs/go/picker/LiveGrepPicker.js'
+import { CreateQuickfixList } from '@bindings/nvim-gui/app';
+import { OpenFile } from '@bindings/nvim-gui/features/picker/picker';
+import { GetLiveGrepOpts, GetNextPage, GetPrevPage } from '@bindings/nvim-gui/features/picker/livegreppicker';
 import { Call } from '@wailsio/runtime';
 
 function sendKey(e: KeyboardEvent) {

@@ -1,12 +1,13 @@
-let timer: NodeJS.Timeout
-
-export function debounce<T>(value: T, ms = 400): Promise<T> {
-  return new Promise((resolve) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      resolve(value);
-    }, ms);
-  });
+export function createDebounce(ms = 400) {
+  let timer: NodeJS.Timeout;
+  return function <T>(value: T, overrideMs?: number): Promise<T> {
+    return new Promise((resolve) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        resolve(value);
+      }, overrideMs ?? ms);
+    });
+  };
 }
 
 export function isInBounds(element: HTMLElement, parent: HTMLElement): boolean {
