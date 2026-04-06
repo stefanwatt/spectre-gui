@@ -268,7 +268,6 @@ declare global {
 		}
 
 		interface FileExplorerConfirmPrompt {
-			winId: number;
 			message: string;
 			choices: string[];
 		}

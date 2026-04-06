@@ -95,6 +95,7 @@ func StartListening(ctx context.Context) {
 		// When triggered, it fires vim.rpcnotify to send the data to your Go channel.
 		luaScript := `
     local chan_id = ... -- The first argument passed to ExecLua
+    vim.g.nvim_gui_channel_id = chan_id
 
     vim.api.nvim_create_autocmd("User", {
         pattern = {
@@ -149,6 +150,25 @@ func StartListening(ctx context.Context) {
 				// NvimScreen.FileExplorer.CurrentWinMode = NvimScreen.Mode
 			case "MiniFilesExplorerClose":
 				fileExplorerRegistry.SetActive(false)
+			case "MiniFilesConfirmShow":
+				dataMap, ok := data.(map[string]interface{})
+				if !ok {
+					return
+				}
+				message, _ := dataMap["message"].(string)
+				choicesRaw, _ := dataMap["choices"].([]interface{})
+				choices := make([]string, 0, len(choicesRaw))
+				for _, c := range choicesRaw {
+					if s, ok := c.(string); ok {
+						choices = append(choices, s)
+					}
+				}
+				EmitEvent("file-explorer-confirm-prompt-show", FileExplorerConfirmPrompt{
+					Message: message,
+					Choices: choices,
+				})
+			case "MiniFilesConfirmHide":
+				EmitEvent("file-explorer-confirm-prompt-hide", struct{}{})
 			case "MiniFilesBufferCreate":
 				fileExplorerRegistry.SetActive(true)
 				dataMap, ok := data.(map[string]interface{})

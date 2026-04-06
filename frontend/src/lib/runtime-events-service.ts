@@ -102,7 +102,9 @@ export function startListening() {
 	});
 
 	Events.On('file-explorer-confirm-prompt-show', (ev) => {
+		console.log("file-explorer-confirm-prompt-show")
 		const prompt = ev.data as App.FileExplorerConfirmPrompt;
+		console.log(prompt)
 		setFileExplorerConfirmPrompt(prompt);
 	});
 

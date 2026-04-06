@@ -5,11 +5,7 @@
 	let prompt = $derived(getFileExplorerConfirmPrompt());
 
 	function choose(index: number) {
-		const winId = prompt?.winId;
-		if (!winId) {
-			return;
-		}
-		void Call.ByName('main.App.OnFileExplorerConfirmChoice', winId, index).catch((err) => {
+		void Call.ByName('main.App.OnFileExplorerConfirmChoice', index).catch((err) => {
 			console.error('failed to send file explorer confirm choice', err);
 		});
 	}

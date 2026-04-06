@@ -1,40 +1,26 @@
 package neovim
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/log"
 )
 
 type FileExplorerConfirmPrompt struct {
-	WinId   int      `json:"winId"`
 	Message string   `json:"message"`
 	Choices []string `json:"choices"`
 }
 
-func (s *Screen) HandleFileExplorerConfirmChoice(winId, choice int) {
-	if NvimClient == nil || winId < 1 {
+func (s *Screen) HandleFileExplorerConfirmChoice(choice int) {
+	if NvimClient == nil {
 		return
 	}
-	key := "<Esc>"
+	// vim.fn.confirm with '&Yes\n&No' responds to 'y' (Yes) or 'n' (No).
+	key := "n"
 	if choice == 1 {
-		key = "<CR>"
+		key = "y"
 	}
-	lua := `
-local win_id, feed = ...
-if not vim.api.nvim_win_is_valid(win_id) then
-  return false
-end
-vim.api.nvim_set_current_win(win_id)
-vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(feed, true, false, true), "n", false)
-return true
-`
-	var ok bool
-	if err := NvimClient.ExecLua(lua, &ok, winId, key); err != nil {
-		log.Debug(fmt.Sprintf("[minifiles] failed sending confirm response to win=%d: %v", winId, err))
+	if _, err := NvimClient.Input(key); err != nil {
+		log.Debug("[minifiles] failed sending confirm input", "key", key, "err", err)
 		return
 	}
-	if ok {
-		EmitEvent("file-explorer-confirm-prompt-hide", struct{}{})
-	}
+	EmitEvent("file-explorer-confirm-prompt-hide", struct{}{})
 }

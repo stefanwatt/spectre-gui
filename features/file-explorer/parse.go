@@ -147,64 +147,6 @@ func GridToString(cells [][]*model.Cell) string {
 	return builder.String()
 }
 
-// DetectConfirmPrompt checks if a floating window's grid content looks like
-// the mini.files "close without synchronization" confirm dialog.
-// Returns the prompt info if detected.
-type ConfirmPrompt struct {
-	WinID   int      `json:"winId"`
-	Message string   `json:"message"`
-	Choices []string `json:"choices"`
-}
-
-func DetectConfirmPrompt(winID int, cells [][]*model.Cell, filetype string) (*ConfirmPrompt, bool) {
-	if filetype != "" {
-		return nil, false
-	}
-	raw := strings.TrimSpace(GridToString(cells))
-	if raw == "" || !strings.Contains(raw, "without synchronization") || !strings.Contains(raw, "Confirm") {
-		return nil, false
-	}
-
-	lines := strings.Split(raw, "\n")
-	cleanLines := make([]string, 0, len(lines))
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			continue
-		}
-		if strings.Contains(trimmed, "│") || strings.Contains(trimmed, "─") || strings.Contains(trimmed, "┌") || strings.Contains(trimmed, "└") {
-			trimmed = strings.Map(func(r rune) rune {
-				switch r {
-				case '│', '─', '┌', '┐', '└', '┘':
-					return -1
-				default:
-					return r
-				}
-			}, trimmed)
-			trimmed = strings.TrimSpace(trimmed)
-		}
-		if trimmed == "" {
-			continue
-		}
-		trimmed = strings.ReplaceAll(trimmed, "&", "")
-		if trimmed == "Yes" || trimmed == "No" || strings.HasPrefix(trimmed, "Yes") || strings.HasPrefix(trimmed, "No") {
-			continue
-		}
-		cleanLines = append(cleanLines, trimmed)
-	}
-
-	message := strings.Join(cleanLines, "\n")
-	if strings.TrimSpace(message) == "" {
-		message = "Confirm close without synchronization?"
-	}
-
-	return &ConfirmPrompt{
-		WinID:   winID,
-		Message: message,
-		Choices: []string{"Yes", "No"},
-	}, true
-}
-
 // cellsToString concatenates cell chars into a string.
 func cellsToString(cells []*model.Cell) string {
 	var builder strings.Builder

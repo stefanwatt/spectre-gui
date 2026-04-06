@@ -9,7 +9,6 @@ import (
 type FileExplorerProjector struct {
 	fileExplorerRegistry *fileexplorer.Registry
 	wasActive            bool // tracks previous state for close detection
-	wasConfirmVisible    bool // tracks confirm prompt visibility
 }
 
 func NewFileExplorerProjector(fileExplorerRegistry *fileexplorer.Registry) *FileExplorerProjector {
@@ -26,10 +25,8 @@ func (p *FileExplorerProjector) Project(state *model.AppState) UIProjection {
 	// File explorer just closed — emit close event
 	if !snap.Active && p.wasActive {
 		p.wasActive = false
-		p.wasConfirmVisible = false
 		return UIProjection{Events: []EmittedEvent{
 			{Name: "file-explorer-close", Payload: struct{}{}},
-			{Name: "file-explorer-confirm-prompt-hide", Payload: struct{}{}},
 		}}
 	}
 
@@ -48,8 +45,7 @@ func (p *FileExplorerProjector) Project(state *model.AppState) UIProjection {
 		}
 	}
 	if !hasDirty {
-		// Still check non-FE floating windows for confirm prompt changes
-		return p.projectConfirmPrompt(s)
+		return UIProjection{Events: []EmittedEvent{}}
 	}
 
 	// Build the file-explorer-update payload
@@ -81,10 +77,6 @@ func (p *FileExplorerProjector) Project(state *model.AppState) UIProjection {
 	}
 
 	events = append(events, EmittedEvent{Name: "file-explorer-update", Payload: payload})
-
-	// Also check for confirm prompt
-	confirmEvents := p.projectConfirmPrompt(s)
-	events = append(events, confirmEvents.Events...)
 
 	return UIProjection{Events: events}
 }
@@ -234,43 +226,4 @@ func (p *FileExplorerProjector) renderContentPreview(grid *model.GridState) []re
 	}
 
 	return content
-}
-
-// projectConfirmPrompt scans non-file-explorer floating windows for the
-// mini.files "close without synchronization" confirm dialog.
-func (p *FileExplorerProjector) projectConfirmPrompt(s *model.ScreenState) UIProjection {
-	events := []EmittedEvent{}
-
-	found := false
-	for winID, win := range s.Windows {
-		if win == nil || win.Type != "floating" || win.IsFileExplorer || win.Hidden {
-			continue
-		}
-		grid := s.Grids[win.GridID]
-		if grid == nil || grid.Height == 0 {
-			continue
-		}
-		prompt, ok := fileexplorer.DetectConfirmPrompt(winID, grid.Cells, win.Filetype)
-		if ok {
-			found = true
-			if !p.wasConfirmVisible {
-				p.wasConfirmVisible = true
-				events = append(events, EmittedEvent{
-					Name:    "file-explorer-confirm-prompt-show",
-					Payload: prompt,
-				})
-			}
-			break
-		}
-	}
-
-	if !found && p.wasConfirmVisible {
-		p.wasConfirmVisible = false
-		events = append(events, EmittedEvent{
-			Name:    "file-explorer-confirm-prompt-hide",
-			Payload: struct{}{},
-		})
-	}
-
-	return UIProjection{Events: events}
 }
