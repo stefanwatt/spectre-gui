@@ -98,6 +98,19 @@
 			atEnd: !hasCharUnderCursor
 		};
 	}
+
+	function scrollSelectedIntoView(node: HTMLElement, isSelected: boolean) {
+		if (isSelected) {
+			node.scrollIntoView({ block: 'center' });
+		}
+		return {
+			update(isSelected: boolean) {
+				if (isSelected) {
+					node.scrollIntoView({ block: 'center' });
+				}
+			}
+		};
+	}
 </script>
 
 {#snippet pane(data: App.FileExplorerDirectory, role: 'parent' | 'current')}
@@ -119,12 +132,14 @@
 				{@const cursorActive = isCurrentPane && selected}
 				{@const split = cursorActive ? splitEntryTextAtCursor(entry, data.cursorCol ?? 0) : null}
 				<div
-					class="flex h-9 cursor-default gap-1 whitespace-nowrap rounded-lg border-2 border-transparent px-1"
-					class:border-blue={selected}
+					use:scrollSelectedIntoView={selected}
+					class="flex items-center h-9 cursor-default gap-1 whitespace-nowrap rounded-lg p-1"
+					class:bg-blue={selected}
+					class:text-mantle={selected}
 				>
 					<span
 						class:bg-very-dark={selected}
-						class={`grid h-full w-[2ch] shrink-0 place-items-center text-center ${entry.iconClass ?? ''}`}
+						class={`grid h-[2ch] w-[2ch] shrink-0 place-items-center rounded-full ${entry.iconClass ?? ''}`}
 						>{entry.icon}</span
 					>
 					<span class="flex h-full overflow-hidden text-ellipsis">

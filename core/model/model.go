@@ -39,6 +39,12 @@ type GridState struct {
 	CursorRow int
 	CursorCol int
 
+	// ViewportCursorLine is the buffer-level cursor line (0-indexed) from
+	// win_viewport events. Unlike CursorRow (which is only updated via
+	// grid_cursor_goto for the focused window), this is updated for ALL
+	// windows whenever neovim sends a win_viewport event.
+	ViewportCursorLine int
+
 	// Proper cell storage for the rendering pipeline.
 	// Cells[row][col] is a *Cell with resolved highlight classes.
 	Cells     [][]*Cell

@@ -242,6 +242,8 @@ func (r *Reducer) Apply(state *model.AppState, event events.Event) {
 			s.Grids[payload.GridID] = grid
 		}
 		grid.TopLine = payload.TopLine
+		grid.ViewportCursorLine = payload.CursorLine
+		markWindowDirtyByGrid(s, payload.GridID)
 
 	case events.EventWinViewportMargin:
 		payload, ok := event.Payload.(events.WindowViewportMargins)
