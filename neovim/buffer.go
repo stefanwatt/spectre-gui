@@ -69,7 +69,6 @@ func GetWindowBuffer(winId int) (*Buffer, error) {
 		NvimClient.WindowVar(*foundWindow, "treesitter_context", &treesitterContext)
 		filetype = "treesitter_context"
 	}
-
 	buffername, err := NvimClient.BufferName(buffer)
 	assert(err == nil, "error getting bufname")
 

@@ -386,6 +386,29 @@ func StartListening(ctx context.Context) {
 			}
 		})
 
+		NvimClient.RegisterHandler("LspHover", func(updates ...[]interface{}) {
+			for _, data := range updates {
+				if len(data) < 3 {
+					continue
+				}
+				content, _ := data[0].(string)
+				row := utils.ReflectToInt(data[1])
+				col := utils.ReflectToInt(data[2])
+				if content == "" {
+					continue
+				}
+				EmitEvent("hover-window-open", features.HoverDocumentation{
+					Content: content,
+					Row:     row,
+					Col:     col,
+				})
+			}
+		})
+
+		NvimClient.RegisterHandler("LspHoverClose", func(updates ...[]interface{}) {
+			EmitEvent("hover-window-close", struct{}{})
+		})
+
 		opts := map[string]interface{}{
 			"rgb":            true,
 			"ext_linegrid":   true,
@@ -459,6 +482,11 @@ func StartListening(ctx context.Context) {
 		// Set up completion bridge for blink.cmp
 		if err := NvimClient.ExecLua(features.CompletionLua, nil, NvimClient.ChannelID()); err != nil {
 			log.Debug(fmt.Sprintf("Error loading completion Lua: %v", err))
+		}
+
+		// Set up LSP hover (K keymap → buf_request_sync → rpcnotify)
+		if err := NvimClient.ExecLua(features.HoverLua, nil, NvimClient.ChannelID()); err != nil {
+			log.Debug(fmt.Sprintf("Error loading hover Lua: %v", err))
 		}
 
 		if err := NvimClient.Serve(); err != nil {

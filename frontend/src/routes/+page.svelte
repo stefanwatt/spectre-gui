@@ -5,6 +5,7 @@
 	import FloatingWindowContainer from '$lib/floating-windows/FloatingWindowContainer.svelte';
 	import NvimWindow from '$lib/windows/NvimWindow.svelte';
 	import CompletionMenu from '$lib/completion/CompletionMenu.svelte';
+	import HoverWindow from '$lib/hover/HoverWindow.svelte';
 	import FileExplorer from '$lib/file-explorer/FileExplorer.svelte';
 	import FileExplorerConfirmPrompt from '$lib/file-explorer/FileExplorerConfirmPrompt.svelte';
 	import { cmdline, windowContentRowMap, layout, cursor, nestedState, getFloatingWindows, completion } from '$lib/state.svelte';
@@ -86,9 +87,12 @@
 							{windowContentRowMap}
 							anchorWindow={win.id}
 						/>
-						{#if layout.activeWindowId === win.id || completionHostWindowId === win.id}
-							<CompletionMenu {completion} />
-						{/if}
+					{#if layout.activeWindowId === win.id || completionHostWindowId === win.id}
+						<CompletionMenu {completion} />
+					{/if}
+					{#if layout.activeWindowId === win.id}
+						<HoverWindow />
+					{/if}
 					</div>
 				{/each}
 			</div>

@@ -55,15 +55,14 @@ func (p *LayoutContentProjector) Project(state *model.AppState) UIProjection {
 	// --- Floating windows ---
 	p.projectFloatingWindows(&ui, s)
 
-
 	// --- Cursor ---
-	cursorRow := s.Viewport.CursorLine +1
+	cursorRow := s.Viewport.CursorLine + 1
 	cursorCol := 0
 	if activeWin, exists := s.Windows[s.ActiveWindow]; exists {
 		if grid, exists := s.Grids[activeWin.GridID]; exists {
 			cursorCol = grid.CursorCol
 			if cursorRow == 0 {
-				cursorRow = grid.TopLine + grid.CursorRow +1
+				cursorRow = grid.TopLine + grid.CursorRow + 1
 			}
 		}
 	}

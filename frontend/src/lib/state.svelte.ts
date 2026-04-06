@@ -56,6 +56,10 @@ export let completion = $state<App.CompletionState>({
 let _completionDocumentation = $state<App.CompletionDocumentation | null>(null);
 export function getCompletionDocumentation() { return _completionDocumentation; }
 export function setCompletionDocumentation(v: App.CompletionDocumentation | null) { _completionDocumentation = v; }
+
+let _hoverWindow = $state<App.HoverWindow | null>(null);
+export function getHoverWindow() { return _hoverWindow; }
+export function setHoverWindow(v: App.HoverWindow | null) { _hoverWindow = v; }
 export function getKeymapMode(): App.KeymapMode {
   return keymapMode
 }

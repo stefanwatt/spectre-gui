@@ -234,6 +234,12 @@ declare global {
 			detail: string; // item detail (type signature)
 		}
 
+		interface HoverWindow {
+			content: string; // markdown from LSP
+			row: number;     // 1-based buffer line
+			col: number;     // 0-based cursor col
+		}
+
 		interface FileExplorerEntry {
 			id: number;
 			isDir: boolean;

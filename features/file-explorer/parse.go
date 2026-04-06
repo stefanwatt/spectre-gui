@@ -2,8 +2,17 @@ package fileexplorer
 
 import (
 	"nvim-gui/core/model"
+	"regexp"
 	"strings"
 )
+
+// borderChars contains all box-drawing characters used by floating window borders.
+const borderChars = "│┌┐└┘─"
+
+// entryRegex matches a directory entry line: an optional non-ASCII icon followed
+// by whitespace and the filename. The icon is a single multi-byte character with
+// codepoint > 127 that is NOT a box-drawing border character.
+var entryRegex = regexp.MustCompile(`^(\S+)\s+(.+)$`)
 
 // DirectoryEntry is a parsed file/directory entry from a mini.files pane.
 type DirectoryEntry struct {
@@ -38,71 +47,37 @@ func ParseDirectoryEntries(cells [][]*model.Cell, height int, directoryLineMap m
 			continue
 		}
 
-		// Find first and last non-empty cells
-		firstNonEmpty := -1
-		lastNonEmpty := -1
-		for i, cell := range rowCells {
-			if cell != nil && strings.TrimSpace(cell.Char) != "" {
-				firstNonEmpty = i
-				break
-			}
-		}
-		if firstNonEmpty == -1 {
-			continue
-		}
-		for i := len(rowCells) - 1; i >= 0; i-- {
-			if rowCells[i] != nil && strings.TrimSpace(rowCells[i].Char) != "" {
-				lastNonEmpty = i
-				break
-			}
-		}
-		if lastNonEmpty == -1 {
-			continue
-		}
-
-		leftChar := rowCells[firstNonEmpty].Char
-		rightChar := rowCells[lastNonEmpty].Char
-
-		// Skip border rows (┌─── or └───)
-		if leftChar == "┌" || leftChar == "└" {
-			continue
-		}
-
-		// Strip │ border characters if present
-		contentStart := firstNonEmpty
-		contentEnd := lastNonEmpty
-		if leftChar == "│" && rightChar == "│" && contentEnd-contentStart >= 2 {
-			contentStart++
-			contentEnd--
-		}
-		if contentStart > contentEnd {
-			continue
-		}
-
-		contentCells := rowCells[contentStart : contentEnd+1]
-		line := strings.TrimSpace(cellsToString(contentCells))
+		// Convert the entire row to a string and strip border characters.
+		// This is robust against cursor-row highlight changes that can break
+		// cell-level left/right border detection.
+		rawLine := cellsToString(rowCells)
+		line := stripBorderChars(rawLine)
 		if line == "" {
 			continue
 		}
 
-		// Extract icon (first non-space cell that has a non-ASCII rune)
+		// Use regex to extract icon and filename from the content.
+		// Entry format: "<icon> <filename>" where icon is a non-ASCII character.
 		var icon string
 		var iconClass string
-		text := line
-		iconCellIndex := -1
-		for i, cell := range contentCells {
-			if cell != nil && strings.TrimSpace(cell.Char) != "" {
-				iconCellIndex = i
-				break
+		var text string
+
+		match := entryRegex.FindStringSubmatch(line)
+		if match != nil {
+			candidate := match[1]
+			candidateRunes := []rune(candidate)
+			// Icon must be a single non-ASCII character that is not a border char
+			if len(candidateRunes) == 1 && candidateRunes[0] > 127 && !strings.ContainsRune(borderChars, candidateRunes[0]) {
+				icon = candidate
+				text = strings.TrimSpace(match[2])
+				// Walk the cells to find the icon cell and extract its CSS class
+				iconClass = findCellClass(rowCells, icon)
+			} else {
+				// First token is not an icon — treat the whole line as text
+				text = line
 			}
-		}
-		if iconCellIndex >= 0 {
-			iconRunes := []rune(contentCells[iconCellIndex].Char)
-			if len(iconRunes) > 0 && iconRunes[0] > 127 {
-				icon = contentCells[iconCellIndex].Char
-				iconClass = contentCells[iconCellIndex].ClassesToString()
-				text = strings.TrimSpace(cellsToString(contentCells[iconCellIndex+1:]))
-			}
+		} else {
+			text = line
 		}
 
 		if icon == "" && text == "" {
@@ -124,6 +99,36 @@ func ParseDirectoryEntries(cells [][]*model.Cell, height int, directoryLineMap m
 		})
 	}
 	return entries
+}
+
+// stripBorderChars removes box-drawing border characters and surrounding
+// whitespace from a row string. This handles all border patterns (┌─┐, └─┘,
+// │...│) regardless of cursor highlighting or cell layout.
+func stripBorderChars(s string) string {
+	trimmed := strings.TrimSpace(s)
+	if trimmed == "" {
+		return ""
+	}
+	// Skip entire border rows (top/bottom borders)
+	firstRune := []rune(trimmed)[0]
+	if firstRune == '┌' || firstRune == '└' || firstRune == '─' {
+		return ""
+	}
+	// Strip leading and trailing │ (side borders)
+	trimmed = strings.TrimLeft(trimmed, "│")
+	trimmed = strings.TrimRight(trimmed, "│")
+	return strings.TrimSpace(trimmed)
+}
+
+// findCellClass scans a row of cells for the first cell whose Char matches
+// the target string and returns its CSS classes.
+func findCellClass(cells []*model.Cell, target string) string {
+	for _, cell := range cells {
+		if cell != nil && cell.Char == target {
+			return cell.ClassesToString()
+		}
+	}
+	return ""
 }
 
 // GridToString converts a grid's cells into a single string with newlines between rows.

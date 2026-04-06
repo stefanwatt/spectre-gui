@@ -91,7 +91,9 @@
 		const hasCharUnderCursor = cursorDisplayCol < entry.text.length;
 		return {
 			before: entry.text.slice(0, cursorDisplayCol),
-			cursor: hasCharUnderCursor ? entry.text.slice(cursorDisplayCol, cursorDisplayCol + 1) : '\u00a0',
+			cursor: hasCharUnderCursor
+				? entry.text.slice(cursorDisplayCol, cursorDisplayCol + 1)
+				: '\u00a0',
 			after: hasCharUnderCursor ? entry.text.slice(cursorDisplayCol + 1) : '',
 			atEnd: !hasCharUnderCursor
 		};
@@ -117,20 +119,26 @@
 				{@const cursorActive = isCurrentPane && selected}
 				{@const split = cursorActive ? splitEntryTextAtCursor(entry, data.cursorCol ?? 0) : null}
 				<div
-					class="border-2 border-transparent rounded-lg flex cursor-default gap-1 whitespace-nowrap px-1 py-2"
+					class="flex h-9 cursor-default gap-1 whitespace-nowrap rounded-lg border-2 border-transparent px-1"
 					class:border-blue={selected}
 				>
 					<span
 						class:bg-very-dark={selected}
-						class={`w-[2ch] shrink-0 text-center ${entry.iconClass ?? ''}`}>{entry.icon}</span
+						class={`grid h-full w-[2ch] shrink-0 place-items-center text-center ${entry.iconClass ?? ''}`}
+						>{entry.icon}</span
 					>
-					<span class="overflow-hidden text-ellipsis">
+					<span class="flex h-full overflow-hidden text-ellipsis">
 						{#if cursorActive && split}
-							<span>{split.before}</span><span class:cursor={true} class:end-cursor={split.atEnd}
-								>{split.cursor}</span
-							><span>{split.after}</span>
+							<span class="grid h-full place-items-center">{split.before}</span>
+							<span
+								class="grid h-full place-items-center"
+								class:cursor={true}
+								class:end-cursor={split.atEnd}>{split.cursor}</span
+							><span class="grid h-full place-items-center">{split.after}</span>
 						{:else}
-							{entry.text}
+							<span class="grid h-full place-items-center">
+								{entry.text}
+							</span>
 						{/if}
 					</span>
 				</div>
@@ -141,7 +149,7 @@
 
 {#if visible && state?.current}
 	<div
-		class="file-explorer victor-mono bg-very-dark text-text active-window"
+		class="file-explorer victor-mono bg-very-dark active-window text-text"
 		class:mode-i={currentWindowMode === 'insert'}
 		class:mode-n={currentWindowMode === 'normal'}
 		class:mode-v={currentWindowMode === 'visual'}

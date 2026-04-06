@@ -44,6 +44,10 @@ func init() {
 	application.RegisterEvent[int]("floating_window_closed")
 	application.RegisterEvent[int]("preview-window-closed")
 
+	// Hover events
+	application.RegisterEvent[interface{}]("hover-window-open")
+	application.RegisterEvent[interface{}]("hover-window-close")
+
 	// Cursor & Mode events
 	application.RegisterEvent[interface{}]("cursor-changed") // CursorMoveEvent struct
 	application.RegisterEvent[string]("mode-changed")
@@ -132,6 +136,7 @@ func main() {
 		Height:           768,
 		BackgroundColour: application.NewRGB(39, 42, 56),
 		URL:              "/",
+		DevToolsEnabled:  false,
 	})
 
 	// Run application

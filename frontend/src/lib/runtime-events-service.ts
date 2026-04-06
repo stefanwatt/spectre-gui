@@ -13,7 +13,8 @@ import {
 	setFileExplorerVisible,
 	setFileExplorerConfirmPrompt,
 	completion,
-	setCompletionDocumentation
+	setCompletionDocumentation,
+	setHoverWindow
 } from '$lib/state.svelte';
 import { state as liveGrepState } from '$lib/picker/live-grep-results/results.service.svelte';
 
@@ -147,8 +148,12 @@ export function startListening() {
 
 	Events.On('cursor-changed', (ev) => {
 		const e = ev.data;
+		const cursorMoved = cursor.row !== e.row || cursor.col !== e.col;
 		cursor.row = e.row;
 		cursor.col = e.col;
+		if (cursorMoved) {
+			setHoverWindow(null);
+		}
 		if (!layout) return;
 		layout.activeWindowId = e.activeWindowId;
 	});
@@ -211,5 +216,13 @@ export function startListening() {
 	Events.On('completion-documentation', (ev) => {
 		const doc = ev.data;
 		setCompletionDocumentation(doc && (doc.text || doc.detail) ? doc : null);
+	});
+
+	Events.On('hover-window-open', (ev) => {
+		setHoverWindow(ev.data);
+	});
+
+	Events.On('hover-window-close', () => {
+		setHoverWindow(null);
 	});
 }
