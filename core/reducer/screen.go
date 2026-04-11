@@ -231,11 +231,17 @@ func (r *Reducer) Apply(state *model.AppState, event events.Event) {
 		if !ok {
 			return
 		}
-		s.Viewport.TopLine = payload.TopLine
-		s.Viewport.BottomLine = payload.BottomLine
-		s.Viewport.CursorLine = payload.CursorLine
-		s.Viewport.LineCount = payload.LineCount
-		s.Viewport.ScrollDelta = payload.ScrollDelta
+		// Only update global viewport from the active window's grid.
+		// Floating windows (e.g. LSP progress) also emit win_viewport and
+		// would overwrite the cursor line, causing relative line numbers in
+		// the main window to flicker.
+		if winID, ok := s.GridToWindow[payload.GridID]; ok && winID == s.ActiveWindow {
+			s.Viewport.TopLine = payload.TopLine
+			s.Viewport.BottomLine = payload.BottomLine
+			s.Viewport.CursorLine = payload.CursorLine
+			s.Viewport.LineCount = payload.LineCount
+			s.Viewport.ScrollDelta = payload.ScrollDelta
+		}
 		grid := s.Grids[payload.GridID]
 		if grid == nil {
 			grid = &model.GridState{ID: payload.GridID}
