@@ -6,13 +6,20 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/charmbracelet/log"
 )
 
 var helpTags []*neovim.HelpTag
 
 func (p *Picker) FindHelp(query string) []*PickerResult {
 	if len(helpTags) == 0 {
-		helpTags = neovim.GetHelpTags()
+		var err error
+		helpTags, err = neovim.GetHelpTags()
+		if err != nil {
+			log.Error("error getting help tags", "error", err)
+			return nil
+		}
 	}
 
 	var helpTagLines []string
@@ -47,6 +54,7 @@ func (p *Picker) FindHelp(query string) []*PickerResult {
 			Icon:         icon,
 			IconColor:    iconColor,
 			Text:         helpTag.Tag,
+			Row:          neovim.ResolveTagLine(helpTag.Filepath, helpTag.Cmd),
 		})
 	}
 

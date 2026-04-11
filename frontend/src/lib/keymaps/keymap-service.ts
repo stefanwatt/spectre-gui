@@ -7,7 +7,8 @@ const pickerModes: App.KeymapMode[] = [
 	'find-references',
 	'find-files',
 	'live-grep',
-	'find-buffer-symbols'
+	'find-buffer-symbols',
+	'find-help'
 ];
 
 export function registerKeymap(keymap: App.Keymap) {
