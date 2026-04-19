@@ -118,6 +118,11 @@ func StartListening(ctx context.Context) {
 		if err != nil {
 			log.Errorf("Failed to setup autocmd bridge: %v", err)
 		}
+		NvimClient.RegisterHandler("FileExplorerClose", func(_ *nvim.Nvim, data interface{}) {
+			log.Info("FileExplorerClose")
+			NvimClient.Command("tabc")
+			GetFileExplorer().Close()
+		})
 
 		NvimClient.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data events.BufEnter) {
 			log.Infof("[BufEnter]", data)

@@ -77,7 +77,7 @@ func (a *App) OnFileExplorerConfirmChoice(choice int) {
 	if neovim.NvimScreen == nil {
 		return
 	}
-	neovim.NvimScreen.HandleFileExplorerConfirmChoice(choice)
+	// neovim.NvimScreen.HandleFileExplorerConfirmChoice(choice)
 }
 
 // RequestState triggers emission of current state to frontend

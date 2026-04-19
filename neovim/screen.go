@@ -2,11 +2,9 @@ package neovim
 
 import (
 	"context"
-	"fmt"
 	"nvim-gui/rendering"
 	"sync"
 
-	"github.com/charmbracelet/log"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -58,19 +56,19 @@ func (s *Screen) Resize(width, height int) {
 }
 
 func (s *Screen) SetFileExplorerPreviewSizePixels(widthPx, heightPx int) {
-	cols, rows := PreviewGridSizeFromPixels(widthPx, heightPx)
-	currentCols := cols / 2
-	if currentCols < 1 {
-		currentCols = 1
-	}
-	currentRows := rows
-	if currentRows < 1 {
-		currentRows = 1
-	}
-	if err := SetMiniFilesWindowOverrides(currentCols, cols, currentRows, rows); err != nil {
-		log.Debug(fmt.Sprintf("[minifiles] failed to set window overrides current=%dx%d preview=%dx%d err=%v",
-			currentCols, currentRows, cols, rows, err))
-	}
+	// cols, rows := PreviewGridSizeFromPixels(widthPx, heightPx)
+	// currentCols := cols / 2
+	// if currentCols < 1 {
+	// 	currentCols = 1
+	// }
+	// currentRows := rows
+	// if currentRows < 1 {
+	// 	currentRows = 1
+	// }
+	// if err := SetMiniFilesWindowOverrides(currentCols, cols, currentRows, rows); err != nil {
+	// 	log.Debug(fmt.Sprintf("[minifiles] failed to set window overrides current=%dx%d preview=%dx%d err=%v",
+	// 		currentCols, currentRows, cols, rows, err))
+	// }
 }
 
 func (s *Screen) GetActiveWindow() *Window {

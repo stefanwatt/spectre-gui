@@ -4,8 +4,6 @@ import (
 	"nvim-gui/core/model"
 	fileexplorer "nvim-gui/features/file-explorer"
 	"nvim-gui/rendering"
-
-	"github.com/charmbracelet/log"
 )
 
 type FileExplorerProjector struct {
@@ -26,7 +24,6 @@ func (p *FileExplorerProjector) Project(state *model.AppState) UIProjection {
 	// File explorer just closed — emit close event
 	if !p.fileExplorer.GetActive() && p.wasActive {
 		p.wasActive = false
-		log.Info("[FileExplorerProjector] closing file explorer")
 		return UIProjection{Events: []EmittedEvent{
 			{Name: "file-explorer-close", Payload: struct{}{}},
 		}}
@@ -34,13 +31,11 @@ func (p *FileExplorerProjector) Project(state *model.AppState) UIProjection {
 
 	// Not active, nothing to do
 	if !active {
-		log.Info("[FileExplorerProjector] not active -> return early")
 		return UIProjection{Events: []EmittedEvent{}}
 	}
 	p.wasActive = true
 
 	if !p.fileExplorer.Dirty {
-		log.Info("[FileExplorerProjector] nothing dirty -> return early")
 		return UIProjection{Events: []EmittedEvent{}}
 	}
 
@@ -54,7 +49,6 @@ func (p *FileExplorerProjector) Project(state *model.AppState) UIProjection {
 		"currentWinMode": s.Mode,
 	}
 
-	log.Info("[FileExplorerProjector] sending update")
 	events = append(events, EmittedEvent{Name: "file-explorer-update", Payload: payload})
 	p.fileExplorer.Dirty = false
 

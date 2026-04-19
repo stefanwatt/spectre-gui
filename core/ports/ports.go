@@ -21,7 +21,9 @@ type NvimClient interface {
 	Command(cmd string) error
 	OpenSplitRight(winId *int, bufNr int) error
 	CurrentWindow() (int, error)
+	SetCurrentWindow(winId int) error
 	SetBufferToWindow(winId int, bufNr int) error
 	GetCurrentFilepath() (string, error)
 	SetWindowOption(winId int, key string, value any) error
+	CreateBufferKeymap(bufNr int, mode, lhs string, rhs func(channelID int) string) error
 }

@@ -10,22 +10,18 @@ import (
 
 	"nvim-gui/core/ports"
 	"nvim-gui/utils"
+
+	"github.com/charmbracelet/log"
 )
 
 type FileExplorer struct {
-	active     bool
-	Dirty      bool
-	idCounter  uint64
-	nvim       ports.NvimClient
-	parent     Directory
-	current    Directory
-	preview    Directory
-	parentBuf  int
-	parentWin  int
-	currentBuf int
-	currentWin int
-	previewBuf int
-	previewWin int
+	active    bool
+	Dirty     bool
+	idCounter uint64
+	nvim      ports.NvimClient
+	parent    Directory
+	current   Directory
+	preview   Directory
 }
 
 type DirectoryEntry struct {
@@ -73,23 +69,7 @@ func (e *FileExplorer) GetActive() bool {
 }
 
 func (e *FileExplorer) GetCurrentBuf() int {
-	return e.currentBuf
-}
-
-func (e *FileExplorer) GetCurrentWin() int {
-	return e.currentWin
-}
-func (e *FileExplorer) GetParentBuf() int {
-	return e.parentBuf
-}
-func (e *FileExplorer) GetParentWin() int {
-	return e.parentWin
-}
-func (e *FileExplorer) GetPreviewBuf() int {
-	return e.previewBuf
-}
-func (e *FileExplorer) GetPreviewWin() int {
-	return e.previewWin
+	return e.current.BufNr
 }
 
 func (e *FileExplorer) Open(_filepath *string) error {
@@ -101,15 +81,15 @@ func (e *FileExplorer) Open(_filepath *string) error {
 	if err != nil {
 		return err
 	}
-	e.parentBuf, err = e.nvim.CreateBuffer(true, false)
+	e.parent.BufNr, err = e.nvim.CreateBuffer(true, false)
 	if err != nil {
 		return err
 	}
-	e.currentBuf, err = e.nvim.CreateBuffer(true, false)
+	e.current.BufNr, err = e.nvim.CreateBuffer(true, false)
 	if err != nil {
 		return err
 	}
-	e.previewBuf, err = e.nvim.CreateBuffer(true, false)
+	e.preview.BufNr, err = e.nvim.CreateBuffer(true, false)
 	if err != nil {
 		return err
 	}
@@ -134,17 +114,17 @@ func (e *FileExplorer) Open(_filepath *string) error {
 	if err != nil {
 		return err
 	}
-	err = e.nvim.SetBufferToWindow(parentWin, e.parentBuf)
+	err = e.nvim.SetBufferToWindow(parentWin, e.parent.BufNr)
 	if err != nil {
 		return err
 	}
 	var currentWin int
-	err = e.nvim.OpenSplitRight(&currentWin, e.currentBuf)
+	err = e.nvim.OpenSplitRight(&currentWin, e.current.BufNr)
 	if err != nil {
 		return err
 	}
 	var previewWin int
-	err = e.nvim.OpenSplitRight(&previewWin, e.previewBuf)
+	err = e.nvim.OpenSplitRight(&previewWin, e.preview.BufNr)
 	if err != nil {
 		return err
 	}
@@ -155,7 +135,7 @@ func (e *FileExplorer) Open(_filepath *string) error {
 
 	e.parent = Directory{
 		WinID:           parentWin,
-		BufNr:           e.parentBuf,
+		BufNr:           e.parent.BufNr,
 		Entries:         parentEntries,
 		SelectedEntryId: selectedParentEntry.ID,
 	}
@@ -165,19 +145,39 @@ func (e *FileExplorer) Open(_filepath *string) error {
 	})
 	e.current = Directory{
 		WinID:           currentWin,
-		BufNr:           e.currentBuf,
+		BufNr:           e.current.BufNr,
 		Entries:         currentEntries,
 		SelectedEntryId: selectedCurrentEntry.ID,
 	}
 	e.preview = Directory{
 		WinID:   previewWin,
-		BufNr:   e.previewBuf,
+		BufNr:   e.preview.BufNr,
 		Entries: []DirectoryEntry{},
 	}
 	e.active = true
 	e.Dirty = true
+	err = e.nvim.CreateBufferKeymap(
+		e.current.BufNr,
+		"n",
+		"q",
+		func(channelID int) string {
+			return fmt.Sprintf(":lua vim.rpcnotify(%d, 'FileExplorerClose', {})<CR>", channelID)
+		},
+	)
+	if err != nil {
+		log.Error(err.Error())
+	} else {
+		log.Info("successfully set up keymap for closing fileexplorer")
+	}
+
+	e.nvim.SetCurrentWindow(e.current.WinID)
 
 	return err
+}
+
+func (e *FileExplorer) Close() {
+	e.active = false
+	e.Dirty = false
 }
 
 func (e *FileExplorer) mapDirectoryEntries(path string) ([]DirectoryEntry, error) {
