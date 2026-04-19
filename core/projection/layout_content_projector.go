@@ -342,7 +342,7 @@ func mapLayoutWindows(s *model.ScreenState) []rendering.LayoutWindow {
 			StartCol:            win.StartCol,
 			Width:               win.Width,
 			Height:              win.Height,
-			LineNumbers:         !isFloating,
+			LineNumbers:         !isFloating && win.LineNumbers,
 			RelativeLineNumbers: !isFloating,
 			Mode:                s.Mode,
 			Filetype:            win.Filetype,

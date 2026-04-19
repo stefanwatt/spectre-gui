@@ -110,3 +110,8 @@ type WindowBufferInfo struct {
 	Filetype string
 	Filepath string
 }
+
+type WindowOptions struct {
+	WindowID    int
+	LineNumbers bool
+}

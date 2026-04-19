@@ -323,6 +323,16 @@ func (r *Reducer) Apply(state *model.AppState, event events.Event) {
 			win.Dirty = true
 		}
 
+	case events.EventWindowOptions:
+		payload, ok := event.Payload.(events.WindowOptions)
+		if !ok {
+			return
+		}
+		if win, exists := s.Windows[payload.WindowID]; exists {
+			win.LineNumbers = payload.LineNumbers
+			win.Dirty = true
+		}
+
 	}
 }
 

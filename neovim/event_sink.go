@@ -10,7 +10,9 @@ import (
 
 var (
 	canonicalEventSink   atomic.Value
+	//TODO: seems pretty insane to have two variables here
 	fileExplorerRegistry atomic.Value
+	fileExplorerVar      atomic.Value
 )
 
 func SetFileExplorerRegistry(reg *fileexplorer.Registry) {
@@ -23,6 +25,18 @@ func GetFileExplorerRegistry() *fileexplorer.Registry {
 		return nil
 	}
 	return v.(*fileexplorer.Registry)
+}
+
+func SetFileExplorer(fe *fileexplorer.FileExplorer) {
+	fileExplorerVar.Store(fe)
+}
+
+func GetFileExplorer() *fileexplorer.FileExplorer {
+	v := fileExplorerVar.Load()
+	if v == nil {
+		return nil
+	}
+	return v.(*fileexplorer.FileExplorer)
 }
 
 func SetEventSink(sink ports.EventSink) {

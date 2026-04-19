@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"nvim-gui/core/events"
 	"nvim-gui/features"
+	fileexplorer "nvim-gui/features/file-explorer"
 	"nvim-gui/utils"
 	"os"
 	"path/filepath"
@@ -492,6 +493,7 @@ func StartListening(ctx context.Context) {
 			}
 		}
 
+		SetFileExplorer(fileexplorer.New(&NvimAdapter{}, GetFileExplorerRegistry()))
 		SetupKeymaps()
 
 		// Set up markdown table detection via treesitter

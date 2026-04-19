@@ -56,6 +56,18 @@ func RegisterKeymap(event, lhs string, cb func(v *nvim.Nvim, data interface{})) 
 }
 
 func SetupKeymaps() {
+	RegisterKeymap("file-explorer", keymaps.GuiFileExplorer, func(_ *nvim.Nvim, _ interface{}) {
+		fe := GetFileExplorer()
+		if fe == nil {
+			log.Error("[file-explorer] not initialized")
+			return
+		}
+		if err := fe.Open(nil); err != nil {
+			log.Errorf("[file-explorer] open failed: %v", err)
+			return
+		}
+		EmitEvent("show-file-explorer", struct{}{})
+	})
 	RegisterKeymap("live-grep", keymaps.GuiLiveGrep, func(_ *nvim.Nvim, data interface{}) {
 		EmitEvent("show_live_grep", struct{}{})
 	})

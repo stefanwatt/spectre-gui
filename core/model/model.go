@@ -61,6 +61,7 @@ type WindowState struct {
 	Height         int
 	Hidden         bool
 	Focusable      bool
+	LineNumbers    bool
 	Anchor         string
 	AnchorGrid     int
 	ZIndex         int

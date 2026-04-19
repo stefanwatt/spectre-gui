@@ -65,6 +65,7 @@ func handleCanonicalSideEffects(ev events.Event) {
 			return
 		}
 		go fetchAndEnqueueBufferInfo(payload.WindowID)
+		go fetchAndEnqueueWindowOptions(payload.WindowID)
 
 	case events.EventWinFloatPos:
 		payload, ok := ev.Payload.(events.FloatingWindowPosition)
@@ -72,7 +73,29 @@ func handleCanonicalSideEffects(ev events.Event) {
 			return
 		}
 		go fetchAndEnqueueBufferInfo(payload.WindowID)
+		go fetchAndEnqueueWindowOptions(payload.WindowID)
 	}
+}
+
+// fetchAndEnqueueWindowOptions fetches number/relativenumber for a window and enqueues
+// an EventWindowOptions event to update WindowState.LineNumbers.
+func fetchAndEnqueueWindowOptions(windowID int) {
+	win, err := getWindow(windowID)
+	if err != nil {
+		log.Debug("fetchAndEnqueueWindowOptions: failed to get window", "windowID", windowID, "err", err)
+		return
+	}
+	var number, relNumber bool
+	_ = NvimClient.WindowOption(*win, "number", &number)
+	_ = NvimClient.WindowOption(*win, "relativenumber", &relNumber)
+	EnqueueCanonicalEvent(events.Event{
+		Name: events.EventWindowOptions,
+		Payload: events.WindowOptions{
+			WindowID:    windowID,
+			LineNumbers: number || relNumber,
+		},
+		Source: "neovim-api",
+	})
 }
 
 // fetchAndEnqueueBufferInfo calls GetWindowBuffer asynchronously and enqueues

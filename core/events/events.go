@@ -23,6 +23,7 @@ const (
 	EventDefaultColorsSet  Name = "default_colors_set"
 	EventBufEnter          Name = "BufEnter"
 	EventWindowBufferInfo  Name = "window_buffer_info"
+	EventWindowOptions     Name = "window_options"
 )
 
 type Event struct {
