@@ -10,12 +10,12 @@ import (
 )
 
 type Reducer struct {
-	fileExplorerRegistry *fileexplorer.Registry
+	fileExplorer *fileexplorer.FileExplorer
 }
 
-func NewReducer(fileExplorerRegistry *fileexplorer.Registry) *Reducer {
+func NewReducer(fileExplorer *fileexplorer.FileExplorer) *Reducer {
 	return &Reducer{
-		fileExplorerRegistry,
+		fileExplorer,
 	}
 }
 
@@ -173,19 +173,6 @@ func (r *Reducer) Apply(state *model.AppState, event events.Event) {
 		if grid := s.Grids[payload.GridID]; grid != nil {
 			win.Width = grid.Width
 			win.Height = grid.Height
-		}
-		snap := r.fileExplorerRegistry.Snapshot()
-		if snap.Active {
-			if snap.Parent.WinID == payload.WindowID {
-				win.IsFileExplorer = true
-				win.PaneRole = "parent"
-			} else if snap.Current.WinID == payload.WindowID {
-				win.IsFileExplorer = true
-				win.PaneRole = "current"
-			} else if snap.Preview.WinID == payload.WindowID {
-				win.IsFileExplorer = true
-				win.PaneRole = "preview"
-			}
 		}
 
 	case events.EventWinHide:

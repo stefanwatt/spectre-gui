@@ -3,7 +3,10 @@ package fileexplorer
 import (
 	"nvim-gui/core/model"
 	"regexp"
+	"strconv"
 	"strings"
+
+	"github.com/charmbracelet/log"
 )
 
 // borderChars contains all box-drawing characters used by floating window borders.
@@ -15,22 +18,6 @@ const borderChars = "│┌┐└┘─"
 var entryRegex = regexp.MustCompile(`^(\S+)\s+(.+)$`)
 
 // DirectoryEntry is a parsed file/directory entry from a mini.files pane.
-type DirectoryEntry struct {
-	ID        int    `json:"id"`
-	Icon      string `json:"icon"`
-	IconClass string `json:"iconClass"`
-	Text      string `json:"text"`
-	IsDir     bool   `json:"isDir"`
-}
-
-// Directory holds parsed entries for one mini.files pane (parent/current/preview).
-type Directory struct {
-	WinID           int              `json:"winId"`
-	BufNr           int              `json:"bufNr"`
-	Entries         []DirectoryEntry `json:"entries"`
-	SelectedEntryId int              `json:"selectedEntryId"`
-	CursorCol       int              `json:"cursorCol"`
-}
 
 // ParseDirectoryEntries parses a grid's cell data into directory entries.
 // cells is the grid's [][]*model.Cell, height is the number of rows to process.
@@ -89,9 +76,14 @@ func ParseDirectoryEntries(cells [][]*model.Cell, height int, directoryLineMap m
 		if !ok {
 			isDir = strings.HasSuffix(text, "/")
 		}
+		ID, err := strconv.ParseUint(match[0], 10, 64)
+		if err != nil {
+			log.Errorf("unable to parse id from line:\n%s\n", line)
+			ID = 0
+		}
 
 		entries = append(entries, DirectoryEntry{
-			ID:        row,
+			ID:        ID,
 			Icon:      icon,
 			IconClass: iconClass,
 			Text:      text,

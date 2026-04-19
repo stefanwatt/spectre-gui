@@ -7,6 +7,7 @@ import (
 	"nvim-gui/core/events"
 
 	"github.com/charmbracelet/log"
+	"github.com/neovim/go-client/nvim"
 )
 
 func HandleRedraw(updates [][]interface{}) {
@@ -65,7 +66,7 @@ func handleCanonicalSideEffects(ev events.Event) {
 			return
 		}
 		go fetchAndEnqueueBufferInfo(payload.WindowID)
-		go fetchAndEnqueueWindowOptions(payload.WindowID)
+		// go fetchAndEnqueueWindowOptions(payload.WindowID)
 
 	case events.EventWinFloatPos:
 		payload, ok := ev.Payload.(events.FloatingWindowPosition)
@@ -73,26 +74,23 @@ func handleCanonicalSideEffects(ev events.Event) {
 			return
 		}
 		go fetchAndEnqueueBufferInfo(payload.WindowID)
-		go fetchAndEnqueueWindowOptions(payload.WindowID)
+		// go fetchAndEnqueueWindowOptions(payload.WindowID)
 	}
 }
 
 // fetchAndEnqueueWindowOptions fetches number/relativenumber for a window and enqueues
 // an EventWindowOptions event to update WindowState.LineNumbers.
-func fetchAndEnqueueWindowOptions(windowID int) {
-	win, err := getWindow(windowID)
-	if err != nil {
-		log.Debug("fetchAndEnqueueWindowOptions: failed to get window", "windowID", windowID, "err", err)
-		return
-	}
-	var number, relNumber bool
-	_ = NvimClient.WindowOption(*win, "number", &number)
-	_ = NvimClient.WindowOption(*win, "relativenumber", &relNumber)
+func fetchAndEnqueueWindowOptions(winId int) {
+	win := nvim.Window(winId)
+	var number, relNumber interface{}
+	_ = NvimClient.WindowOption(win, "number", &number)
+	_ = NvimClient.WindowOption(win, "relativenumber", &relNumber)
+	log.Infof("[fetchAndEnqueueWindowOptions] winId=%d number=%v relativenumber=%v", winId, number, relNumber)
 	EnqueueCanonicalEvent(events.Event{
 		Name: events.EventWindowOptions,
 		Payload: events.WindowOptions{
-			WindowID:    windowID,
-			LineNumbers: number || relNumber,
+			WindowID:    winId,
+			LineNumbers: true,
 		},
 		Source: "neovim-api",
 	})

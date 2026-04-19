@@ -66,7 +66,7 @@ func SetupKeymaps() {
 			log.Errorf("[file-explorer] open failed: %v", err)
 			return
 		}
-		EmitEvent("show-file-explorer", struct{}{})
+		// EmitEvent("file-explorer-update", struct{}{})
 	})
 	RegisterKeymap("live-grep", keymaps.GuiLiveGrep, func(_ *nvim.Nvim, data interface{}) {
 		EmitEvent("show_live_grep", struct{}{})

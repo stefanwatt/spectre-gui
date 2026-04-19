@@ -24,14 +24,14 @@ type Runtime struct {
 	screenReducer *reducer.Reducer
 }
 
-func New(emitter ports.UIEmitter, fileExplorerRegistry *fileexplorer.Registry) *Runtime {
+func New(emitter ports.UIEmitter, fileExplorer *fileexplorer.FileExplorer) *Runtime {
 	return &Runtime{
 		state:         model.NewAppState(),
 		emitter:       emitter,
 		projector:     projection.NoopProjector{},
 		events:        make(chan events.Event, 2048),
 		done:          make(chan struct{}),
-		screenReducer: reducer.NewReducer(fileExplorerRegistry),
+		screenReducer: reducer.NewReducer(fileExplorer),
 	}
 }
 

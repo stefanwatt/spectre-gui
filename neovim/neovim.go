@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"nvim-gui/core/events"
 	"nvim-gui/features"
-	fileexplorer "nvim-gui/features/file-explorer"
 	"nvim-gui/utils"
 	"os"
 	"path/filepath"
@@ -98,20 +97,6 @@ func StartListening(ctx context.Context) {
     local chan_id = ... -- The first argument passed to ExecLua
     vim.g.nvim_gui_channel_id = chan_id
 
-    vim.api.nvim_create_autocmd("User", {
-        pattern = {
-            "MiniFilesExplorerOpen",
-            "MiniFilesExplorerClose",
-            "MiniFilesWindowOpen",
-            "MiniFilesWindowUpdate",
-            "MiniFilesBufferCreate",
-            "MiniFilesBufferUpdate"
-        },
-        callback = function(args)
-            vim.rpcnotify(chan_id, "MiniFilesBridge", args.match, args.data or {})
-        end
-    })
-
 		vim.api.nvim_create_autocmd("BufEnter" , {
 			group = vim.api.nvim_create_augroup("nvim-gui-buf-enter" , { clear = true }),
 			callback = function(args)
@@ -133,119 +118,6 @@ func StartListening(ctx context.Context) {
 		if err != nil {
 			log.Errorf("Failed to setup autocmd bridge: %v", err)
 		}
-		err = EnsureMiniFilesPatched()
-		if err != nil {
-			log.Debug(fmt.Sprintf("[minifiles] failed to load patched mini.files: %v", err))
-		}
-
-		NvimClient.RegisterHandler("MiniFilesBridge", func(eventName string, data interface{}) {
-			fileExplorerRegistry := GetFileExplorerRegistry()
-			if fileExplorerRegistry == nil {
-				log.Debug("[minifiles] MiniFilesBridge: file explorer registry is nil, ignoring event")
-				return
-			}
-			switch eventName {
-			case "MiniFilesExplorerOpen":
-				fileExplorerRegistry.SetActive(true)
-				// TODO: verify this is not needed anymore
-				// NvimScreen.FileExplorer.CurrentWinMode = NvimScreen.Mode
-			case "MiniFilesExplorerClose":
-				fileExplorerRegistry.SetActive(false)
-			case "MiniFilesConfirmShow":
-				dataMap, ok := data.(map[string]interface{})
-				if !ok {
-					return
-				}
-				message, _ := dataMap["message"].(string)
-				choicesRaw, _ := dataMap["choices"].([]interface{})
-				choices := make([]string, 0, len(choicesRaw))
-				for _, c := range choicesRaw {
-					if s, ok := c.(string); ok {
-						choices = append(choices, s)
-					}
-				}
-				EmitEvent("file-explorer-confirm-prompt-show", FileExplorerConfirmPrompt{
-					Message: message,
-					Choices: choices,
-				})
-			case "MiniFilesConfirmHide":
-				EmitEvent("file-explorer-confirm-prompt-hide", struct{}{})
-			case "MiniFilesBufferCreate":
-				fileExplorerRegistry.SetActive(true)
-				dataMap, ok := data.(map[string]interface{})
-				if !ok {
-					return
-				}
-				bufNr := utils.ReflectToInt(dataMap["buf_id"])
-				column, _ := dataMap["column"].(string)
-				switch column {
-				case "parent":
-					fileExplorerRegistry.UpdateParentPaneBufnr(bufNr)
-				case "current":
-					fileExplorerRegistry.UpdateCurrentPaneBufnr(bufNr)
-				case "preview":
-					fileExplorerRegistry.UpdatePreviewPaneBufnr(bufNr)
-				}
-			case "MiniFilesWindowOpen":
-				fileExplorerRegistry.SetActive(true)
-				dataMap, ok := data.(map[string]interface{})
-				if !ok {
-					return
-				}
-				winId := utils.ReflectToInt(dataMap["win_id"])
-				bufNr := utils.ReflectToInt(dataMap["buf_id"])
-				column, _ := dataMap["column"].(string)
-				switch column {
-				case "parent":
-					fileExplorerRegistry.AssignParentPane(winId, bufNr)
-				case "current":
-					fileExplorerRegistry.AssignCurrentPane(winId, bufNr)
-				case "preview":
-					fileExplorerRegistry.AssignPreviewPane(winId, bufNr)
-					// Preview size is handled by SetFileExplorerPreviewSizePixels from the frontend.
-				}
-			case "MiniFilesWindowUpdate":
-				dataMap, ok := data.(map[string]interface{})
-				if !ok {
-					log.Debug("[minifiles] MiniFilesWindowUpdate: invalid data format")
-					return
-				}
-				column, _ := dataMap["column"].(string)
-				if column == "" {
-					log.Debug("[minifiles] MiniFilesWindowUpdate: missing column")
-					return
-				}
-				winId := utils.ReflectToInt(dataMap["win_id"])
-				bufNr := utils.ReflectToInt(dataMap["buf_id"])
-				switch column {
-				case "parent":
-					fileExplorerRegistry.AssignParentPane(winId, bufNr)
-				case "current":
-					fileExplorerRegistry.AssignCurrentPane(winId, bufNr)
-				case "preview":
-					fileExplorerRegistry.AssignPreviewPane(winId, bufNr)
-					// TODO: what about preview HasPreviewTargetSize and previewTargetCols
-					// Preview size is handled by SetFileExplorerPreviewSizePixels from the frontend.
-				default:
-					log.Debug(fmt.Sprintf("[minifiles] MiniFilesWindowUpdate: unsupported column=%s", column))
-				}
-			case "MiniFilesBufferUpdate":
-				dataMap, ok := data.(map[string]interface{})
-				if !ok {
-					log.Debug("MiniFilesBufferUpdate: invalid data format")
-					return
-				}
-				bufNr := utils.ReflectToInt(dataMap["buf_id"])
-				if bufNr < 1 {
-					return
-				}
-				lineMap, err := GetMiniFilesDirectoryLineMap(bufNr)
-				if err != nil {
-					return
-				}
-				fileExplorerRegistry.SetDirectoryLineMap(bufNr, lineMap)
-			}
-		})
 
 		NvimClient.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data events.BufEnter) {
 			log.Infof("[BufEnter]", data)
@@ -493,7 +365,6 @@ func StartListening(ctx context.Context) {
 			}
 		}
 
-		SetFileExplorer(fileexplorer.New(&NvimAdapter{}, GetFileExplorerRegistry()))
 		SetupKeymaps()
 
 		// Set up markdown table detection via treesitter

@@ -5,16 +5,21 @@ import (
 	"os"
 	path "path/filepath"
 	"sort"
+	"strings"
+	"sync/atomic"
 
 	"nvim-gui/core/ports"
 	"nvim-gui/utils"
-
-	"github.com/charmbracelet/log"
 )
 
 type FileExplorer struct {
-	registry   *Registry
+	active     bool
+	Dirty      bool
+	idCounter  uint64
 	nvim       ports.NvimClient
+	parent     Directory
+	current    Directory
+	preview    Directory
 	parentBuf  int
 	parentWin  int
 	currentBuf int
@@ -23,11 +28,68 @@ type FileExplorer struct {
 	previewWin int
 }
 
-func New(nvim ports.NvimClient, registry *Registry) *FileExplorer {
+type DirectoryEntry struct {
+	ID        uint64 `json:"id"`
+	Icon      string `json:"icon"`
+	IconClass string `json:"iconClass"`
+	Text      string `json:"text"`
+	Path      string `json:"path"`
+	IsDir     bool   `json:"isDir"`
+}
+
+// Directory holds parsed entries for one mini.files pane (parent/current/preview).
+type Directory struct {
+	WinID           int              `json:"winId"`
+	BufNr           int              `json:"bufNr"`
+	Entries         []DirectoryEntry `json:"entries"`
+	SelectedEntryId uint64           `json:"selectedEntryId"`
+	CursorCol       int              `json:"cursorCol"`
+}
+
+func NewFileExplorer(nvim ports.NvimClient) *FileExplorer {
 	return &FileExplorer{
-		registry: registry,
-		nvim:     nvim,
+		nvim: nvim,
 	}
+}
+
+func (e *FileExplorer) nextID() uint64 {
+	return atomic.AddUint64(&e.idCounter, 1)
+}
+
+func (e *FileExplorer) GetParent() Directory {
+	return e.parent
+}
+
+func (e *FileExplorer) GetCurrent() Directory {
+	return e.current
+}
+
+func (e *FileExplorer) GetPreview() Directory {
+	return e.preview
+}
+
+func (e *FileExplorer) GetActive() bool {
+	return e.active
+}
+
+func (e *FileExplorer) GetCurrentBuf() int {
+	return e.currentBuf
+}
+
+func (e *FileExplorer) GetCurrentWin() int {
+	return e.currentWin
+}
+func (e *FileExplorer) GetParentBuf() int {
+	return e.parentBuf
+}
+func (e *FileExplorer) GetParentWin() int {
+	return e.parentWin
+}
+func (e *FileExplorer) GetPreviewBuf() int {
+	return e.previewBuf
+}
+func (e *FileExplorer) GetPreviewWin() int {
+	return e.previewWin
 }
 
 func (e *FileExplorer) Open(_filepath *string) error {
@@ -56,20 +118,11 @@ func (e *FileExplorer) Open(_filepath *string) error {
 	if parentDir == "." {
 		return fmt.Errorf("[FileExplorer] parent dir doesnt exist")
 	}
-	parentLines, err := e.mapDirectoryLines(parentDir)
+	parentEntries, err := e.mapDirectoryEntries(parentDir)
 	if err != nil {
 		return err
 	}
-	err = e.nvim.SetBufferLines(e.parentBuf, 0, 1, true, parentLines)
-	if err != nil {
-		return err
-	}
-	currentLines, err := e.mapDirectoryLines(currentDir)
-	err = e.nvim.SetBufferLines(e.currentBuf, 0, 1, true, currentLines)
-	if err != nil {
-		return err
-	}
-	err = e.nvim.SetBufferLines(e.previewBuf, 0, 1, true, [][]byte{[]byte("preview")})
+	currentEntries, err := e.mapDirectoryEntries(currentDir)
 	if err != nil {
 		return err
 	}
@@ -77,49 +130,57 @@ func (e *FileExplorer) Open(_filepath *string) error {
 	if err != nil {
 		return err
 	}
-	e.parentWin, err = e.nvim.CurrentWindow()
+	parentWin, err := e.nvim.CurrentWindow()
 	if err != nil {
 		return err
 	}
-	err = e.nvim.SetBufferToWindow(e.parentWin, e.parentBuf)
+	err = e.nvim.SetBufferToWindow(parentWin, e.parentBuf)
 	if err != nil {
 		return err
 	}
-	err = e.nvim.OpenSplitRight(&e.currentWin, e.currentBuf)
+	var currentWin int
+	err = e.nvim.OpenSplitRight(&currentWin, e.currentBuf)
 	if err != nil {
 		return err
 	}
-	err = e.nvim.OpenSplitRight(&e.previewWin, e.previewBuf)
+	var previewWin int
+	err = e.nvim.OpenSplitRight(&previewWin, e.previewBuf)
 	if err != nil {
 		return err
 	}
-	log.Infof("[FileExplorer] parentWin=%d currentWin=%d previewWin=%d", e.parentWin, e.currentWin, e.previewWin)
-	err = e.nvim.SetWindowOption(e.parentWin, "relativenumber", false)
-	if err != nil {
-		return err
+
+	selectedParentEntry, _ := utils.Find(parentEntries, func(entry DirectoryEntry) bool {
+		return strings.Contains(filepath, entry.Path)
+	})
+
+	e.parent = Directory{
+		WinID:           parentWin,
+		BufNr:           e.parentBuf,
+		Entries:         parentEntries,
+		SelectedEntryId: selectedParentEntry.ID,
 	}
-	err = e.nvim.SetWindowOption(e.currentWin, "relativenumber", false)
-	if err != nil {
-		return err
+
+	selectedCurrentEntry, _ := utils.Find(currentEntries, func(entry DirectoryEntry) bool {
+		return filepath == entry.Path
+	})
+	e.current = Directory{
+		WinID:           currentWin,
+		BufNr:           e.currentBuf,
+		Entries:         currentEntries,
+		SelectedEntryId: selectedCurrentEntry.ID,
 	}
-	err = e.nvim.SetWindowOption(e.parentWin, "number", false)
-	if err != nil {
-		return err
+	e.preview = Directory{
+		WinID:   previewWin,
+		BufNr:   e.previewBuf,
+		Entries: []DirectoryEntry{},
 	}
-	err = e.nvim.SetWindowOption(e.currentWin, "number", false)
-	if err != nil {
-		return err
-	}
-	err = e.nvim.SetWindowOption(e.previewWin, "relativenumber", false)
+	e.active = true
+	e.Dirty = true
+
 	return err
-	// registry := GetFileExplorerRegistry()
-	// registry.AssignCurrentPane(int(parentWin), int(parentBuf))
-	// registry.AssignCurrentPane(int(currentWin), int(currentBuf))
-	// registry.AssignCurrentPane(int(previewWin), int(previewBuf))
-	// registry.SetActive(true)
 }
 
-func (e *FileExplorer) mapDirectoryLines(path string) ([][]byte, error) {
+func (e *FileExplorer) mapDirectoryEntries(path string) ([]DirectoryEntry, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -144,18 +205,37 @@ func (e *FileExplorer) mapDirectoryLines(path string) ([][]byte, error) {
 
 	sort.Strings(dirStrings)
 	sort.Strings(fileStrings)
-	dirs := utils.MapArray(dirStrings, func(dir string) []byte { return []byte(dir) })
-	files := utils.MapArray(fileStrings, func(file string) []byte { return []byte(file) })
-
+	dirs := utils.MapArray(dirStrings, func(dir string) DirectoryEntry {
+		return DirectoryEntry{
+			ID:        e.nextID(),
+			Icon:      "",
+			IconClass: "",
+			Text:      dir,
+			IsDir:     true,
+			Path:      path + string(os.PathSeparator) + dir,
+		}
+	})
+	files := utils.MapArray(fileStrings, func(file string) DirectoryEntry {
+		return DirectoryEntry{
+			ID:        e.nextID(),
+			Icon:      "",
+			IconClass: "",
+			Text:      file,
+			Path:      path + string(os.PathSeparator) + file,
+			IsDir:     false,
+		}
+	})
 	return append(dirs, files...), nil
 }
 
 func (e *FileExplorer) GoIn() error {
 	var err error
+	e.Dirty = true
 	return err
 }
 
 func (e *FileExplorer) GoOut() error {
 	var err error
+	e.Dirty = true
 	return err
 }

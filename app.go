@@ -40,15 +40,15 @@ func NewApp() *App {
 func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	a.ctx = ctx
 	utils.SetupLog()
-	fileExplorerRegistry := fileexplorer.NewRegistry()
-	neovim.SetFileExplorerRegistry(fileExplorerRegistry)
-	a.runtime = appruntime.New(nil, fileExplorerRegistry)
+	fileExplorer := fileexplorer.NewFileExplorer(&neovim.NvimAdapter{})
+	neovim.SetFileExplorer(fileExplorer)
+	a.runtime = appruntime.New(nil, fileExplorer)
 	a.runtime.SetEmitter(wailsUIEmitter{app: a.App})
 	a.runtime.SetProjector(projection.CompositeProjector{
 		Projectors: []projection.Projector{
 			projection.NewLayoutContentProjector(),
 			projection.EventsProjector{},
-			projection.NewFileExplorerProjector(fileExplorerRegistry),
+			projection.NewFileExplorerProjector(fileExplorer),
 		},
 	})
 	a.runtime.Start(ctx)
