@@ -10,8 +10,6 @@ import (
 
 	"nvim-gui/core/ports"
 	"nvim-gui/utils"
-
-	"github.com/charmbracelet/log"
 )
 
 type FileExplorer struct {
@@ -40,6 +38,7 @@ type Directory struct {
 	Entries         []DirectoryEntry `json:"entries"`
 	SelectedEntryId uint64           `json:"selectedEntryId"`
 	CursorCol       int              `json:"cursorCol"`
+	Path            string
 }
 
 func NewFileExplorer(nvim ports.NvimClient) *FileExplorer {
@@ -93,16 +92,16 @@ func (e *FileExplorer) Open(_filepath *string) error {
 	if err != nil {
 		return err
 	}
-	currentDir := path.Dir(filepath)
-	parentDir := path.Dir(currentDir)
-	if parentDir == "." {
+	e.current.Path = path.Dir(filepath)
+	e.parent.Path = path.Dir(e.current.Path)
+	if e.parent.Path == "." {
 		return fmt.Errorf("[FileExplorer] parent dir doesnt exist")
 	}
-	parentEntries, err := e.mapDirectoryEntries(parentDir)
+	e.parent.Entries, err = e.mapDirectoryEntries(e.parent.Path)
 	if err != nil {
 		return err
 	}
-	currentEntries, err := e.mapDirectoryEntries(currentDir)
+	e.current.Entries, err = e.mapDirectoryEntries(e.current.Path)
 	if err != nil {
 		return err
 	}
@@ -110,53 +109,59 @@ func (e *FileExplorer) Open(_filepath *string) error {
 	if err != nil {
 		return err
 	}
-	parentWin, err := e.nvim.CurrentWindow()
+	e.parent.WinID, err = e.nvim.CurrentWindow()
 	if err != nil {
 		return err
 	}
-	err = e.nvim.SetBufferToWindow(parentWin, e.parent.BufNr)
+	err = e.nvim.SetBufferToWindow(e.parent.WinID, e.parent.BufNr)
 	if err != nil {
 		return err
 	}
-	var currentWin int
-	err = e.nvim.OpenSplitRight(&currentWin, e.current.BufNr)
+	err = e.nvim.OpenSplitRight(&e.current.WinID, e.current.BufNr)
 	if err != nil {
 		return err
 	}
-	var previewWin int
-	err = e.nvim.OpenSplitRight(&previewWin, e.preview.BufNr)
+	err = e.nvim.OpenSplitRight(&e.preview.WinID, e.preview.BufNr)
 	if err != nil {
 		return err
 	}
 
-	selectedParentEntry, _ := utils.Find(parentEntries, func(entry DirectoryEntry) bool {
-		return strings.Contains(filepath, entry.Path)
-	})
-
-	e.parent = Directory{
-		WinID:           parentWin,
-		BufNr:           e.parent.BufNr,
-		Entries:         parentEntries,
-		SelectedEntryId: selectedParentEntry.ID,
+	err = e.updateSelectedEntries(filepath)
+	if err != nil {
+		return err
 	}
-
-	selectedCurrentEntry, _ := utils.Find(currentEntries, func(entry DirectoryEntry) bool {
-		return filepath == entry.Path
-	})
-	e.current = Directory{
-		WinID:           currentWin,
-		BufNr:           e.current.BufNr,
-		Entries:         currentEntries,
-		SelectedEntryId: selectedCurrentEntry.ID,
-	}
-	e.preview = Directory{
-		WinID:   previewWin,
-		BufNr:   e.preview.BufNr,
-		Entries: []DirectoryEntry{},
-	}
+	e.preview.Entries = []DirectoryEntry{}
 	e.active = true
 	e.Dirty = true
-	err = e.nvim.CreateBufferKeymap(
+	err = e.setupKeymaps()
+	if err != nil {
+		return err
+	}
+	e.nvim.SetCurrentWindow(e.current.WinID)
+
+	return err
+}
+
+func (e *FileExplorer) updateSelectedEntries(filepath string) error {
+	var err error
+	var entry DirectoryEntry
+	entry, err = utils.Find(e.parent.Entries, func(entry DirectoryEntry) bool {
+		return strings.Contains(filepath, entry.Path)
+	})
+	if err != nil {
+		return err
+	}
+	e.parent.SelectedEntryId = entry.ID
+
+	entry, err = utils.Find(e.current.Entries, func(entry DirectoryEntry) bool {
+		return filepath == entry.Path
+	})
+	e.current.SelectedEntryId = entry.ID
+	return err
+}
+
+func (e *FileExplorer) setupKeymaps() error {
+	err := e.nvim.CreateBufferKeymap(
 		e.current.BufNr,
 		"n",
 		"q",
@@ -165,13 +170,29 @@ func (e *FileExplorer) Open(_filepath *string) error {
 		},
 	)
 	if err != nil {
-		log.Error(err.Error())
-	} else {
-		log.Info("successfully set up keymap for closing fileexplorer")
+		return err
 	}
 
-	e.nvim.SetCurrentWindow(e.current.WinID)
+	err = e.nvim.CreateBufferKeymap(
+		e.current.BufNr,
+		"n",
+		"<Right>",
+		func(channelID int) string {
+			return fmt.Sprintf(":lua vim.rpcnotify(%d, 'FileExplorerGoIn', {})<CR>", channelID)
+		},
+	)
 
+	if err != nil {
+		return err
+	}
+	err = e.nvim.CreateBufferKeymap(
+		e.current.BufNr,
+		"n",
+		"<Left>",
+		func(channelID int) string {
+			return fmt.Sprintf(":lua vim.rpcnotify(%d, 'FileExplorerGoOut', {})<CR>", channelID)
+		},
+	)
 	return err
 }
 
@@ -229,13 +250,68 @@ func (e *FileExplorer) mapDirectoryEntries(path string) ([]DirectoryEntry, error
 }
 
 func (e *FileExplorer) GoIn() error {
-	var err error
+
+	selectedEntry, err := utils.Find(e.current.Entries, func(entry DirectoryEntry) bool {
+		return entry.ID == e.current.SelectedEntryId
+	})
+	if err != nil {
+		return err
+	}
+	if !selectedEntry.IsDir {
+		return fmt.Errorf("cannot go in. selected entry is file: %s", selectedEntry.Path)
+	}
+
+	newCurrentPath := selectedEntry.Path
+
+	// Shift panes: current -> parent, selected child directory -> current.
+	e.parent.Path = e.current.Path
+	e.parent.Entries = e.current.Entries
+	e.parent.SelectedEntryId = selectedEntry.ID
+
+	entries, err := e.mapDirectoryEntries(newCurrentPath)
+	if err != nil {
+		return err
+	}
+	e.current.Path = newCurrentPath
+	e.current.Entries = entries
+	if len(entries) > 0 {
+		e.current.SelectedEntryId = entries[0].ID
+	} else {
+		e.current.SelectedEntryId = 0
+	}
+
+	e.preview.Entries = []DirectoryEntry{}
 	e.Dirty = true
-	return err
+	return nil
 }
 
 func (e *FileExplorer) GoOut() error {
 	var err error
+	parentPath := e.parent.Path
+	newParentDir := path.Dir(parentPath)
+	if newParentDir == "." {
+		return fmt.Errorf("cannot go out further. already at root dir")
+	}
+	e.parent.Path = newParentDir
+	e.current.Entries = e.parent.Entries
+	e.current.SelectedEntryId = e.parent.SelectedEntryId
+
+	entries, err := e.mapDirectoryEntries(e.parent.Path)
+	if err != nil {
+		return err
+	}
+	e.parent.Entries = entries
+	entry, err := utils.Find(e.parent.Entries, func(entry DirectoryEntry) bool {
+		return strings.Contains(e.current.Path, entry.Path)
+	})
+	if err != nil {
+		return err
+	}
+	e.parent.SelectedEntryId = entry.ID
+	e.current.Path = parentPath
+	if err != nil {
+		return err
+	}
 	e.Dirty = true
 	return err
 }
