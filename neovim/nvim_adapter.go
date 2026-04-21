@@ -14,6 +14,10 @@ func (a *NvimAdapter) CreateBufferKeymap(bufNr int, mode, lhs string, _rhs func(
 	log.Infof("[CreateBufferKeymap] rhs=%s", rhs)
 	return NvimClient.SetBufferKeyMap(nvim.Buffer(bufNr), mode, lhs, rhs, map[string]bool{})
 }
+func (a *NvimAdapter) SetWindowCursor(winId, row, col int) error {
+	return NvimClient.SetWindowCursor(nvim.Window(winId), [2]int{row, col})
+}
+
 func (a *NvimAdapter) CreateBuffer(listed, scratch bool) (int, error) {
 	buf, err := NvimClient.CreateBuffer(listed, scratch)
 	return int(buf), err
@@ -21,6 +25,10 @@ func (a *NvimAdapter) CreateBuffer(listed, scratch bool) (int, error) {
 
 func (a *NvimAdapter) SetBufferLines(bufNr int, start, end int, strict bool, lines [][]byte) error {
 	return NvimClient.SetBufferLines(nvim.Buffer(bufNr), start, end, strict, lines)
+}
+
+func (a *NvimAdapter) GetBufferLines(bufNr int, start, end int, strict bool) ([][]byte, error) {
+	return NvimClient.BufferLines(nvim.Buffer(bufNr), start, end, strict)
 }
 
 func (a *NvimAdapter) Command(cmd string) error {

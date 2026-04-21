@@ -46,6 +46,15 @@ func Find[T any](array []T, find_func func(T) bool) (T, error) {
 	return zero, fmt.Errorf("no match found")
 }
 
+func FindIndex[T any](array []T, find_func func(T) bool) (int, error) {
+	for index, value := range array {
+		if find_func(value) {
+			return index, nil
+		}
+	}
+	return -1, fmt.Errorf("no match found")
+}
+
 func MapArray[T any, U any](array []T, map_func func(T) U) []U {
 	var result []U
 	for _, value := range array {

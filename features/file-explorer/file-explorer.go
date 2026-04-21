@@ -5,6 +5,7 @@ import (
 	"os"
 	path "path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync/atomic"
 
@@ -131,6 +132,22 @@ func (e *FileExplorer) Open(_filepath *string) error {
 		return err
 	}
 	e.preview.Entries = []DirectoryEntry{}
+
+	err = e.syncPaneBuffers()
+	if err != nil {
+		return err
+	}
+
+	err = e.syncPaneCursorToSelection(e.parent.WinID, e.parent.BufNr, e.parent.SelectedEntryId)
+	if err != nil {
+		return err
+	}
+
+	err = e.syncPaneCursorToSelection(e.current.WinID, e.current.BufNr, e.current.SelectedEntryId)
+	if err != nil {
+		return err
+	}
+
 	e.active = true
 	e.Dirty = true
 	err = e.setupKeymaps()
@@ -138,8 +155,60 @@ func (e *FileExplorer) Open(_filepath *string) error {
 		return err
 	}
 	e.nvim.SetCurrentWindow(e.current.WinID)
+	//TODO: still getting panic 
+	// panic: [UpdateCursor] no line at row=1
+	// have to investigate
+	// also have to change the buffer lines actually
+	// i thought writing the entry id would be enough, but its not
+	// if i only have the id then i could never edit
+	// i suppose that also means i have to conceal the id after all, not sure tho
+	// have to test how it is in mini.files and how conceal works
+	// i just had the thought that conceal might protect me from clearing the id
+	// with something like cc, but im not even sure that works in mini.files
+	// and im not sure that conceal even prevents that
+	// might have to do some cursor manipulation
 
 	return err
+}
+
+func (e *FileExplorer) UpdateCursor(row, col int) error {
+	if row < 0 || col < 0 {
+		return fmt.Errorf("[UpdateCursor] row/col out of bounds")
+	}
+
+	lines, err := e.nvim.GetBufferLines(e.current.BufNr, row, row+1, false)
+	if err != nil {
+		return fmt.Errorf("[UpdateCursor] get buffer line failed: %w", err)
+	}
+	if len(lines) == 0 {
+		return fmt.Errorf("[UpdateCursor] no line at row=%d", row)
+	}
+
+	line := strings.TrimSpace(string(lines[0]))
+	if line == "" {
+		return fmt.Errorf("[UpdateCursor] empty line at row=%d", row)
+	}
+
+	selectedID, err := strconv.ParseUint(line, 10, 64)
+	if err != nil {
+		return fmt.Errorf("[UpdateCursor] parse id from line '%s' failed: %w", line, err)
+	}
+
+	_, err = utils.Find(e.current.Entries, func(entry DirectoryEntry) bool {
+		return entry.ID == selectedID
+	})
+	if err != nil {
+		return fmt.Errorf("[UpdateCursor] id %d not in current entries", selectedID)
+	}
+
+	cursorChanged := e.current.CursorCol != col
+	selectionChanged := e.current.SelectedEntryId != selectedID
+	e.current.CursorCol = col
+	e.current.SelectedEntryId = selectedID
+	if cursorChanged || selectionChanged {
+		e.Dirty = true
+	}
+	return nil
 }
 
 func (e *FileExplorer) updateSelectedEntries(filepath string) error {
@@ -249,6 +318,59 @@ func (e *FileExplorer) mapDirectoryEntries(path string) ([]DirectoryEntry, error
 	return append(dirs, files...), nil
 }
 
+func (e *FileExplorer) entriesToBufferLines(entries []DirectoryEntry) [][]byte {
+	lines := utils.MapArray(entries, func(entry DirectoryEntry) []byte {
+		return []byte(strconv.FormatUint(entry.ID, 10))
+	})
+	if lines == nil {
+		return [][]byte{}
+	}
+	return lines
+}
+
+func (e *FileExplorer) setBufferLinesFromEntries(bufNr int, entries []DirectoryEntry) error {
+	return e.nvim.SetBufferLines(bufNr, 0, -1, false, e.entriesToBufferLines(entries))
+}
+
+func (e *FileExplorer) syncPaneBuffers() error {
+	if err := e.setBufferLinesFromEntries(e.parent.BufNr, e.parent.Entries); err != nil {
+		return err
+	}
+	if err := e.setBufferLinesFromEntries(e.current.BufNr, e.current.Entries); err != nil {
+		return err
+	}
+	if err := e.setBufferLinesFromEntries(e.preview.BufNr, e.preview.Entries); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (e *FileExplorer) findBufferRowBySelectedEntryID(bufNr int, selectedEntryID uint64) (int, error) {
+	lines, err := e.nvim.GetBufferLines(bufNr, 0, -1, false)
+	if err != nil {
+		return 0, err
+	}
+	target := strconv.FormatUint(selectedEntryID, 10)
+	row, err := utils.FindIndex(lines, func(line []byte) bool {
+		return strings.TrimSpace(string(line)) == target
+	})
+	if err != nil {
+		return 0, err
+	}
+	return row + 1, nil // NOTE: rows are 1 based in neovim
+}
+
+func (e *FileExplorer) syncPaneCursorToSelection(winID, bufNr int, selectedEntryID uint64) error {
+	if selectedEntryID == 0 {
+		return nil
+	}
+	row, err := e.findBufferRowBySelectedEntryID(bufNr, selectedEntryID)
+	if err != nil {
+		return err
+	}
+	return e.nvim.SetWindowCursor(winID, row, 0)
+}
+
 func (e *FileExplorer) GoIn() error {
 
 	selectedEntry, err := utils.Find(e.current.Entries, func(entry DirectoryEntry) bool {
@@ -281,6 +403,15 @@ func (e *FileExplorer) GoIn() error {
 	}
 
 	e.preview.Entries = []DirectoryEntry{}
+	if err := e.syncPaneBuffers(); err != nil {
+		return err
+	}
+	if err := e.syncPaneCursorToSelection(e.parent.WinID, e.parent.BufNr, e.parent.SelectedEntryId); err != nil {
+		return err
+	}
+	if err := e.syncPaneCursorToSelection(e.current.WinID, e.current.BufNr, e.current.SelectedEntryId); err != nil {
+		return err
+	}
 	e.Dirty = true
 	return nil
 }
@@ -309,9 +440,16 @@ func (e *FileExplorer) GoOut() error {
 	}
 	e.parent.SelectedEntryId = entry.ID
 	e.current.Path = parentPath
-	if err != nil {
+	e.preview.Entries = []DirectoryEntry{}
+	if err := e.syncPaneBuffers(); err != nil {
+		return err
+	}
+	if err := e.syncPaneCursorToSelection(e.parent.WinID, e.parent.BufNr, e.parent.SelectedEntryId); err != nil {
+		return err
+	}
+	if err := e.syncPaneCursorToSelection(e.current.WinID, e.current.BufNr, e.current.SelectedEntryId); err != nil {
 		return err
 	}
 	e.Dirty = true
-	return err
+	return nil
 }
