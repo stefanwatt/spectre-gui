@@ -10,6 +10,7 @@ import (
 // MapRedrawBatch translates raw nvim redraw updates into canonical events.
 // Unknown or malformed entries are dropped.
 func MapRedrawBatch(updates [][]interface{}) []events.Event {
+	priority := make([]events.Event, 0)
 	result := make([]events.Event, 0)
 	for _, update := range updates {
 		if len(update) == 0 {
@@ -21,9 +22,13 @@ func MapRedrawBatch(updates [][]interface{}) []events.Event {
 		}
 		args := update[1:]
 		mapped := mapEvent(eventName, args)
+		if eventName == "tabline_update" {
+			priority = append(priority, mapped...)
+			continue
+		}
 		result = append(result, mapped...)
 	}
-	return result
+	return append(priority, result...)
 }
 
 func mapEvent(name string, args []interface{}) []events.Event {
@@ -351,6 +356,24 @@ func mapEvent(name string, args []interface{}) []events.Event {
 			},
 			Source: "neovim-redraw",
 		}}
+
+	case "tabline_update":
+		if len(args) < 1 {
+			return nil
+		}
+		a, ok := args[0].([]interface{})
+		if !ok || len(a) < 1 {
+			return nil
+		}
+		tabID, ok := mapTabpageID(a[0])
+		if !ok {
+			return nil
+		}
+		return []events.Event{{
+			Name:    events.EventCurrentTabChanged,
+			Payload: events.CurrentTabChanged{TabID: tabID},
+			Source:  "neovim-redraw",
+		}}
 	}
 
 	return nil
@@ -365,17 +388,25 @@ func interfaceSlice(items []interface{}) []any {
 }
 
 func mapWindowID(raw interface{}) (int, bool) {
+	return mapHandleID(raw, "Window")
+}
+
+func mapTabpageID(raw interface{}) (int, bool) {
+	return mapHandleID(raw, "Tabpage")
+}
+
+func mapHandleID(raw interface{}, prefix string) (int, bool) {
 	stringer, ok := raw.(interface{ String() string })
 	if !ok {
 		return 0, false
 	}
 	parts := strings.Split(stringer.String(), ":")
-	if len(parts) != 2 {
+	if len(parts) != 2 || parts[0] != prefix {
 		return 0, false
 	}
-	winID, err := strconv.Atoi(parts[1])
+	handleID, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return 0, false
 	}
-	return winID, true
+	return handleID, true
 }

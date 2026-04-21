@@ -43,7 +43,7 @@ func (p *LayoutContentProjector) Project(state *model.AppState) UIProjection {
 
 	// --- Content for each visible normal window ---
 	for _, win := range s.Windows {
-		if win == nil || win.Hidden {
+		if !windowBelongsToCurrentTab(win, s.CurrentTab) || win.Hidden {
 			continue
 		}
 		if win.Type == "floating" {
@@ -58,7 +58,7 @@ func (p *LayoutContentProjector) Project(state *model.AppState) UIProjection {
 	// --- Cursor ---
 	cursorRow := s.Viewport.CursorLine + 1
 	cursorCol := 0
-	if activeWin, exists := s.Windows[s.ActiveWindow]; exists {
+	if activeWin, exists := s.Windows[s.ActiveWindow]; exists && windowBelongsToCurrentTab(activeWin, s.CurrentTab) {
 		if grid, exists := s.Grids[activeWin.GridID]; exists {
 			cursorCol = grid.CursorCol
 			if cursorRow == 0 {
@@ -147,7 +147,7 @@ func (p *LayoutContentProjector) projectFloatingWindows(ui *UIProjection, s *mod
 	hasDirtyFloating := false
 
 	for winID, win := range s.Windows {
-		if win == nil || win.Type != "floating" || win.IsFileExplorer {
+		if !windowBelongsToCurrentTab(win, s.CurrentTab) || win.Type != "floating" || win.IsFileExplorer {
 			continue
 		}
 
@@ -329,7 +329,7 @@ func syncGridData(gd *rendering.GridData, grid *model.GridState) {
 func mapLayoutWindows(s *model.ScreenState) []rendering.LayoutWindow {
 	result := make([]rendering.LayoutWindow, 0, len(s.Windows))
 	for _, win := range s.Windows {
-		if win == nil {
+		if !windowBelongsToCurrentTab(win, s.CurrentTab) {
 			continue
 		}
 		isFloating := win.Type == "floating"
@@ -350,4 +350,14 @@ func mapLayoutWindows(s *model.ScreenState) []rendering.LayoutWindow {
 		})
 	}
 	return result
+}
+
+func windowBelongsToCurrentTab(win *model.WindowState, currentTab int) bool {
+	if win == nil {
+		return false
+	}
+	if currentTab == 0 {
+		return true
+	}
+	return win.TabID == currentTab
 }

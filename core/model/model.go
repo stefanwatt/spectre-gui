@@ -21,6 +21,7 @@ type ScreenState struct {
 	Height           int
 	Mode             string
 	ActiveWindow     int
+	CurrentTab       int
 	Grids            map[int]*GridState
 	Windows          map[int]*WindowState
 	GridToWindow     map[int]int
@@ -54,6 +55,7 @@ type GridState struct {
 type WindowState struct {
 	ID             int
 	GridID         int
+	TabID          int
 	Type           string
 	StartRow       int
 	StartCol       int

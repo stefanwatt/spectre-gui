@@ -24,6 +24,7 @@ const (
 	EventBufEnter          Name = "BufEnter"
 	EventWindowBufferInfo  Name = "window_buffer_info"
 	EventWindowOptions     Name = "window_options"
+	EventCurrentTabChanged Name = "current_tab_changed"
 )
 
 type Event struct {

@@ -115,3 +115,7 @@ type WindowOptions struct {
 	WindowID    int
 	LineNumbers bool
 }
+
+type CurrentTabChanged struct {
+	TabID int
+}

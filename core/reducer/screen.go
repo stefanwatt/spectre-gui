@@ -23,6 +23,24 @@ func (r *Reducer) Apply(state *model.AppState, event events.Event) {
 	s := &state.Editor.Screen
 
 	switch event.Name {
+	case events.EventCurrentTabChanged:
+		payload, ok := event.Payload.(events.CurrentTabChanged)
+		if !ok {
+			return
+		}
+		if s.CurrentTab == payload.TabID {
+			return
+		}
+		previousTab := s.CurrentTab
+		s.CurrentTab = payload.TabID
+		if previousTab == 0 {
+			for _, win := range s.Windows {
+				if win != nil && win.TabID == 0 {
+					win.TabID = payload.TabID
+				}
+			}
+		}
+
 	case events.EventModeChange:
 		payload, ok := event.Payload.(events.ModeChange)
 		if !ok {
@@ -136,6 +154,7 @@ func (r *Reducer) Apply(state *model.AppState, event events.Event) {
 		}
 		win.Type = "normal"
 		win.GridID = payload.GridID
+		win.TabID = s.CurrentTab
 		win.StartRow = payload.Row
 		win.StartCol = payload.Col
 		win.Width = payload.Width
@@ -160,6 +179,7 @@ func (r *Reducer) Apply(state *model.AppState, event events.Event) {
 		}
 		win.Type = "floating"
 		win.GridID = payload.GridID
+		win.TabID = s.CurrentTab
 		win.Anchor = payload.Anchor
 		win.AnchorGrid = payload.AnchorGrid
 		win.StartRow = int(payload.AnchorRow)
