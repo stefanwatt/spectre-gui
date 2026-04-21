@@ -1,6 +1,7 @@
 package fileexplorer
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	path "path/filepath"
@@ -11,16 +12,19 @@ import (
 
 	"nvim-gui/core/ports"
 	"nvim-gui/utils"
+
+	"github.com/charmbracelet/log"
 )
 
 type FileExplorer struct {
-	active    bool
-	Dirty     bool
-	idCounter uint64
-	nvim      ports.NvimClient
-	parent    Directory
-	current   Directory
-	preview   Directory
+	active           bool
+	Dirty            bool
+	idCounter        uint64
+	nvim             ports.NvimClient
+	parent           Directory
+	current          Directory
+	preview          Directory
+	openedFromWindow int
 }
 
 type DirectoryEntry struct {
@@ -44,7 +48,8 @@ type Directory struct {
 
 func NewFileExplorer(nvim ports.NvimClient) *FileExplorer {
 	return &FileExplorer{
-		nvim: nvim,
+		nvim:      nvim,
+		idCounter: 1,
 	}
 }
 
@@ -154,24 +159,23 @@ func (e *FileExplorer) Open(_filepath *string) error {
 	if err != nil {
 		return err
 	}
-	e.nvim.SetCurrentWindow(e.current.WinID)
-	//TODO: still getting panic 
-	// panic: [UpdateCursor] no line at row=1
-	// have to investigate
-	// also have to change the buffer lines actually
-	// i thought writing the entry id would be enough, but its not
-	// if i only have the id then i could never edit
-	// i suppose that also means i have to conceal the id after all, not sure tho
-	// have to test how it is in mini.files and how conceal works
-	// i just had the thought that conceal might protect me from clearing the id
-	// with something like cc, but im not even sure that works in mini.files
-	// and im not sure that conceal even prevents that
-	// might have to do some cursor manipulation
+	err = e.nvim.CreateBufferAutocmd(e.current.WinID, e.current.BufNr, `
+		print("chanid=" .. tostring(chan_id) .. " winId=" .. tostring(winId) .. " bufNr=" .. tostring(bufNr))
+		if (not args.buf == bufNr)then
+			return 
+		end
+		local cursor = vim.api.nvim_win_get_cursor(0)
+		vim.rpcnotify(chan_id, "FileExplorerCursorMoved", cursor)
+	`)
 
+	if err != nil {
+		return err
+	}
+	err = e.nvim.SetCurrentWindow(e.current.WinID)
 	return err
 }
 
-func (e *FileExplorer) UpdateCursor(row, col int) error {
+func (e *FileExplorer) UpdateSelectedyEntryCurrent(row, col int) error {
 	if row < 0 || col < 0 {
 		return fmt.Errorf("[UpdateCursor] row/col out of bounds")
 	}
@@ -184,14 +188,9 @@ func (e *FileExplorer) UpdateCursor(row, col int) error {
 		return fmt.Errorf("[UpdateCursor] no line at row=%d", row)
 	}
 
-	line := strings.TrimSpace(string(lines[0]))
-	if line == "" {
-		return fmt.Errorf("[UpdateCursor] empty line at row=%d", row)
-	}
-
-	selectedID, err := strconv.ParseUint(line, 10, 64)
+	selectedID, err := parseEntryIDFromBufferLine(strings.TrimSpace(string(lines[0])))
 	if err != nil {
-		return fmt.Errorf("[UpdateCursor] parse id from line '%s' failed: %w", line, err)
+		return fmt.Errorf("[UpdateCursor] parse id failed: %w", err)
 	}
 
 	_, err = utils.Find(e.current.Entries, func(entry DirectoryEntry) bool {
@@ -266,8 +265,26 @@ func (e *FileExplorer) setupKeymaps() error {
 }
 
 func (e *FileExplorer) Close() {
+	e.nvim.Command("tabc")
+	e.idCounter = 1
 	e.active = false
 	e.Dirty = false
+}
+
+func parseEntryIDFromBufferLine(line string) (uint64, error) {
+	if line == "" {
+		return 0, fmt.Errorf("empty line")
+	}
+	parts := strings.SplitN(line, "/", 2)
+	idPart := strings.TrimSpace(parts[0])
+	if idPart == "" {
+		return 0, fmt.Errorf("missing id in line '%s'", line)
+	}
+	id, err := strconv.ParseUint(idPart, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid id '%s' in line '%s': %w", idPart, line, err)
+	}
+	return id, nil
 }
 
 func (e *FileExplorer) mapDirectoryEntries(path string) ([]DirectoryEntry, error) {
@@ -293,8 +310,13 @@ func (e *FileExplorer) mapDirectoryEntries(path string) ([]DirectoryEntry, error
 		}
 	}
 
-	sort.Strings(dirStrings)
-	sort.Strings(fileStrings)
+	sort.Slice(dirStrings, func(i, j int) bool {
+		return strings.ToLower(dirStrings[i]) < strings.ToLower(dirStrings[j])
+	})
+
+	sort.Slice(fileStrings, func(i, j int) bool {
+		return strings.ToLower(fileStrings[i]) < strings.ToLower(fileStrings[j])
+	})
 	dirs := utils.MapArray(dirStrings, func(dir string) DirectoryEntry {
 		return DirectoryEntry{
 			ID:        e.nextID(),
@@ -320,7 +342,7 @@ func (e *FileExplorer) mapDirectoryEntries(path string) ([]DirectoryEntry, error
 
 func (e *FileExplorer) entriesToBufferLines(entries []DirectoryEntry) [][]byte {
 	lines := utils.MapArray(entries, func(entry DirectoryEntry) []byte {
-		return []byte(strconv.FormatUint(entry.ID, 10))
+		return []byte(fmt.Sprintf("%d/%s", entry.ID, entry.Text))
 	})
 	if lines == nil {
 		return [][]byte{}
@@ -350,9 +372,9 @@ func (e *FileExplorer) findBufferRowBySelectedEntryID(bufNr int, selectedEntryID
 	if err != nil {
 		return 0, err
 	}
-	target := strconv.FormatUint(selectedEntryID, 10)
 	row, err := utils.FindIndex(lines, func(line []byte) bool {
-		return strings.TrimSpace(string(line)) == target
+		id, parseErr := parseEntryIDFromBufferLine(strings.TrimSpace(string(line)))
+		return parseErr == nil && id == selectedEntryID
 	})
 	if err != nil {
 		return 0, err
@@ -364,6 +386,9 @@ func (e *FileExplorer) syncPaneCursorToSelection(winID, bufNr int, selectedEntry
 	if selectedEntryID == 0 {
 		return nil
 	}
+	lines, err := e.nvim.GetBufferLines(bufNr, 0, -1, true)
+	s := string(bytes.Join(lines, []byte("\n")))
+	log.Debug(s)
 	row, err := e.findBufferRowBySelectedEntryID(bufNr, selectedEntryID)
 	if err != nil {
 		return err
@@ -380,7 +405,7 @@ func (e *FileExplorer) GoIn() error {
 		return err
 	}
 	if !selectedEntry.IsDir {
-		return fmt.Errorf("cannot go in. selected entry is file: %s", selectedEntry.Path)
+		e.OpenFile(selectedEntry.Path)
 	}
 
 	newCurrentPath := selectedEntry.Path
@@ -452,4 +477,14 @@ func (e *FileExplorer) GoOut() error {
 	}
 	e.Dirty = true
 	return nil
+}
+
+func (e *FileExplorer) OpenFile(filepath string) error {
+	e.Close()
+	err := e.nvim.SetCurrentWindow(e.openedFromWindow)
+	if err != nil {
+		return err
+	}
+	err = e.nvim.Command("e " + filepath)
+	return err
 }

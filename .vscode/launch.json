@@ -10,6 +10,13 @@
       "preLaunchTask": "build",
       "cwd": "${workspaceFolder}",
       "env": {}
-    }
+    },
+{
+  "name": "Attach Wails",
+  "type": "go",
+  "request": "attach",
+  "mode": "local",
+  "processId": "${command:pickProcess}"
+}
   ]
 }

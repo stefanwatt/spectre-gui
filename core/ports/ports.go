@@ -28,4 +28,5 @@ type NvimClient interface {
 	GetCurrentFilepath() (string, error)
 	SetWindowOption(winId int, key string, value any) error
 	CreateBufferKeymap(bufNr int, mode, lhs string, rhs func(channelID int) string) error
+	CreateBufferAutocmd(winId, bufNr int, luaCallback string) error
 }

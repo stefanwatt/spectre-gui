@@ -7,6 +7,7 @@ pkgs.mkShell {
   # buildInputs are the libraries Wails needs to link against
   buildInputs = with pkgs; [ gtk3 webkitgtk_4_1 ];
   shellHook = with pkgs; ''
+    export CGO_CFLAGS="-O1"
     export XDG_DATA_DIRS=${gsettings-desktop-schemas}/share/gsettings-schemas/${gsettings-desktop-schemas.name}:${gtk3}/share/gsettings-schemas/${gtk3.name}:$XDG_DATA_DIRS;
     export GIO_MODULE_DIR="${glib-networking}/lib/gio/modules/";
     export PLAYWRIGHT_BROWSERS_PATH="${playwright-driver.browsers}";

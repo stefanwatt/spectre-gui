@@ -111,6 +111,7 @@ func StartListening(ctx context.Context) {
 		})
 
 `
+
 		// Execute the Lua script, passing the channelID as the argument (...)
 		var result interface{}
 		err := NvimClient.ExecLua(luaScript, &result, channelID)
@@ -118,8 +119,20 @@ func StartListening(ctx context.Context) {
 			log.Errorf("Failed to setup autocmd bridge: %v", err)
 		}
 		NvimClient.RegisterHandler("FileExplorerClose", func(_ *nvim.Nvim, data interface{}) {
-			NvimClient.Command("tabc")
 			GetFileExplorer().Close()
+		})
+
+		NvimClient.RegisterHandler("FileExplorerCursorMoved", func(_ *nvim.Nvim, data []uint64) {
+			row := int(data[0])
+			col := int(data[1])
+			log.Infof("FileExplorerCursorMoved row=%d col=%d")
+			fileExplorer := GetFileExplorer()
+			if fileExplorer.GetActive() {
+				err := fileExplorer.UpdateSelectedyEntryCurrent(row-1, col)
+				if err != nil {
+					panic(err.Error())
+				}
+			}
 		})
 
 		NvimClient.RegisterHandler("FileExplorerGoIn", func(_ *nvim.Nvim, data interface{}) {

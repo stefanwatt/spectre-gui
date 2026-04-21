@@ -1,6 +1,8 @@
 package neovim
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/log"
 	"github.com/neovim/go-client/nvim"
 )
@@ -14,6 +16,20 @@ func (a *NvimAdapter) CreateBufferKeymap(bufNr int, mode, lhs string, _rhs func(
 	log.Infof("[CreateBufferKeymap] rhs=%s", rhs)
 	return NvimClient.SetBufferKeyMap(nvim.Buffer(bufNr), mode, lhs, rhs, map[string]bool{})
 }
+
+func (a *NvimAdapter) CreateBufferAutocmd(winId, bufNr int, luaCallback string) error {
+	var result interface{}
+	return NvimClient.ExecLua(fmt.Sprintf(`
+    local chan_id,winId,bufNr = ... -- The first argument passed to ExecLua
+		vim.api.nvim_create_autocmd({"CursorMoved","CursorMovedI" }, {
+			group = vim.api.nvim_create_augroup("nvim-gui-file-explorer-cursor-moved" , { clear = true }),
+			callback = function(args)
+				%s
+			end,
+		})
+	`, luaCallback), &result, NvimClient.ChannelID(), winId, bufNr)
+}
+
 func (a *NvimAdapter) SetWindowCursor(winId, row, col int) error {
 	return NvimClient.SetWindowCursor(nvim.Window(winId), [2]int{row, col})
 }

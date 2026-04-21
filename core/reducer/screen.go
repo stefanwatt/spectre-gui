@@ -70,12 +70,6 @@ func (r *Reducer) Apply(state *model.AppState, event events.Event) {
 		grid.MarkRowDirty(grid.CursorRow)
 		if winID, ok := s.GridToWindow[payload.GridID]; ok {
 			s.ActiveWindow = winID
-			if r.fileExplorer.GetActive() && r.fileExplorer.GetCurrent().WinID == winID {
-				err := r.fileExplorer.UpdateCursor(payload.Row, payload.Col)
-				if err != nil {
-					panic(err.Error())
-				}
-			}
 		}
 		markWindowDirtyByGrid(s, payload.GridID)
 
