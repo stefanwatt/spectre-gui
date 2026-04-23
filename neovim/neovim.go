@@ -130,9 +130,35 @@ func StartListening(ctx context.Context) {
 			if fileExplorer.GetActive() {
 				err := fileExplorer.UpdateSelectedyEntryCurrent(row-1, col)
 				if err != nil {
-					panic(err.Error())
+					log.Error(err.Error())
+					// panic(err.Error())
 				}
 			}
+		})
+
+		NvimClient.RegisterHandler("nvim_buf_lines_event", func(_ *nvim.Nvim, data ...any) {
+			if len(data) != 6 {
+				return
+			}
+			log.Info("nvim_buf_lines_event",
+				"buf", data[0],
+				"changedtick", data[1],
+				"firstline", data[2],
+				"lastline", data[3],
+				"linedata", data[4],
+				"more", data[5],
+			)
+			firstline := data[2].(int64)
+			lastline := data[3].(int64)
+			linedata := utils.MapArray(data[4].([]interface{}), func(item interface{}) string {
+				return item.(string)
+			})
+
+			GetFileExplorer().UpdateEntryText(int(firstline), int(lastline), linedata)
+		})
+
+		NvimClient.RegisterHandler("nvim_buf_detach_event", func(_ *nvim.Nvim, data ...any) {
+			log.Info("nvim_buf_detach_event", "buf", data[0])
 		})
 
 		NvimClient.RegisterHandler("FileExplorerGoIn", func(_ *nvim.Nvim, data interface{}) {

@@ -80,9 +80,8 @@
 	});
 
 	function currentCursorDisplayCol(entry: App.FileExplorerEntry, cursorCol: number) {
-		const iconWidth = entry.icon ? 2 : 0;
-		const contentStart = iconWidth + 1; // icon slot + gap
-		const colInContent = Math.max(0, cursorCol - contentStart);
+		const hiddenPrefixWidth = String(entry.id).length + 1; // "<id>/"
+		const colInContent = Math.max(0, cursorCol - hiddenPrefixWidth);
 		return Math.min(colInContent, entry.text.length);
 	}
 

@@ -81,3 +81,7 @@ func (a *NvimAdapter) SetWindowOption(winId int, key string, value any) error {
 	log.Infof("[FileExplorer] converted win: %v", win)
 	return NvimClient.SetWindowOption(win, key, value)
 }
+
+func (a *NvimAdapter) AttachBuffer(bufNr int, sendBuffer bool, opts map[string]any) (bool, error) {
+	return NvimClient.AttachBuffer(nvim.Buffer(bufNr), sendBuffer, opts)
+}
