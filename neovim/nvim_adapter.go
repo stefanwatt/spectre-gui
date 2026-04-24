@@ -85,3 +85,9 @@ func (a *NvimAdapter) SetWindowOption(winId int, key string, value any) error {
 func (a *NvimAdapter) AttachBuffer(bufNr int, sendBuffer bool, opts map[string]any) (bool, error) {
 	return NvimClient.AttachBuffer(nvim.Buffer(bufNr), sendBuffer, opts)
 }
+
+func (a *NvimAdapter) RegisterHandler(event string, handler func(data ...any)) {
+	NvimClient.RegisterHandler(event, func(_ *nvim.Nvim, data ...any) {
+		handler(data...)
+	})
+}

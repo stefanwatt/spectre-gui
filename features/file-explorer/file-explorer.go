@@ -24,10 +24,15 @@ var (
 //TODO: bug: switching mode does not send fileexplorer update apparently
 // cause cursor shape doesnt update until you move
 
-//TODO: use if init syntax wherever possible 
+//TODO: use if init syntax wherever possible & reasonable
 
 //TODO: buf attach mechanism doesnt create new row and doesnt work when id breaks
 
+//TODO: this file is getting a bit long. find opportunities to modularize
+
+//TODO: check if we should use more pointers
+
+//TODO: use uint64 where possible & reasonable
 
 type FileExplorer struct {
 	active           bool
@@ -47,6 +52,7 @@ type DirectoryEntry struct {
 	Text      string `json:"text"`
 	Path      string `json:"path"`
 	IsDir     bool   `json:"isDir"`
+	IsDraft   bool
 }
 
 // Directory holds parsed entries for one mini.files pane (parent/current/preview).
@@ -64,6 +70,15 @@ func NewFileExplorer(nvim ports.NvimClient) *FileExplorer {
 		nvim:      nvim,
 		idCounter: 1,
 	}
+}
+
+func (e *FileExplorer) RegisterHandlers() {
+	e.nvim.RegisterHandler("FileExplorerClose", e.onClose)
+	e.nvim.RegisterHandler("FileExplorerCursorMoved", e.onCursorMoved)
+	e.nvim.RegisterHandler("nvim_buf_lines_event", e.onBufferLines)
+	e.nvim.RegisterHandler("nvim_buf_detach_event", e.onBufferDetach)
+	e.nvim.RegisterHandler("FileExplorerGoIn", e.onGoIn)
+	e.nvim.RegisterHandler("FileExplorerGoOut", e.onGoOut)
 }
 
 func (e *FileExplorer) Open(filepath *string) error {
@@ -129,46 +144,102 @@ func (e *FileExplorer) GetCurrentBuf() int {
 	return e.current.BufNr
 }
 
-func (e *FileExplorer) UpdateSelectedyEntryCurrent(row, col int) error {
-	if row < 0 || col < 0 {
-		return fmt.Errorf("[UpdateCursor] row/col out of bounds")
+func (e *FileExplorer) UpdateSelectedyEntry(row, col int) error {
+	if row < 0 || col < 0 || row >= len(e.current.Entries) {
+		return fmt.Errorf("[UpdateSelectedyEntry] row/col out of bounds")
 	}
 
 	lines, err := e.nvim.GetBufferLines(e.current.BufNr, row, row+1, false)
 	if err != nil {
-		return fmt.Errorf("[UpdateCursor] get buffer line failed: %w", err)
+		return fmt.Errorf("[UpdateSelectedyEntry] get buffer line failed: %w", err)
 	}
 	if len(lines) == 0 {
-		return fmt.Errorf("[UpdateCursor] no line at row=%d", row)
+		return fmt.Errorf("[UpdateSelectedyEntry] no line at row=%d", row)
 	}
 
-	selectedEntry, err := parseEntryFromBufferLine(strings.TrimSpace(string(lines[0])))
-	if err != nil {
-		return fmt.Errorf("[UpdateCursor] parse entry failed: %w", err)
-	}
-
+	id := e.current.Entries[row].ID
 	cursorChanged := e.current.CursorCol != col
-	selectionChanged := e.current.SelectedEntryId != selectedEntry.ID
+	selectionChanged := e.current.SelectedEntryId != id
+	//TODO: cursor position should be entirely handled in Go not in svelte
+	// its currently broken for draft entries
 	e.current.CursorCol = col
-	e.current.SelectedEntryId = selectedEntry.ID
+	e.current.SelectedEntryId = id
 	if cursorChanged || selectionChanged {
 		e.Dirty = true
 	}
 	return nil
 }
 
-func (e *FileExplorer) UpdateEntryText(firstline, lastline int, linedata []string) error {
-	updatedEntry, err := parseEntryFromBufferLine(strings.TrimSpace(string(linedata[0])))
-	if err != nil {
-		return err
+func (e *FileExplorer) UpdateEntries(firstline, lastline int, lines []string) error {
+	row := firstline 
+	newEntries := []DirectoryEntry{}
+	if len(lines) == 0 {
+		// entry deleted
+		e.current.Entries = append(e.current.Entries[:firstline], e.current.Entries[lastline:]...)
+		return nil
 	}
-	for i, entry := range e.current.Entries {
-		if entry.ID == updatedEntry.ID {
-			e.current.Entries[i].Text = updatedEntry.Text
+	for _, line := range lines {
+		id, text := parseBufferLine(strings.TrimSpace(string(line)))
+		e.Dirty = true
+		if id == 0 {
+			entry, err := e.findExistingDraftEntry(line, row)
+			if err != nil {
+				id = e.nextID()
+			} else {
+				id = entry.ID
+			}
+			//entirely new entry
+			newEntries = append(newEntries, e.createDraftEntry(id, text))
+		} else {
+			handled := false
+			for i, entry := range e.current.Entries {
+				if entry.ID == id {
+					if row+1 == i {
+						// renamed
+						e.current.Entries[i].Text = text
+					} else {
+						// e.g. copy pasted in same dir
+						newEntries = append(newEntries, e.createDraftEntry(e.nextID(), text))
+					}
+					handled = true
+				}
+			}
+			if !handled {
+				// e.g. brought back via undo
+				newEntries = append(newEntries, e.createDraftEntry(id, text))
+			}
 		}
+		row += 1
 	}
-	e.Dirty = true
+	orig := e.current.Entries
+	head := append(orig[:firstline:firstline], newEntries...)
+	e.current.Entries = append(head, orig[lastline:]...)
 	return nil
+}
+
+func (e *FileExplorer) createDraftEntry(id uint64, text string) DirectoryEntry {
+	return DirectoryEntry{
+		ID:        id,
+		Text:      text,
+		Icon:      FILE_ICON,
+		IconClass: "",
+		Path:      e.current.Path + "/" + text,
+		IsDir:     false,
+		IsDraft:   true,
+	}
+}
+
+func (e *FileExplorer) findExistingDraftEntry(line string, row int) (DirectoryEntry, error) {
+	if row > len(e.current.Entries)-1 {
+		return DirectoryEntry{}, fmt.Errorf("[findExistingDraftEntry] couldnt find candidate: out of bounds")
+	}
+	candidate := e.current.Entries[row]
+
+	if !candidate.IsDraft {
+		return DirectoryEntry{}, fmt.Errorf("[findExistingDraftEntry] no draft entry at row=%d", row)
+	}
+	//NOTE: thinking about soft matching line against candidate.Text, but i cant think of a hard rule
+	return candidate, nil
 }
 
 func (e *FileExplorer) Close() {
@@ -415,18 +486,18 @@ func (e *FileExplorer) setupCurrentBufferAutocmd() error {
 	`)
 }
 
-func parseEntryFromBufferLine(line string) (DirectoryEntry, error) {
+func parseBufferLine(line string) (uint64, string) {
 	if line == "" {
-		return DirectoryEntry{}, fmt.Errorf("empty line")
+		return 0, ""
 	}
 	parts := strings.SplitN(line, "/", 2)
 	idPart := strings.TrimSpace(parts[0])
 	if idPart == "" {
-		return DirectoryEntry{}, fmt.Errorf("missing id in line '%s'", line)
+		return 0, line
 	}
 	id, err := strconv.ParseUint(idPart, 10, 64)
 	if err != nil {
-		return DirectoryEntry{}, fmt.Errorf("invalid id '%s' in line '%s': %w", idPart, line, err)
+		return 0, line
 	}
 
 	text := ""
@@ -434,10 +505,7 @@ func parseEntryFromBufferLine(line string) (DirectoryEntry, error) {
 		text = parts[1]
 	}
 
-	return DirectoryEntry{
-		ID:   id,
-		Text: text,
-	}, nil
+	return id, text
 }
 
 func (e *FileExplorer) mapDirectoryEntries(path string) ([]DirectoryEntry, error) {
@@ -495,7 +563,7 @@ func (e *FileExplorer) mapDirectoryEntries(path string) ([]DirectoryEntry, error
 
 func (e *FileExplorer) entriesToBufferLines(entries []DirectoryEntry) [][]byte {
 	lines := utils.MapArray(entries, func(entry DirectoryEntry) []byte {
-		return []byte(fmt.Sprintf("%d/%s", entry.ID, entry.Text))
+		return fmt.Appendf(nil, "%d/%s", entry.ID, entry.Text)
 	})
 	if lines == nil {
 		return [][]byte{}
@@ -529,8 +597,8 @@ func (e *FileExplorer) findBufferRowBySelectedEntryID(bufNr int, selectedEntryID
 		return 0, err
 	}
 	row, err := utils.FindIndex(lines, func(line []byte) bool {
-		entry, parseErr := parseEntryFromBufferLine(strings.TrimSpace(string(line)))
-		return parseErr == nil && entry.ID == selectedEntryID
+		id, _ := parseBufferLine(strings.TrimSpace(string(line)))
+		return id == selectedEntryID
 	})
 	if err != nil {
 		return 0, err

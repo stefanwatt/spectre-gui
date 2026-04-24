@@ -118,60 +118,9 @@ func StartListening(ctx context.Context) {
 		if err != nil {
 			log.Errorf("Failed to setup autocmd bridge: %v", err)
 		}
-		NvimClient.RegisterHandler("FileExplorerClose", func(_ *nvim.Nvim, data interface{}) {
-			GetFileExplorer().Close()
-		})
 
-		NvimClient.RegisterHandler("FileExplorerCursorMoved", func(_ *nvim.Nvim, data []uint64) {
-			row := int(data[0])
-			col := int(data[1])
-			log.Infof("FileExplorerCursorMoved row=%d col=%d")
-			fileExplorer := GetFileExplorer()
-			if fileExplorer.GetActive() {
-				err := fileExplorer.UpdateSelectedyEntryCurrent(row-1, col)
-				if err != nil {
-					log.Error(err.Error())
-					// panic(err.Error())
-				}
-			}
-		})
-
-		NvimClient.RegisterHandler("nvim_buf_lines_event", func(_ *nvim.Nvim, data ...any) {
-			if len(data) != 6 {
-				return
-			}
-			log.Info("nvim_buf_lines_event",
-				"buf", data[0],
-				"changedtick", data[1],
-				"firstline", data[2],
-				"lastline", data[3],
-				"linedata", data[4],
-				"more", data[5],
-			)
-			firstline := data[2].(int64)
-			lastline := data[3].(int64)
-			linedata := utils.MapArray(data[4].([]interface{}), func(item interface{}) string {
-				return item.(string)
-			})
-
-			GetFileExplorer().UpdateEntryText(int(firstline), int(lastline), linedata)
-		})
-
-		NvimClient.RegisterHandler("nvim_buf_detach_event", func(_ *nvim.Nvim, data ...any) {
-			log.Info("nvim_buf_detach_event", "buf", data[0])
-		})
-
-		NvimClient.RegisterHandler("FileExplorerGoIn", func(_ *nvim.Nvim, data interface{}) {
-			if err := GetFileExplorer().GoIn(); err != nil {
-				log.Errorf("FileExplorerGoIn failed: %v", err)
-			}
-		})
-
-		NvimClient.RegisterHandler("FileExplorerGoOut", func(_ *nvim.Nvim, data interface{}) {
-			if err := GetFileExplorer().GoOut(); err != nil {
-				log.Errorf("FileExplorerGoOut failed: %v", err)
-			}
-		})
+		//TODO: move RegisterHandler calls to features where possible and reasonable
+		GetFileExplorer().RegisterHandlers()
 
 		NvimClient.RegisterHandler("BufEnter", func(_ *nvim.Nvim, data events.BufEnter) {
 			log.Infof("[BufEnter]", data)

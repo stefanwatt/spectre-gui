@@ -8,26 +8,48 @@ import (
 )
 
 func ReflectToInt(iface interface{}) int {
-	i, ok := iface.(int64)
-	if ok {
-		return int(i)
+	if iface == nil {
+		log.Debug("could not reflect type:<nil> to int")
+		return 0
 	}
-	j, ok := iface.(uint64)
-	if ok {
-		return int(j)
+
+	switch v := iface.(type) {
+	case int:
+		return v
+	case int8:
+		return int(v)
+	case int16:
+		return int(v)
+	case int32:
+		return int(v)
+	case int64:
+		return int(v)
+	case uint:
+		return int(v)
+	case uint8:
+		return int(v)
+	case uint16:
+		return int(v)
+	case uint32:
+		return int(v)
+	case uint64:
+		return int(v)
+	case float32:
+		return int(v)
+	case float64:
+		return int(v)
 	}
-	k, ok := iface.(int)
-	if ok {
-		return int(k)
+
+	val := reflect.ValueOf(iface)
+	switch val.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return int(val.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return int(val.Uint())
+	case reflect.Float32, reflect.Float64:
+		return int(val.Float())
 	}
-	l, ok := iface.(uint)
-	if ok {
-		return int(l)
-	}
-	b, ok := iface.(byte)
-	if ok {
-		return int(b)
-	}
+
 	log.Debug(fmt.Sprintf("could not reflect type:%s to int", reflect.TypeOf(iface).String()))
 	return 0
 }
