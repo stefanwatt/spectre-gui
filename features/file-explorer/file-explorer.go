@@ -1,7 +1,6 @@
 package fileexplorer
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	path "path/filepath"
@@ -35,14 +34,19 @@ var (
 //TODO: use uint64 where possible & reasonable
 
 type FileExplorer struct {
-	active           bool
-	Dirty            bool
-	idCounter        uint64
-	nvim             ports.NvimClient
-	parent           Directory
-	current          Directory
-	preview          Directory
-	openedFromWindow int
+	active            bool
+	Dirty             bool
+	idCounter         uint64
+	nvim              ports.NvimClient
+	parent            *Directory
+	current           *Directory
+	preview           Directory
+	openedFromWindow  int
+	parentWinID       int
+	currentWinID      int
+	previewWinID      int
+	directoriesByPath map[string]*Directory
+	directoriesByBuf  map[int]*Directory
 }
 
 type DirectoryEntry struct {
@@ -67,8 +71,13 @@ type Directory struct {
 
 func NewFileExplorer(nvim ports.NvimClient) *FileExplorer {
 	return &FileExplorer{
-		nvim:      nvim,
-		idCounter: 1,
+		nvim:              nvim,
+		idCounter:         1,
+		parentWinID:       -1,
+		currentWinID:      -1,
+		previewWinID:      -1,
+		directoriesByPath: map[string]*Directory{},
+		directoriesByBuf:  map[int]*Directory{},
 	}
 }
 
@@ -86,7 +95,8 @@ func (e *FileExplorer) Open(filepath *string) error {
 	if err != nil {
 		return err
 	}
-	if err := e.createPaneBuffers(); err != nil {
+	e.resetSessionState()
+	if err := e.createPreviewBuffer(); err != nil {
 		return err
 	}
 	if err := e.initializePaneDirectories(resolvedPath); err != nil {
@@ -106,34 +116,35 @@ func (e *FileExplorer) Open(filepath *string) error {
 
 	e.active = true
 	e.Dirty = true
-	if err := e.setupKeymaps(); err != nil {
-		return err
-	}
 	if err := e.setupCurrentBufferAutocmd(); err != nil {
 		return err
 	}
 
-	var ok bool
-	if ok, err = e.nvim.AttachBuffer(e.current.BufNr, false, map[string]any{}); err != nil {
-		return err
-	}
-	if !ok {
-		log.Error("could not attach to buffer")
-	}
-
-	return e.nvim.SetCurrentWindow(e.current.WinID)
+	return e.nvim.SetCurrentWindow(e.currentWinID)
 }
 
 func (e *FileExplorer) GetParent() Directory {
-	return e.parent
+	if e.parent == nil {
+		return Directory{}
+	}
+	parent := *e.parent
+	parent.WinID = e.parentWinID
+	return parent
 }
 
 func (e *FileExplorer) GetCurrent() Directory {
-	return e.current
+	if e.current == nil {
+		return Directory{}
+	}
+	current := *e.current
+	current.WinID = e.currentWinID
+	return current
 }
 
 func (e *FileExplorer) GetPreview() Directory {
-	return e.preview
+	preview := e.preview
+	preview.WinID = e.previewWinID
+	return preview
 }
 
 func (e *FileExplorer) GetActive() bool {
@@ -141,10 +152,16 @@ func (e *FileExplorer) GetActive() bool {
 }
 
 func (e *FileExplorer) GetCurrentBuf() int {
+	if e.current == nil {
+		return 0
+	}
 	return e.current.BufNr
 }
 
 func (e *FileExplorer) UpdateSelectedyEntry(row, col int) error {
+	if e.current == nil {
+		return fmt.Errorf("[UpdateSelectedyEntry] no current directory")
+	}
 	if row < 0 || col < 0 || row >= len(e.current.Entries) {
 		return fmt.Errorf("[UpdateSelectedyEntry] row/col out of bounds")
 	}
@@ -170,70 +187,80 @@ func (e *FileExplorer) UpdateSelectedyEntry(row, col int) error {
 	return nil
 }
 
-func (e *FileExplorer) UpdateEntries(firstline, lastline int, lines []string) error {
-	row := firstline 
+func (e *FileExplorer) UpdateEntries(bufNr, firstline, lastline int, lines []string) error {
+	directory, err := e.directoryByBuf(bufNr)
+	if err != nil {
+		return err
+	}
+	if !isValidSpliceRange(len(directory.Entries), firstline, lastline) {
+		log.Warnf("[UpdateEntries] ignoring out-of-range event buf=%d first=%d last=%d len=%d", bufNr, firstline, lastline, len(directory.Entries))
+		return nil
+	}
+
+	row := firstline
 	newEntries := []DirectoryEntry{}
 	if len(lines) == 0 {
 		// entry deleted
-		e.current.Entries = append(e.current.Entries[:firstline], e.current.Entries[lastline:]...)
+		directory.Entries = append(directory.Entries[:firstline], directory.Entries[lastline:]...)
+		e.Dirty = true
 		return nil
 	}
 	for _, line := range lines {
 		id, text := parseBufferLine(strings.TrimSpace(string(line)))
 		e.Dirty = true
 		if id == 0 {
-			entry, err := e.findExistingDraftEntry(line, row)
+			entry, err := e.findExistingDraftEntry(directory, line, row)
 			if err != nil {
 				id = e.nextID()
 			} else {
 				id = entry.ID
 			}
-			//entirely new entry
-			newEntries = append(newEntries, e.createDraftEntry(id, text))
+			// entirely new entry
+			newEntries = append(newEntries, e.createDraftEntry(directory, id, text))
 		} else {
 			handled := false
-			for i, entry := range e.current.Entries {
+			for i, entry := range directory.Entries {
 				if entry.ID == id {
 					if row+1 == i {
 						// renamed
-						e.current.Entries[i].Text = text
+						directory.Entries[i].Text = text
 					} else {
 						// e.g. copy pasted in same dir
-						newEntries = append(newEntries, e.createDraftEntry(e.nextID(), text))
+						newEntries = append(newEntries, e.createDraftEntry(directory, e.nextID(), text))
 					}
 					handled = true
 				}
 			}
 			if !handled {
 				// e.g. brought back via undo
-				newEntries = append(newEntries, e.createDraftEntry(id, text))
+				newEntries = append(newEntries, e.createDraftEntry(directory, id, text))
 			}
 		}
 		row += 1
 	}
-	orig := e.current.Entries
+	orig := directory.Entries
 	head := append(orig[:firstline:firstline], newEntries...)
-	e.current.Entries = append(head, orig[lastline:]...)
+	directory.Entries = append(head, orig[lastline:]...)
 	return nil
 }
 
-func (e *FileExplorer) createDraftEntry(id uint64, text string) DirectoryEntry {
+func (e *FileExplorer) createDraftEntry(directory *Directory, id uint64, text string) DirectoryEntry {
 	return DirectoryEntry{
 		ID:        id,
 		Text:      text,
 		Icon:      FILE_ICON,
 		IconClass: "",
-		Path:      e.current.Path + "/" + text,
+		Path:      directory.Path + "/" + text,
 		IsDir:     false,
 		IsDraft:   true,
 	}
 }
 
-func (e *FileExplorer) findExistingDraftEntry(line string, row int) (DirectoryEntry, error) {
-	if row > len(e.current.Entries)-1 {
+func (e *FileExplorer) findExistingDraftEntry(directory *Directory, line string, row int) (DirectoryEntry, error) {
+	if row > len(directory.Entries)-1 {
 		return DirectoryEntry{}, fmt.Errorf("[findExistingDraftEntry] couldnt find candidate: out of bounds")
 	}
-	candidate := e.current.Entries[row]
+	candidate := directory.Entries[row]
 
 	if !candidate.IsDraft {
 		return DirectoryEntry{}, fmt.Errorf("[findExistingDraftEntry] no draft entry at row=%d", row)
@@ -247,9 +274,13 @@ func (e *FileExplorer) Close() {
 	e.idCounter = 1
 	e.active = false
 	e.Dirty = false
+	e.resetSessionState()
 }
 
 func (e *FileExplorer) GoIn() error {
+	if e.current == nil {
+		return fmt.Errorf("[GoIn] no current directory")
+	}
 	selectedEntry, err := utils.Find(e.current.Entries, func(entry DirectoryEntry) bool {
 		return entry.ID == e.current.SelectedEntryId
 	})
@@ -257,23 +288,28 @@ func (e *FileExplorer) GoIn() error {
 		return err
 	}
 	if !selectedEntry.IsDir {
-		e.OpenFile(selectedEntry.Path)
+		return e.OpenFile(selectedEntry.Path)
 	}
 
-	newCurrentPath := selectedEntry.Path
+	newParent := e.current
+	newParent.SelectedEntryId = selectedEntry.ID
 
-	// Shift panes: current -> parent, selected child directory -> current.
-	e.parent.Path = e.current.Path
-	e.parent.Entries = e.current.Entries
-	e.parent.SelectedEntryId = selectedEntry.ID
-
-	if err := e.loadDirectory(&e.current, newCurrentPath); err != nil {
+	newCurrent, err := e.getOrCreateDirectory(selectedEntry.Path)
+	if err != nil {
 		return err
 	}
-	e.selectFirstEntry(&e.current)
+	if newCurrent.SelectedEntryId == 0 {
+		e.selectFirstEntry(newCurrent)
+	}
+
+	e.parent = newParent
+	e.current = newCurrent
 
 	e.clearPreview()
 	if err := e.refreshVisiblePanes(); err != nil {
+		return err
+	}
+	if err := e.setupCurrentBufferAutocmd(); err != nil {
 		return err
 	}
 	e.Dirty = true
@@ -281,31 +317,36 @@ func (e *FileExplorer) GoIn() error {
 }
 
 func (e *FileExplorer) GoOut() error {
+	if e.parent == nil {
+		return fmt.Errorf("[GoOut] no parent directory")
+	}
 	parentPath := e.parent.Path
 	newParentDir := path.Dir(parentPath)
 	if newParentDir == "." {
 		return fmt.Errorf("cannot go out further. already at root dir")
 	}
 
-	e.parent.Path = newParentDir
-	e.current.Entries = e.parent.Entries
-	e.current.SelectedEntryId = e.parent.SelectedEntryId
-
-	if err := e.loadDirectory(&e.parent, e.parent.Path); err != nil {
-		return err
-	}
-	entry, err := utils.Find(e.parent.Entries, func(entry DirectoryEntry) bool {
-		return strings.Contains(e.current.Path, entry.Path)
-	})
+	newCurrent := e.parent
+	newParent, err := e.getOrCreateDirectory(newParentDir)
 	if err != nil {
 		return err
 	}
 
-	e.parent.SelectedEntryId = entry.ID
-	e.current.Path = parentPath
+	entry, err := utils.Find(newParent.Entries, func(entry DirectoryEntry) bool {
+		return parentPath == entry.Path
+	})
+	if err == nil {
+		newParent.SelectedEntryId = entry.ID
+	}
+
+	e.current = newCurrent
+	e.parent = newParent
 
 	e.clearPreview()
 	if err := e.refreshVisiblePanes(); err != nil {
+		return err
+	}
+	if err := e.setupCurrentBufferAutocmd(); err != nil {
 		return err
 	}
 	e.Dirty = true
@@ -339,13 +380,6 @@ func (e *FileExplorer) resolveOpenFilepath(filepath *string) (string, error) {
 }
 
 func (e *FileExplorer) createPaneBuffers() error {
-	for _, directory := range []*Directory{&e.parent, &e.current, &e.preview} {
-		bufNr, err := e.nvim.CreateBuffer(true, false)
-		if err != nil {
-			return err
-		}
-		directory.BufNr = bufNr
-	}
 	return nil
 }
 
@@ -356,12 +390,16 @@ func (e *FileExplorer) initializePaneDirectories(filepath string) error {
 		return fmt.Errorf("[FileExplorer] parent dir doesnt exist")
 	}
 
-	if err := e.loadDirectory(&e.parent, parentPath); err != nil {
+	parentDir, err := e.getOrCreateDirectory(parentPath)
+	if err != nil {
 		return err
 	}
-	if err := e.loadDirectory(&e.current, currentPath); err != nil {
+	currentDir, err := e.getOrCreateDirectory(currentPath)
+	if err != nil {
 		return err
 	}
+	e.parent = parentDir
+	e.current = currentDir
 	return nil
 }
 
@@ -376,6 +414,9 @@ func (e *FileExplorer) loadDirectory(directory *Directory, directoryPath string)
 }
 
 func (e *FileExplorer) openPaneWindows() error {
+	if e.parent == nil || e.current == nil {
+		return fmt.Errorf("[openPaneWindows] parent/current not initialized")
+	}
 	if err := e.nvim.Command("tab new"); err != nil {
 		return err
 	}
@@ -384,28 +425,34 @@ func (e *FileExplorer) openPaneWindows() error {
 	if err != nil {
 		return err
 	}
-	e.parent.WinID = winID
+	e.parentWinID = winID
 
-	if err := e.nvim.SetBufferToWindow(e.parent.WinID, e.parent.BufNr); err != nil {
+	if err := e.nvim.SetBufferToWindow(e.parentWinID, e.parent.BufNr); err != nil {
 		return err
 	}
-	if err := e.nvim.OpenSplitRight(&e.current.WinID, e.current.BufNr); err != nil {
+	if err := e.nvim.OpenSplitRight(&e.currentWinID, e.current.BufNr); err != nil {
 		return err
 	}
-	if err := e.nvim.OpenSplitRight(&e.preview.WinID, e.preview.BufNr); err != nil {
+	if err := e.nvim.OpenSplitRight(&e.previewWinID, e.preview.BufNr); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (e *FileExplorer) refreshVisiblePanes() error {
+	if e.parent == nil || e.current == nil {
+		return fmt.Errorf("[refreshVisiblePanes] parent/current not initialized")
+	}
+	if err := e.nvim.SetBufferToWindow(e.parentWinID, e.parent.BufNr); err != nil {
+		return err
+	}
+	if err := e.nvim.SetBufferToWindow(e.currentWinID, e.current.BufNr); err != nil {
+		return err
+	}
+	if err := e.nvim.SetBufferToWindow(e.previewWinID, e.preview.BufNr); err != nil {
+		return err
+	}
 	if err := e.syncPaneBuffers(); err != nil {
-		return err
-	}
-	if err := e.syncPaneCursorToSelection(e.parent.WinID, e.parent.BufNr, e.parent.SelectedEntryId); err != nil {
-		return err
-	}
-	if err := e.syncPaneCursorToSelection(e.current.WinID, e.current.BufNr, e.current.SelectedEntryId); err != nil {
 		return err
 	}
 	return nil
@@ -424,6 +471,9 @@ func (e *FileExplorer) selectFirstEntry(directory *Directory) {
 }
 
 func (e *FileExplorer) updateSelectedEntries(filepath string) error {
+	if e.parent == nil || e.current == nil {
+		return fmt.Errorf("[updateSelectedEntries] parent/current not initialized")
+	}
 	entry, err := utils.Find(e.parent.Entries, func(entry DirectoryEntry) bool {
 		return strings.Contains(filepath, entry.Path)
 	})
@@ -439,9 +489,9 @@ func (e *FileExplorer) updateSelectedEntries(filepath string) error {
 	return err
 }
 
-func (e *FileExplorer) setupKeymaps() error {
+func (e *FileExplorer) setupKeymaps(bufNr int) error {
 	err := e.nvim.CreateBufferKeymap(
-		e.current.BufNr,
+		bufNr,
 		"n",
 		"q",
 		func(channelID int) string {
@@ -453,7 +503,7 @@ func (e *FileExplorer) setupKeymaps() error {
 	}
 
 	err = e.nvim.CreateBufferKeymap(
-		e.current.BufNr,
+		bufNr,
 		"n",
 		"<Right>",
 		func(channelID int) string {
@@ -465,7 +515,7 @@ func (e *FileExplorer) setupKeymaps() error {
 	}
 
 	err = e.nvim.CreateBufferKeymap(
-		e.current.BufNr,
+		bufNr,
 		"n",
 		"<Left>",
 		func(channelID int) string {
@@ -476,7 +526,10 @@ func (e *FileExplorer) setupKeymaps() error {
 }
 
 func (e *FileExplorer) setupCurrentBufferAutocmd() error {
-	return e.nvim.CreateBufferAutocmd(e.current.WinID, e.current.BufNr, `
+	if e.current == nil {
+		return fmt.Errorf("[setupCurrentBufferAutocmd] no current directory")
+	}
+	return e.nvim.CreateBufferAutocmd(e.currentWinID, e.current.BufNr, `
 		print("chanid=" .. tostring(chan_id) .. " winId=" .. tostring(winId) .. " bufNr=" .. tostring(bufNr))
 		if (args.buf ~= bufNr)then
 			return 
@@ -484,6 +537,78 @@ func (e *FileExplorer) setupCurrentBufferAutocmd() error {
 		local cursor = vim.api.nvim_win_get_cursor(0)
 		vim.rpcnotify(chan_id, "FileExplorerCursorMoved", cursor)
 	`)
+}
+
+func (e *FileExplorer) resetSessionState() {
+	e.parent = nil
+	e.current = nil
+	e.preview = Directory{}
+	e.parentWinID = -1
+	e.currentWinID = -1
+	e.previewWinID = -1
+	e.directoriesByPath = map[string]*Directory{}
+	e.directoriesByBuf = map[int]*Directory{}
+}
+
+func (e *FileExplorer) createPreviewBuffer() error {
+	bufNr, err := e.nvim.CreateBuffer(true, false)
+	if err != nil {
+		return err
+	}
+	e.preview = Directory{BufNr: bufNr, Entries: []DirectoryEntry{}}
+	return nil
+}
+
+func (e *FileExplorer) getOrCreateDirectory(directoryPath string) (*Directory, error) {
+	if directory, ok := e.directoriesByPath[directoryPath]; ok {
+		return directory, nil
+	}
+
+	bufNr, err := e.nvim.CreateBuffer(true, false)
+	if err != nil {
+		return nil, err
+	}
+	directory := &Directory{BufNr: bufNr, Path: directoryPath}
+	if err := e.loadDirectory(directory, directoryPath); err != nil {
+		return nil, err
+	}
+	e.selectFirstEntry(directory)
+	if err := e.setBufferLinesFromEntries(directory.BufNr, directory.Entries); err != nil {
+		return nil, err
+	}
+	if err := e.setupKeymaps(directory.BufNr); err != nil {
+		return nil, err
+	}
+
+	var ok bool
+	if ok, err = e.nvim.AttachBuffer(directory.BufNr, false, map[string]any{}); err != nil {
+		return nil, err
+	}
+	if !ok {
+		log.Errorf("could not attach to buffer %d", directory.BufNr)
+	}
+
+	e.directoriesByPath[directoryPath] = directory
+	e.directoriesByBuf[directory.BufNr] = directory
+	return directory, nil
+}
+
+func (e *FileExplorer) directoryByBuf(bufNr int) (*Directory, error) {
+	directory, ok := e.directoriesByBuf[bufNr]
+	if !ok {
+		return nil, fmt.Errorf("unknown directory buffer %d", bufNr)
+	}
+	return directory, nil
+}
+
+func isValidSpliceRange(entriesLen, firstline, lastline int) bool {
+	if firstline < 0 || lastline < 0 || firstline > lastline {
+		return false
+	}
+	if firstline > entriesLen || lastline > entriesLen {
+		return false
+	}
+	return true
 }
 
 func parseBufferLine(line string) (uint64, string) {
@@ -576,64 +701,11 @@ func (e *FileExplorer) setBufferLinesFromEntries(bufNr int, entries []DirectoryE
 }
 
 func (e *FileExplorer) syncPaneBuffers() error {
-	if err := e.setBufferLinesFromEntries(e.parent.BufNr, e.parent.Entries); err != nil {
-		return err
-	}
-	if err := e.setBufferLinesFromEntries(e.current.BufNr, e.current.Entries); err != nil {
-		return err
+	if e.preview.BufNr == 0 {
+		return nil
 	}
 	if err := e.setBufferLinesFromEntries(e.preview.BufNr, e.preview.Entries); err != nil {
 		return err
 	}
 	return nil
-}
-
-func (e *FileExplorer) findBufferRowBySelectedEntryID(bufNr int, selectedEntryID uint64) (int, error) {
-	if _, err := e.entriesForBuffer(bufNr); err != nil {
-		return 0, err
-	}
-	lines, err := e.nvim.GetBufferLines(bufNr, 0, -1, false)
-	if err != nil {
-		return 0, err
-	}
-	row, err := utils.FindIndex(lines, func(line []byte) bool {
-		id, _ := parseBufferLine(strings.TrimSpace(string(line)))
-		return id == selectedEntryID
-	})
-	if err != nil {
-		return 0, err
-	}
-	return row + 1, nil // NOTE: rows are 1 based in neovim
-}
-
-func (e *FileExplorer) entriesForBuffer(bufNr int) ([]DirectoryEntry, error) {
-	switch bufNr {
-	case e.parent.BufNr:
-		return e.parent.Entries, nil
-	case e.current.BufNr:
-		return e.current.Entries, nil
-	case e.preview.BufNr:
-		return e.preview.Entries, nil
-	default:
-		return nil, fmt.Errorf("unknown buffer %d", bufNr)
-	}
-}
-
-func (e *FileExplorer) syncPaneCursorToSelection(winID, bufNr int, selectedEntryID uint64) error {
-	if selectedEntryID == 0 {
-		return nil
-	}
-
-	var err error
-	var lines [][]byte
-	if lines, err = e.nvim.GetBufferLines(bufNr, 0, -1, true); err != nil {
-		return err
-	}
-	s := string(bytes.Join(lines, []byte("\n")))
-	log.Debug(s)
-	var row int
-	if row, err = e.findBufferRowBySelectedEntryID(bufNr, selectedEntryID); err != nil {
-		return err
-	}
-	return e.nvim.SetWindowCursor(winID, row, 0)
 }

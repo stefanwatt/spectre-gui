@@ -45,16 +45,15 @@ func (e *FileExplorer) onCursorMoved(data ...any) {
 
 func (e *FileExplorer) onBufferLines(data ...any) {
 	log.Infof("[nvim_buf_lines_event] raw data: %v", data)
+	if !e.GetActive() {
+		return
+	}
 	if len(data) != 6 {
 		log.Info("[nvim_buf_lines_event] unexpected data length")
 		return
 	}
 
 	buf := utils.ReflectToInt(data[0])
-	if buf != e.current.BufNr {
-		log.Infof("[nvim_buf_lines_event] not in current buffer. buf=%d currentBuf=%d", buf, e.current.BufNr)
-		return
-	}
 	firstline := utils.ReflectToInt(data[2])
 	lastline := utils.ReflectToInt(data[3])
 
@@ -72,7 +71,7 @@ func (e *FileExplorer) onBufferLines(data ...any) {
 		return
 	}
 
-	if err := e.UpdateEntries(firstline, lastline, linedata); err != nil {
+	if err := e.UpdateEntries(buf, firstline, lastline, linedata); err != nil {
 		log.Errorf("FileExplorer update entry text failed: %v", err)
 	}
 }
