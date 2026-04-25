@@ -20,3 +20,7 @@ some stuff must be handled in underlying neovim instance in lua
 neovim is bound to grid based rendering since its a TUI, 
 but we can render variable font-size, images, etc.
 to keep continuity while editing markdown the rich rendering is disabled if the cursor is on the table, image, etc.
+
+# plans
+- plan files go to `./docs/plans/`
+- when a plan is finished you may put it into `./docs/plans/archive/`
