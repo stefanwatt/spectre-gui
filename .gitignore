@@ -4,5 +4,6 @@ node_modules
 frontend/dist
 .playwright-mcp
 tmp
-bin
+/bin/
 .task
+/nvim-gui
