@@ -8,15 +8,25 @@ import (
 )
 
 type fakeNvim struct {
-	linesByBuf  map[int][][]byte
-	calls       []string
-	cursorCalls []cursorCall
+	linesByBuf            map[int][][]byte
+	calls                 []string
+	cursorCalls           []cursorCall
+	bufferWindowCalls     []bufferWindowCall
+	nextBuf               int
+	createBufferCallCount int
+	createBufferErr       error
+	deleteBufferCallCount int
 }
 
 type cursorCall struct {
 	winID int
 	row   int
 	col   int
+}
+
+type bufferWindowCall struct {
+	winID int
+	bufNr int
 }
 
 type fakeEmitter struct {
@@ -27,7 +37,18 @@ func (f *fakeEmitter) Emit(name string, payload any) {
 	f.events = append(f.events, name)
 }
 
-func (f *fakeNvim) CreateBuffer(listed, scratch bool) (int, error) { return 0, nil }
+func (f *fakeNvim) CreateBuffer(listed, scratch bool) (int, error) {
+	f.createBufferCallCount++
+	if f.createBufferErr != nil {
+		return 0, f.createBufferErr
+	}
+	if f.nextBuf <= 0 {
+		return 0, nil
+	}
+	bufNr := f.nextBuf
+	f.nextBuf++
+	return bufNr, nil
+}
 func (f *fakeNvim) SetBufferLines(buf int, start, end int, strict bool, lines [][]byte) error {
 	f.calls = append(f.calls, fmt.Sprintf("set:%d", buf))
 	if f.linesByBuf == nil {
@@ -41,10 +62,20 @@ func (f *fakeNvim) SetBufferLines(buf int, start, end int, strict bool, lines []
 	return nil
 }
 func (f *fakeNvim) GetBufferLines(buf int, start, end int, strict bool) ([][]byte, error) {
-	if lines, ok := f.linesByBuf[buf]; ok {
-		return lines, nil
+	lines, ok := f.linesByBuf[buf]
+	if !ok {
+		return [][]byte{}, nil
 	}
-	return [][]byte{}, nil
+	if start < 0 {
+		start = 0
+	}
+	if end < 0 || end > len(lines) {
+		end = len(lines)
+	}
+	if start > len(lines) || start > end {
+		return [][]byte{}, nil
+	}
+	return lines[start:end], nil
 }
 func (f *fakeNvim) Command(cmd string) error                   { return nil }
 func (f *fakeNvim) OpenSplitRight(winId *int, bufNr int) error { return nil }
@@ -53,10 +84,20 @@ func (f *fakeNvim) SetWindowCursor(winId, row, col int) error {
 	f.cursorCalls = append(f.cursorCalls, cursorCall{winID: winId, row: row, col: col})
 	return nil
 }
-func (f *fakeNvim) SetCurrentWindow(winId int) error                       { return nil }
-func (f *fakeNvim) SetBufferToWindow(winId int, bufNr int) error           { return nil }
+func (f *fakeNvim) SetCurrentWindow(winId int) error { return nil }
+func (f *fakeNvim) SetBufferToWindow(winId int, bufNr int) error {
+	f.bufferWindowCalls = append(f.bufferWindowCalls, bufferWindowCall{winID: winId, bufNr: bufNr})
+	return nil
+}
 func (f *fakeNvim) GetCurrentFilepath() (string, error)                    { return "", nil }
 func (f *fakeNvim) SetWindowOption(winId int, key string, value any) error { return nil }
+func (f *fakeNvim) SetBufferOption(bufNr int, key string, value any) error { return nil }
+func (f *fakeNvim) DeleteBuffer(bufNr int, force bool) error {
+	f.deleteBufferCallCount++
+	return nil
+}
+func (f *fakeNvim) SetWindowSize(winId, cols, rows int) error            { return nil }
+func (f *fakeNvim) ExecLua(script string, result any, args ...any) error { return nil }
 func (f *fakeNvim) CreateBufferKeymap(bufNr int, mode, lhs string, rhs func(channelID int) string) error {
 	return nil
 }
@@ -342,7 +383,7 @@ func TestRefreshVisiblePanes_SyncsCursorsToSelectedEntries(t *testing.T) {
 		t.Fatalf("refreshVisiblePanes failed: %v", err)
 	}
 
-	expected := []cursorCall{{winID: 101, row: 2, col: 0}, {winID: 102, row: 2, col: 0}}
+	expected := []cursorCall{{winID: 101, row: 2, col: 2}, {winID: 102, row: 2, col: 2}}
 	if len(nvim.cursorCalls) != len(expected) {
 		t.Fatalf("expected cursor calls %#v, got %#v", expected, nvim.cursorCalls)
 	}

@@ -2,8 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
-	"mime"
+	"net/url"
 	appruntime "nvim-gui/app/runtime"
 	"nvim-gui/core/projection"
 	fileexplorer "nvim-gui/features/file-explorer"
@@ -71,10 +70,9 @@ func (a *App) OnResize(width, height int) {
 }
 
 func (a *App) OnFileExplorerPreviewResize(width, height int) {
-	if neovim.NvimScreen == nil {
-		return
+	if a.fileExplorer != nil {
+		a.fileExplorer.ResizePreviewPixels(width, height)
 	}
-	neovim.NvimScreen.SetFileExplorerPreviewSizePixels(width, height)
 }
 
 func (a *App) OnFileExplorerConfirmChoice(choice int) {
@@ -92,25 +90,29 @@ func (a *App) RequestState() {
 	}
 }
 
-// ReadLocalImage decodes a base64-encoded local file path and returns it as a data URL.
-// This allows the frontend to load local images in both dev and production modes.
-func (a *App) ReadLocalImage(encoded string) string {
-	decoded, err := base64.URLEncoding.DecodeString(encoded)
-	if err != nil {
-		return ""
+// ReadLocalImage returns an asset-server URL for a local image path.
+func (a *App) ReadLocalImage(imagePath string) string {
+	return localImageURL(imagePath)
+}
+
+func normalizeLocalImagePath(imagePath string) string {
+	if strings.HasPrefix(imagePath, "file://") {
+		parsed, err := url.Parse(imagePath)
+		if err == nil {
+			if unescaped, err := url.PathUnescape(parsed.Path); err == nil {
+				imagePath = unescaped
+			} else {
+				imagePath = parsed.Path
+			}
+		}
 	}
-	absPath := string(decoded)
-	ext := strings.ToLower(filepath.Ext(absPath))
-	if !imageExtensions[ext] {
-		return ""
+	if imagePath == "~" || strings.HasPrefix(imagePath, "~/") {
+		if home, err := os.UserHomeDir(); err == nil && home != "" {
+			if imagePath == "~" {
+				return home
+			}
+			return filepath.Join(home, strings.TrimPrefix(imagePath, "~/"))
+		}
 	}
-	data, err := os.ReadFile(absPath)
-	if err != nil {
-		return ""
-	}
-	contentType := mime.TypeByExtension(ext)
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-	return "data:" + contentType + ";base64," + base64.StdEncoding.EncodeToString(data)
+	return imagePath
 }

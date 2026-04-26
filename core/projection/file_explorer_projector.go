@@ -48,11 +48,11 @@ func (p *FileExplorerProjector) Project(state *model.AppState) UIProjection {
 
 	parent := p.fileExplorer.GetParent()
 	current := p.fileExplorer.GetCurrent()
-	preview := p.fileExplorer.GetPreview()
 	payload := map[string]any{
 		"parent":         p.buildPanePayload(parent, p.parentTitle(parent)),
 		"current":        p.buildPanePayload(current, p.basenameTitle(current.Path)),
-		"preview":        p.buildPanePayload(preview, p.previewTitle(current, preview)),
+		"preview":        p.buildPreviewPayload(state),
+		"pathDisplay":    replaceHomePrefix(current.Path),
 		"currentWinMode": s.Mode,
 	}
 
@@ -75,22 +75,79 @@ func (p *FileExplorerProjector) buildPanePayload(directory fileexplorer.Director
 }
 
 func (p *FileExplorerProjector) parentTitle(directory fileexplorer.Directory) string {
-	return compactPathTitle(replaceHomePrefix(directory.Path), 40)
+	return p.basenameTitle(directory.Path)
 }
 
-func (p *FileExplorerProjector) previewTitle(current, preview fileexplorer.Directory) string {
-	for _, entry := range current.Entries {
-		if entry.ID != current.SelectedEntryId {
-			continue
+func (p *FileExplorerProjector) buildPreviewPayload(state *model.AppState) any {
+	kind := p.fileExplorer.GetPreviewKind()
+	if kind == fileexplorer.PreviewKindNone {
+		return nil
+	}
+	title := p.fileExplorer.GetPreviewTitle()
+	switch kind {
+	case fileexplorer.PreviewKindDirectory:
+		preview := p.fileExplorer.GetPreview()
+		return map[string]any{
+			"kind":      "directory",
+			"title":     title,
+			"directory": p.buildPanePayload(preview, title),
 		}
-		if strings.TrimSpace(entry.Text) != "" {
-			return entry.Text
+	case fileexplorer.PreviewKindLocalImage:
+		return map[string]any{
+			"kind":  "localImage",
+			"title": title,
+			"path":  p.fileExplorer.GetPreviewPath(),
 		}
-		if title := p.basenameTitle(entry.Path); title != "" {
-			return title
+	case fileexplorer.PreviewKindTextFile:
+		content := []rendering.ContentRow{}
+		winID := p.fileExplorer.GetPreviewWinID()
+		if win, exists := state.Editor.Screen.Windows[winID]; exists {
+			if grid := state.Editor.Screen.Grids[win.GridID]; grid != nil && grid.Height > 0 {
+				content = p.renderContentPreview(grid, p.fileExplorer.GetPreviewFiletype())
+			}
+		}
+		fallback := textLinesPreviewContent(p.fileExplorer.GetPreviewTextLines())
+		if len(fallback) > 0 && (len(content) == 0 || !contentHasNonWhitespace(content)) {
+			content = fallback
+		}
+		return map[string]any{
+			"kind":    "textFile",
+			"title":   title,
+			"content": content,
+		}
+	default:
+		return nil
+	}
+}
+
+func textLinesPreviewContent(lines []string) []rendering.ContentRow {
+	if len(lines) == 0 {
+		return []rendering.ContentRow{}
+	}
+	content := make([]rendering.ContentRow, len(lines))
+	for i, line := range lines {
+		content[i] = rendering.ContentRow{
+			Index: i + 1,
+			Tokens: []*rendering.Token{{
+				Text:      line,
+				Classes:   "",
+				Highlight: 0,
+			}},
+			Dirty: true,
 		}
 	}
-	return p.basenameTitle(preview.Path)
+	return content
+}
+
+func contentHasNonWhitespace(content []rendering.ContentRow) bool {
+	for _, row := range content {
+		for _, token := range row.Tokens {
+			if strings.TrimSpace(token.Text) != "" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (p *FileExplorerProjector) basenameTitle(path string) string {
@@ -123,180 +180,8 @@ func replaceHomePrefix(path string) string {
 	return cleanPath
 }
 
-func compactPathTitle(title string, maxLen int) string {
-	if maxLen <= 0 || runeLen(title) <= maxLen {
-		return title
-	}
-
-	const prefix = ".../"
-	available := maxLen - runeLen(prefix)
-	if available <= 0 {
-		return tailRunes(prefix, maxLen)
-	}
-
-	segments := strings.Split(filepath.ToSlash(title), "/")
-	suffix := ""
-	for i := len(segments) - 1; i >= 0; i-- {
-		segment := segments[i]
-		if segment == "" {
-			continue
-		}
-
-		candidate := segment
-		if suffix != "" {
-			candidate = segment + "/" + suffix
-		}
-		if runeLen(prefix+candidate) > maxLen {
-			if suffix != "" {
-				return prefix + suffix
-			}
-			return prefix + tailRunes(candidate, available)
-		}
-		suffix = candidate
-	}
-
-	if suffix == "" {
-		return tailRunes(title, maxLen)
-	}
-	return prefix + suffix
-}
-
-func runeLen(value string) int {
-	return len([]rune(value))
-}
-
-func tailRunes(value string, maxLen int) string {
-	if maxLen <= 0 {
-		return ""
-	}
-	runes := []rune(value)
-	if len(runes) <= maxLen {
-		return value
-	}
-	return string(runes[len(runes)-maxLen:])
-}
-
-// buildDirectory parses a file explorer pane into a Directory struct.
-// isCurrentPane indicates whether this is the focused "current" pane (which
-// receives grid_cursor_goto) vs a non-focused pane like "parent".
-// func (p *FileExplorerProjector) buildDirectory(
-// 	s *model.ScreenState,
-// 	winID, bufNr int,
-// 	directoryLineIsDir map[int]map[int]bool,
-// 	isCurrentPane bool,
-// ) *fileexplorer.Directory {
-// 	win, exists := s.Windows[winID]
-// 	if !exists || !win.IsFileExplorer {
-// 		return nil
-// 	}
-// 	grid := s.Grids[win.GridID]
-// 	if grid == nil || grid.Height == 0 {
-// 		return nil
-// 	}
-//
-// 	lineMap := directoryLineIsDir[bufNr]
-// 	if lineMap == nil {
-// 		lineMap = map[int]bool{}
-// 	}
-//
-// 	entries := fileexplorer.ParseDirectoryEntries(grid.Cells, grid.Height, lineMap)
-//
-// 	// Determine selected entry from cursor position.
-// 	// The current pane is focused and receives grid_cursor_goto, so CursorRow
-// 	// is reliable. Non-focused panes (parent) never get grid_cursor_goto, so
-// 	// we use ViewportCursorLine from win_viewport which fires for all windows.
-// 	// ViewportCursorLine is a 0-indexed buffer line; to convert to a grid row
-// 	// we subtract TopLine (scroll offset) and add 1 for the top border row.
-// 	selectedEntryId := -1
-// 	cursorCol := 0
-// 	cursorRow := grid.CursorRow
-// 	if !isCurrentPane {
-// 		cursorRow = grid.ViewportCursorLine - grid.TopLine + 1 // buffer line -> grid row (accounting for scroll + border)
-// 	}
-//
-// 	// DEBUG: log cursor resolution for file explorer panes
-// 	entryIDs := make([]uint64, len(entries))
-// 	for i, e := range entries {
-// 		entryIDs[i] = e.ID
-// 	}
-// 	log.Info(fmt.Sprintf("[fe-projector] buildDirectory winID=%d isCurrentPane=%v gridID=%d CursorRow=%d ViewportCursorLine=%d TopLine=%d cursorRow=%d entryIDs=%v",
-// 		winID, isCurrentPane, win.GridID, grid.CursorRow, grid.ViewportCursorLine, grid.TopLine, cursorRow, entryIDs))
-//
-// 	if cursorRow >= 0 {
-// 		for _, entry := range entries {
-// 			if entry.ID == cursorRow {
-// 				selectedEntryId = entry.ID
-// 				break
-// 			}
-// 		}
-// 		cursorCol = grid.CursorCol
-// 	}
-//
-// 	return &fileexplorer.Directory{
-// 		WinID:           winID,
-// 		BufNr:           bufNr,
-// 		Entries:         entries,
-// 		SelectedEntryId: selectedEntryId,
-// 		CursorCol:       cursorCol,
-// 	}
-// }
-
-// buildPreview constructs the preview payload. If the currently selected entry
-// is a directory, we parse it as a directory listing. Otherwise we render
-// the grid as content rows (syntax-highlighted file preview).
-func (p *FileExplorerProjector) buildPreview(
-	s *model.ScreenState,
-	snap fileexplorer.RegistrySnapshot,
-	current *fileexplorer.Directory,
-) any {
-	win, exists := s.Windows[snap.Preview.WinID]
-	if !exists || !win.IsFileExplorer {
-		return nil
-	}
-	grid := s.Grids[win.GridID]
-	if grid == nil || grid.Height == 0 {
-		return nil
-	}
-
-	// Check if the currently selected entry in the "current" pane is a directory
-	selectedIsDir := false
-	if current != nil && current.SelectedEntryId >= 0 {
-		for _, entry := range current.Entries {
-			if entry.ID == current.SelectedEntryId {
-				selectedIsDir = entry.IsDir
-				break
-			}
-		}
-	}
-
-	if selectedIsDir {
-		// Directory preview
-		lineMap := snap.DirectoryLineIsDir[snap.Preview.BufNr]
-		if lineMap == nil {
-			lineMap = map[int]bool{}
-		}
-		entries := fileexplorer.ParseDirectoryEntries(grid.Cells, grid.Height, lineMap)
-		return map[string]any{
-			"directory": &fileexplorer.Directory{
-				WinID:           snap.Preview.WinID,
-				BufNr:           snap.Preview.BufNr,
-				Entries:         entries,
-				SelectedEntryId: 0,
-				CursorCol:       0,
-			},
-		}
-	}
-
-	// Content preview — render via the standard content pipeline, then strip borders
-	contentRows := p.renderContentPreview(grid)
-	return map[string]any{
-		"content": contentRows,
-	}
-}
-
-// renderContentPreview builds ContentRow[] for a file preview grid,
-// stripping the border (first/last row, first/last token per row).
-func (p *FileExplorerProjector) renderContentPreview(grid *model.GridState) []rendering.ContentRow {
+// renderContentPreview builds ContentRow[] for a file preview grid.
+func (p *FileExplorerProjector) renderContentPreview(grid *model.GridState, filetype string) []rendering.ContentRow {
 	// Copy cells to avoid aliasing the model's live slices.
 	cellsCopy := make([][]*rendering.Cell, len(grid.Cells))
 	for i, row := range grid.Cells {
@@ -319,27 +204,11 @@ func (p *FileExplorerProjector) renderContentPreview(grid *model.GridState) []re
 
 	output := rendering.BuildContentPayload(rendering.ContentInput{
 		WindowID:   0,
-		Filetype:   "minifiles",
+		Filetype:   filetype,
 		CursorLine: -1,
 		Grid:       gd,
 		Meta:       nil,
 	})
 
-	content := output.Content
-
-	// Strip border: remove first and last row
-	if len(content) > 2 {
-		content = content[1 : len(content)-1]
-	}
-	// Strip border: remove first and last token from each row
-	for i := range content {
-		if len(content[i].Tokens) > 2 {
-			content[i].Tokens = content[i].Tokens[1:]
-			if len(content[i].Tokens) > 0 {
-				content[i].Tokens = content[i].Tokens[:len(content[i].Tokens)-1]
-			}
-		}
-	}
-
-	return content
+	return output.Content
 }

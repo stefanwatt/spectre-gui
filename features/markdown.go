@@ -1,7 +1,6 @@
 package features
 
 // import (
-// 	"encoding/base64"
 // 	"nvim-gui/rendering"
 // 	"nvim-gui/utils"
 // 	"strings"
@@ -567,11 +566,7 @@ package features
 // 		}
 // 		alt, _ := imageData[2].(string)
 //
-// 		// Rewrite local paths to use the local-image server
-// 		if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
-// 			encoded := base64.URLEncoding.EncodeToString([]byte(url))
-// 			url = "/local-image/" + encoded
-// 		}
+// 		// Local paths are kept raw. Frontend LocalImage reads them via ReadLocalImage.
 //
 // 		images = append(images, ImageMeta{
 // 			Line:    line,

@@ -34,11 +34,10 @@ export function Paste(text: string): $CancellablePromise<void> {
 }
 
 /**
- * ReadLocalImage decodes a base64-encoded local file path and returns it as a data URL.
- * This allows the frontend to load local images in both dev and production modes.
+ * ReadLocalImage returns an asset-server URL for a local image path.
  */
-export function ReadLocalImage(encoded: string): $CancellablePromise<string> {
-    return $Call.ByID(4020051437, encoded);
+export function ReadLocalImage(imagePath: string): $CancellablePromise<string> {
+    return $Call.ByID(4020051437, imagePath);
 }
 
 /**

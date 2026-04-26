@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
-type LocalImageHandler struct{}
+const localImagePrefix = "/local-image/"
 
 var imageExtensions = map[string]bool{
 	".png":  true,
@@ -22,46 +23,64 @@ var imageExtensions = map[string]bool{
 	".ico":  true,
 }
 
-func (h *LocalImageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+func localImageURL(imagePath string) string {
+	absPath := normalizeLocalImagePath(imagePath)
+	ext := strings.ToLower(filepath.Ext(absPath))
+	if !imageExtensions[ext] {
+		return ""
+	}
+	info, err := os.Stat(absPath)
+	if err != nil || info.IsDir() {
+		return ""
+	}
+	token := base64.RawURLEncoding.EncodeToString([]byte(absPath))
+	version := strconv.FormatInt(info.ModTime().UnixNano(), 36) + "-" + strconv.FormatInt(info.Size(), 36)
+	return localImagePrefix + token + "?v=" + version
+}
+
+func localImageMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, localImagePrefix) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		serveLocalImage(w, r)
+	})
+}
+
+func serveLocalImage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	prefix := "/local-image/"
-	if !strings.HasPrefix(r.URL.Path, prefix) {
-		// Not our route — return nil-like behavior so Wails handles it
+	encoded := strings.TrimPrefix(r.URL.Path, localImagePrefix)
+	if encoded == "" {
 		http.NotFound(w, r)
 		return
 	}
 
-	encoded := strings.TrimPrefix(r.URL.Path, prefix)
-	decoded, err := base64.URLEncoding.DecodeString(encoded)
+	decoded, err := base64.RawURLEncoding.DecodeString(encoded)
 	if err != nil {
-		http.Error(w, "invalid path encoding", http.StatusBadRequest)
+		http.NotFound(w, r)
 		return
 	}
-	absPath := string(decoded)
 
-	// Validate it's an image file by extension
+	absPath := normalizeLocalImagePath(string(decoded))
 	ext := strings.ToLower(filepath.Ext(absPath))
 	if !imageExtensions[ext] {
-		http.Error(w, "not an image file", http.StatusForbidden)
+		http.NotFound(w, r)
 		return
 	}
-
-	// Check file exists
-	info, err := os.Stat(absPath)
-	if err != nil || info.IsDir() {
+	if info, err := os.Stat(absPath); err != nil || info.IsDir() {
 		http.NotFound(w, r)
 		return
 	}
 
-	contentType := mime.TypeByExtension(ext)
-	if contentType == "" {
-		contentType = "application/octet-stream"
+	if contentType := mime.TypeByExtension(ext); contentType != "" {
+		w.Header().Set("Content-Type", contentType)
 	}
-	w.Header().Set("Content-Type", contentType)
-
+	w.Header().Set("Cache-Control", "private, max-age=31536000, immutable")
 	http.ServeFile(w, r, absPath)
 }

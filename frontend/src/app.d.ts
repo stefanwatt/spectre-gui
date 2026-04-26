@@ -244,6 +244,7 @@ declare global {
 			id: number;
 			isDir: boolean;
 			text: string;
+			path: string;
 			icon: string;
 			iconClass: string;
 		}
@@ -258,14 +259,34 @@ declare global {
 			cursorCol: number;
 		}
 
-		interface FileExplorerPreview {
+		interface FileExplorerDirectoryPreview {
+			kind: 'directory';
+			title: string;
+			directory: FileExplorerDirectory;
+		}
+
+		interface FileExplorerTextFilePreview {
+			kind: 'textFile';
+			title: string;
 			content: NvimRow[];
 		}
+
+		interface FileExplorerLocalImagePreview {
+			kind: 'localImage';
+			title: string;
+			path: string;
+		}
+
+		type FileExplorerPreview =
+			| FileExplorerDirectoryPreview
+			| FileExplorerTextFilePreview
+			| FileExplorerLocalImagePreview;
 
 		interface FileExplorerState {
 			parent?: FileExplorerDirectory;
 			current?: FileExplorerDirectory;
-			preview?: FileExplorerDirectory | FileExplorerPreview;
+			preview?: FileExplorerPreview;
+			pathDisplay?: string;
 			currentWinMode?: VimMode;
 		}
 

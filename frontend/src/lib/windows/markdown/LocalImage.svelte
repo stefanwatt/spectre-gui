@@ -3,24 +3,34 @@
 
 	let { url, altText, class: className = '' }: { url: string; altText: string; class?: string } = $props();
 
-	const LOCAL_IMAGE_PREFIX = '/local-image/';
+	function isLocalImageUrl(value: string) {
+		return (
+			value.startsWith('/') ||
+			value.startsWith('~') ||
+			value.startsWith('file://') ||
+			/^[A-Za-z]:[\\/]/.test(value) ||
+			value.startsWith('\\\\')
+		);
+	}
 
-	let dataUrl = $state<string | null>(null);
-	let isLocal = $derived(url.startsWith(LOCAL_IMAGE_PREFIX));
+	let localSrc = $state<string | null>(null);
+	let isLocal = $derived(isLocalImageUrl(url));
 
 	$effect(() => {
-		if (!isLocal) {
-			dataUrl = null;
+		if (!isLocal || !url) {
+			localSrc = null;
 			return;
 		}
-		const encoded = url.slice(LOCAL_IMAGE_PREFIX.length);
-		dataUrl = null;
-		ReadLocalImage(encoded).then((result) => {
-			dataUrl = result || null;
+		const requestedUrl = url;
+		localSrc = null;
+		ReadLocalImage(requestedUrl).then((result) => {
+			if (requestedUrl === url) {
+				localSrc = result || null;
+			}
 		});
 	});
 
-	let src = $derived(isLocal ? dataUrl : url);
+	let src = $derived(isLocal ? localSrc : url);
 </script>
 
 {#if src}

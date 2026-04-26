@@ -27,6 +27,10 @@ type NvimClient interface {
 	SetBufferToWindow(winId int, bufNr int) error
 	GetCurrentFilepath() (string, error)
 	SetWindowOption(winId int, key string, value any) error
+	SetBufferOption(bufNr int, key string, value any) error
+	DeleteBuffer(bufNr int, force bool) error
+	SetWindowSize(winId, cols, rows int) error
+	ExecLua(script string, result any, args ...any) error
 	CreateBufferKeymap(bufNr int, mode, lhs string, rhs func(channelID int) string) error
 	CreateBufferAutocmd(winId, bufNr int, luaCallback string) error
 	AttachBuffer(bufNr int, sendBuffer bool, opts map[string]any) (bool, error)

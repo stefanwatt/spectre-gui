@@ -117,7 +117,8 @@ func main() {
 			application.NewService(symbolsPicker),
 		},
 		Assets: application.AssetOptions{
-			Handler: application.AssetFileServerFS(assets),
+			Handler:    application.AssetFileServerFS(assets),
+			Middleware: localImageMiddleware,
 		},
 	})
 

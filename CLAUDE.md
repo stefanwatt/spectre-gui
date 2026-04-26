@@ -15,6 +15,11 @@ some stuff must be handled in underlying neovim instance in lua
 ## nix
 - provide some dependencies etc. in shell.nix -> run stuff like playwright tests in nix-shell
 
+# Guidelines
+## Frontend
+- try to avoid vanilla css where possible -> prefer tailwind classes
+## Backend
+- use if-init syntax wherever possible
 # features
 ## markdown 
 neovim is bound to grid based rendering since its a TUI, 

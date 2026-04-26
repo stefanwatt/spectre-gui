@@ -82,6 +82,35 @@ func (a *NvimAdapter) SetWindowOption(winId int, key string, value any) error {
 	return NvimClient.SetWindowOption(win, key, value)
 }
 
+func (a *NvimAdapter) SetBufferOption(bufNr int, key string, value any) error {
+	return NvimClient.SetBufferOption(nvim.Buffer(bufNr), key, value)
+}
+
+func (a *NvimAdapter) DeleteBuffer(bufNr int, force bool) error {
+	return NvimClient.DeleteBuffer(nvim.Buffer(bufNr), map[string]bool{"force": force})
+}
+
+func (a *NvimAdapter) SetWindowSize(winId, cols, rows int) error {
+	var result interface{}
+	return NvimClient.ExecLua(`
+		local win, cols, rows = ...
+		if not vim.api.nvim_win_is_valid(win) then
+			return false
+		end
+		if cols and cols > 0 then
+			pcall(vim.api.nvim_win_set_width, win, cols)
+		end
+		if rows and rows > 0 then
+			pcall(vim.api.nvim_win_set_height, win, rows)
+		end
+		return true
+	`, &result, winId, cols, rows)
+}
+
+func (a *NvimAdapter) ExecLua(script string, result any, args ...any) error {
+	return NvimClient.ExecLua(script, result, args...)
+}
+
 func (a *NvimAdapter) AttachBuffer(bufNr int, sendBuffer bool, opts map[string]any) (bool, error) {
 	return NvimClient.AttachBuffer(nvim.Buffer(bufNr), sendBuffer, opts)
 }

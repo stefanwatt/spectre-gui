@@ -1,13 +1,16 @@
 package fileexplorer
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	path "path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"nvim-gui/core/ports"
 	"nvim-gui/utils"
@@ -19,6 +22,35 @@ var (
 	FILE_ICON = ""
 	DIR_ICON  = ""
 )
+
+type PreviewKind string
+
+const (
+	PreviewKindNone       PreviewKind = ""
+	PreviewKindDirectory  PreviewKind = "directory"
+	PreviewKindTextFile   PreviewKind = "textFile"
+	PreviewKindLocalImage PreviewKind = "localImage"
+)
+
+const (
+	previewDebounce      = 75 * time.Millisecond
+	previewBinaryProbe   = 1024
+	previewHugeFileBytes = 1024 * 1024
+	defaultPreviewRows   = 32
+	previewCellWidthPx   = 12
+	previewCellHeightPx  = 28
+)
+
+var previewImageExtensions = map[string]bool{
+	".png":  true,
+	".jpg":  true,
+	".jpeg": true,
+	".gif":  true,
+	".svg":  true,
+	".webp": true,
+	".bmp":  true,
+	".ico":  true,
+}
 
 //TODO: bug: switching mode does not send fileexplorer update apparently
 // cause cursor shape doesnt update until you move
@@ -33,8 +65,6 @@ var (
 
 //TODO: use uint64 where possible & reasonable
 
-//TODO: manage cursor col: pressing ^ should put the cursor at the beginning of the visible text not at the beginning of the buffer line
-
 type FileExplorer struct {
 	active             bool
 	Dirty              bool
@@ -44,6 +74,16 @@ type FileExplorer struct {
 	parent             *Directory
 	current            *Directory
 	preview            Directory
+	previewKind        PreviewKind
+	previewPath        string
+	previewTitle       string
+	previewFiletype    string
+	previewTextLines   []string
+	previewTextBufNr   int
+	previewTextBufPath string
+	previewGeneration  uint64
+	previewTimer       *time.Timer
+	previewRows        int
 	openedFromWindow   int
 	parentWinID        int
 	currentWinID       int
@@ -83,6 +123,7 @@ func NewFileExplorer(nvim ports.NvimClient) *FileExplorer {
 		parentWinID:       -1,
 		currentWinID:      -1,
 		previewWinID:      -1,
+		previewRows:       defaultPreviewRows,
 		directoriesByPath: map[string]*Directory{},
 		directoriesByBuf:  map[int]*Directory{},
 		dirtyByBuf:        map[int]*DirDraft{},
@@ -110,6 +151,8 @@ func (e *FileExplorer) Open(filepath *string) error {
 	if err != nil {
 		return err
 	}
+	e.stopPreviewTimer()
+	e.deletePreviewTextBuffer()
 	e.resetSessionState()
 	if err := e.createPreviewBuffer(); err != nil {
 		return err
@@ -130,6 +173,9 @@ func (e *FileExplorer) Open(filepath *string) error {
 	}
 
 	e.active = true
+	if err := e.refreshPreviewForSelectedEntry(); err != nil {
+		log.Warnf("[FileExplorer] initial preview failed: %v", err)
+	}
 	e.Dirty = true
 	if err := e.setupCurrentBufferAutocmd(); err != nil {
 		return err
@@ -162,6 +208,30 @@ func (e *FileExplorer) GetPreview() Directory {
 	return preview
 }
 
+func (e *FileExplorer) GetPreviewKind() PreviewKind {
+	return e.previewKind
+}
+
+func (e *FileExplorer) GetPreviewPath() string {
+	return e.previewPath
+}
+
+func (e *FileExplorer) GetPreviewTitle() string {
+	return e.previewTitle
+}
+
+func (e *FileExplorer) GetPreviewFiletype() string {
+	return e.previewFiletype
+}
+
+func (e *FileExplorer) GetPreviewTextLines() []string {
+	return append([]string(nil), e.previewTextLines...)
+}
+
+func (e *FileExplorer) GetPreviewWinID() int {
+	return e.previewWinID
+}
+
 func (e *FileExplorer) GetActive() bool {
 	return e.active
 }
@@ -189,23 +259,35 @@ func (e *FileExplorer) UpdateSelectedyEntry(row, col int) error {
 		return fmt.Errorf("[UpdateSelectedyEntry] row/col out of bounds")
 	}
 
-	lines, err := e.nvim.GetBufferLines(e.current.BufNr, row, row+1, false)
+	line, err := e.getBufferLine(e.current.BufNr, row)
 	if err != nil {
 		return fmt.Errorf("[UpdateSelectedyEntry] get buffer line failed: %w", err)
 	}
-	if len(lines) == 0 {
-		return fmt.Errorf("[UpdateSelectedyEntry] no line at row=%d", row)
-	}
 
 	id := e.current.Entries[row].ID
-	cursorChanged := e.current.CursorCol != col
 	selectionChanged := e.current.SelectedEntryId != id
-	//TODO: cursor position should be entirely handled in Go not in svelte
-	// its currently broken for draft entries
-	e.current.CursorCol = col
+
+	visibleCol := bufferColToVisibleCol(line, col)
+	correctedRawCol := col
+	if selectionChanged && e.current.SelectedEntryId != 0 {
+		visibleCol = clampVisibleCol(line, e.current.CursorCol)
+		correctedRawCol = visibleColToBufferCol(line, visibleCol)
+	} else if col < bufferLineVisibleStartCol(line) {
+		visibleCol = 0
+		correctedRawCol = visibleColToBufferCol(line, visibleCol)
+	}
+
+	cursorChanged := e.current.CursorCol != visibleCol
+	e.current.CursorCol = visibleCol
 	e.current.SelectedEntryId = id
 	if cursorChanged || selectionChanged {
 		e.Dirty = true
+	}
+	if selectionChanged {
+		e.schedulePreviewRefresh(e.current.Entries[row])
+	}
+	if correctedRawCol != col && e.currentWinID >= 0 {
+		return e.nvim.SetWindowCursor(e.currentWinID, row+1, correctedRawCol)
 	}
 	return nil
 }
@@ -306,6 +388,8 @@ func (e *FileExplorer) findExistingDraftEntry(directory *Directory, line string,
 
 func (e *FileExplorer) Close() {
 	e.hideClosePrompt()
+	e.stopPreviewTimer()
+	e.deletePreviewTextBuffer()
 	e.nvim.Command("tabc")
 	e.idCounter = 1
 	e.active = false
@@ -348,6 +432,9 @@ func (e *FileExplorer) GoIn() error {
 	if err := e.setupCurrentBufferAutocmd(); err != nil {
 		return err
 	}
+	if err := e.refreshPreviewForSelectedEntry(); err != nil {
+		log.Warnf("[FileExplorer] preview refresh failed: %v", err)
+	}
 	e.Dirty = true
 	return nil
 }
@@ -384,6 +471,9 @@ func (e *FileExplorer) GoOut() error {
 	}
 	if err := e.setupCurrentBufferAutocmd(); err != nil {
 		return err
+	}
+	if err := e.refreshPreviewForSelectedEntry(); err != nil {
+		log.Warnf("[FileExplorer] preview refresh failed: %v", err)
 	}
 	e.Dirty = true
 	return nil
@@ -514,10 +604,17 @@ func (e *FileExplorer) syncPaneCursorToSelection(winID int, directory *Directory
 		return err
 	}
 	if !ok {
+		row, ok = findDirectoryRowBySelectedEntryID(directory)
+	}
+	if !ok {
 		log.Warnf("[FileExplorer] selected entry %d not found in buffer %d", directory.SelectedEntryId, directory.BufNr)
 		return nil
 	}
-	return e.nvim.SetWindowCursor(winID, row, 0)
+	line, err := e.getBufferLine(directory.BufNr, row-1)
+	if err != nil {
+		return err
+	}
+	return e.nvim.SetWindowCursor(winID, row, visibleColToBufferCol(line, directory.CursorCol))
 }
 
 func (e *FileExplorer) findBufferRowBySelectedEntryID(bufNr int, selectedEntryID uint64) (int, bool, error) {
@@ -534,8 +631,438 @@ func (e *FileExplorer) findBufferRowBySelectedEntryID(bufNr int, selectedEntryID
 	return 0, false, nil
 }
 
+func (e *FileExplorer) getBufferLine(bufNr, row int) (string, error) {
+	lines, err := e.nvim.GetBufferLines(bufNr, row, row+1, false)
+	if err != nil {
+		return "", err
+	}
+	if len(lines) == 0 {
+		return "", fmt.Errorf("no line at row=%d", row)
+	}
+	return string(lines[0]), nil
+}
+
+func findDirectoryRowBySelectedEntryID(directory *Directory) (int, bool) {
+	if directory == nil || directory.SelectedEntryId == 0 {
+		return 0, false
+	}
+	for i, entry := range directory.Entries {
+		if entry.ID == directory.SelectedEntryId {
+			return i + 1, true
+		}
+	}
+	return 0, false
+}
+
+func bufferLineVisibleStartCol(line string) int {
+	if line == "" || line[0] < '0' || line[0] > '9' {
+		return 0
+	}
+	for i := 1; i < len(line); i++ {
+		if line[i] >= '0' && line[i] <= '9' {
+			continue
+		}
+		if line[i] == '/' {
+			return i + 1
+		}
+		return 0
+	}
+	return 0
+}
+
+func bufferLineVisibleText(line string) string {
+	return line[bufferLineVisibleStartCol(line):]
+}
+
+func bufferColToVisibleCol(line string, rawCol int) int {
+	start := bufferLineVisibleStartCol(line)
+	return clampInt(rawCol-start, 0, len(bufferLineVisibleText(line)))
+}
+
+func visibleColToBufferCol(line string, visibleCol int) int {
+	start := bufferLineVisibleStartCol(line)
+	return start + clampVisibleCol(line, visibleCol)
+}
+
+func clampVisibleCol(line string, visibleCol int) int {
+	return clampInt(visibleCol, 0, len(bufferLineVisibleText(line)))
+}
+
+func clampInt(value, min, max int) int {
+	if value < min {
+		return min
+	}
+	if value > max {
+		return max
+	}
+	return value
+}
+
 func (e *FileExplorer) clearPreview() {
 	e.preview.Entries = []DirectoryEntry{}
+	e.previewKind = PreviewKindNone
+	e.previewPath = ""
+	e.previewTitle = ""
+	e.previewFiletype = ""
+	e.previewTextLines = nil
+}
+
+func (e *FileExplorer) stopPreviewTimer() {
+	e.previewGeneration++
+	if e.previewTimer == nil {
+		return
+	}
+	e.previewTimer.Stop()
+	e.previewTimer = nil
+}
+
+func (e *FileExplorer) selectedEntry() (DirectoryEntry, bool) {
+	if e.current == nil || e.current.SelectedEntryId == 0 {
+		return DirectoryEntry{}, false
+	}
+	for _, entry := range e.current.Entries {
+		if entry.ID == e.current.SelectedEntryId {
+			return entry, true
+		}
+	}
+	return DirectoryEntry{}, false
+}
+
+func (e *FileExplorer) schedulePreviewRefresh(entry DirectoryEntry) {
+	e.previewGeneration++
+	generation := e.previewGeneration
+	if e.previewTimer != nil {
+		e.previewTimer.Stop()
+	}
+	e.previewTimer = time.AfterFunc(previewDebounce, func() {
+		if !e.active || generation != e.previewGeneration {
+			return
+		}
+		if err := e.refreshPreviewForEntry(entry, generation); err != nil {
+			log.Warnf("[FileExplorer] preview refresh failed path=%s err=%v", entry.Path, err)
+		}
+	})
+}
+
+func (e *FileExplorer) refreshPreviewForSelectedEntry() error {
+	entry, ok := e.selectedEntry()
+	if !ok {
+		e.clearPreview()
+		return nil
+	}
+	e.previewGeneration++
+	return e.refreshPreviewForEntry(entry, e.previewGeneration)
+}
+
+func (e *FileExplorer) refreshPreviewForEntry(entry DirectoryEntry, generation uint64) error {
+	if !e.active || generation != e.previewGeneration {
+		return nil
+	}
+	if entry.Path == "" {
+		e.clearPreview()
+		e.Dirty = true
+		return nil
+	}
+
+	kind := PreviewKindTextFile
+	if entry.IsDir {
+		kind = PreviewKindDirectory
+	} else if isPreviewImage(entry.Path) {
+		kind = PreviewKindLocalImage
+	}
+	e.beginPreviewTransition(entry, kind)
+
+	var err error
+	switch kind {
+	case PreviewKindDirectory:
+		err = e.refreshDirectoryPreview(entry)
+	case PreviewKindLocalImage:
+		err = e.refreshImagePreview(entry)
+	case PreviewKindTextFile:
+		err = e.refreshTextPreview(entry)
+	}
+	if err != nil {
+		e.restoreCurrentPaneFocus()
+		e.Dirty = true
+		e.requestRedraw()
+	}
+	return err
+}
+
+func (e *FileExplorer) beginPreviewTransition(entry DirectoryEntry, kind PreviewKind) {
+	previewBufNr := e.preview.BufNr
+	e.preview = Directory{
+		WinID:   e.previewWinID,
+		BufNr:   previewBufNr,
+		Entries: []DirectoryEntry{},
+		Path:    entry.Path,
+	}
+	e.previewKind = kind
+	e.previewPath = entry.Path
+	e.previewTitle = previewEntryTitle(entry)
+	e.previewFiletype = ""
+	e.previewTextLines = nil
+	e.Dirty = true
+}
+
+func (e *FileExplorer) refreshDirectoryPreview(entry DirectoryEntry) error {
+	entries, err := e.mapDirectoryEntries(entry.Path)
+	if err != nil {
+		return err
+	}
+	previewBufNr := e.preview.BufNr
+	e.preview = Directory{
+		WinID:     e.previewWinID,
+		BufNr:     previewBufNr,
+		Entries:   entries,
+		Path:      entry.Path,
+		CursorCol: 0,
+	}
+	e.previewKind = PreviewKindDirectory
+	e.previewPath = entry.Path
+	e.previewTitle = previewEntryTitle(entry)
+	e.previewFiletype = ""
+	e.previewTextLines = nil
+	e.restoreCurrentPaneFocus()
+	e.Dirty = true
+	e.requestRedraw()
+	return nil
+}
+
+func (e *FileExplorer) refreshImagePreview(entry DirectoryEntry) error {
+	e.previewKind = PreviewKindLocalImage
+	e.previewPath = entry.Path
+	e.previewTitle = previewEntryTitle(entry)
+	e.previewFiletype = ""
+	e.previewTextLines = nil
+	e.preview.Entries = []DirectoryEntry{}
+	e.restoreCurrentPaneFocus()
+	e.Dirty = true
+	e.requestRedraw()
+	return nil
+}
+
+func (e *FileExplorer) refreshTextPreview(entry DirectoryEntry) error {
+	rows := e.previewRows
+	if rows <= 0 {
+		rows = defaultPreviewRows
+	}
+	lines, binary, huge, err := readPreviewLines(entry.Path, rows)
+	if err != nil {
+		lines = []string{fmt.Sprintf("[preview unavailable: %v]", err)}
+	}
+	if binary {
+		lines = []string{"[binary file preview unavailable]"}
+	}
+	e.previewTextLines = append([]string(nil), lines...)
+	bufNr, err := e.ensurePreviewTextBuffer(entry.Path)
+	if err != nil {
+		return err
+	}
+	if err := e.nvim.SetBufferOption(bufNr, "modifiable", true); err != nil {
+		return err
+	}
+	if err := e.nvim.SetBufferLines(bufNr, 0, -1, false, stringsToBytes(lines)); err != nil {
+		return err
+	}
+	filetype, err := e.configurePreviewTextBuffer(bufNr, entry.Path, huge || binary)
+	if err != nil {
+		return err
+	}
+	if e.previewWinID >= 0 {
+		if err := e.nvim.SetBufferToWindow(e.previewWinID, bufNr); err != nil {
+			return err
+		}
+		e.positionPreviewWindowAtTop()
+	}
+	e.previewKind = PreviewKindTextFile
+	e.previewPath = entry.Path
+	e.previewTitle = previewEntryTitle(entry)
+	e.previewFiletype = filetype
+	e.previewTextLines = append([]string(nil), lines...)
+	e.preview.Entries = []DirectoryEntry{}
+	e.restoreCurrentPaneFocus()
+	e.Dirty = true
+	e.requestRedraw()
+	return nil
+}
+
+func (e *FileExplorer) ensurePreviewTextBuffer(previewPath string) (int, error) {
+	if e.previewTextBufNr > 0 {
+		e.previewTextBufPath = previewPath
+		return e.previewTextBufNr, nil
+	}
+	bufNr, err := e.nvim.CreateBuffer(false, true)
+	if err != nil {
+		return 0, err
+	}
+	e.previewTextBufNr = bufNr
+	e.previewTextBufPath = previewPath
+	return bufNr, nil
+}
+
+func (e *FileExplorer) deletePreviewTextBuffer() {
+	if e.previewTextBufNr <= 0 {
+		e.previewTextBufPath = ""
+		return
+	}
+	if err := e.nvim.DeleteBuffer(e.previewTextBufNr, true); err != nil {
+		log.Warnf("[FileExplorer] delete preview buffer failed buf=%d err=%v", e.previewTextBufNr, err)
+	}
+	e.previewTextBufNr = 0
+	e.previewTextBufPath = ""
+}
+
+func (e *FileExplorer) configurePreviewTextBuffer(bufNr int, filename string, skipHighlight bool) (string, error) {
+	var filetype string
+	err := e.nvim.ExecLua(`
+		local bufnr, filename, skip_highlight = ...
+		if not vim.api.nvim_buf_is_valid(bufnr) then
+			return ""
+		end
+		pcall(vim.api.nvim_buf_set_name, bufnr, "nvim-gui-preview://" .. filename)
+		vim.bo[bufnr].buftype = "nofile"
+		vim.bo[bufnr].bufhidden = "wipe"
+		vim.bo[bufnr].swapfile = false
+		vim.bo[bufnr].readonly = true
+		local ft = ""
+		if not skip_highlight then
+			local ok, detected = pcall(vim.filetype.match, { filename = filename })
+			if ok and detected then
+				ft = detected
+				vim.bo[bufnr].filetype = detected
+			end
+		else
+			vim.bo[bufnr].filetype = ""
+		end
+		vim.bo[bufnr].modifiable = false
+		return ft
+	`, &filetype, bufNr, filename, skipHighlight)
+	return filetype, err
+}
+
+func (e *FileExplorer) positionPreviewWindowAtTop() {
+	if e.previewWinID < 0 {
+		return
+	}
+	if err := e.nvim.ExecLua(`
+		local win = ...
+		if not vim.api.nvim_win_is_valid(win) then
+			return
+		end
+		pcall(vim.api.nvim_win_set_cursor, win, {1, 0})
+	`, nil, e.previewWinID); err != nil {
+		log.Warnf("[FileExplorer] reset preview scroll failed: %v", err)
+	}
+}
+
+func (e *FileExplorer) restoreCurrentPaneFocus() {
+	if e.currentWinID < 0 {
+		return
+	}
+	if err := e.nvim.SetCurrentWindow(e.currentWinID); err != nil {
+		log.Warnf("[FileExplorer] restore current pane focus failed: %v", err)
+	}
+}
+
+func (e *FileExplorer) requestRedraw() {
+	if err := e.nvim.Command("redraw"); err != nil {
+		log.Debugf("[FileExplorer] redraw request failed: %v", err)
+	}
+}
+
+func (e *FileExplorer) ResizePreviewPixels(widthPx, heightPx int) {
+	cols := widthPx / previewCellWidthPx
+	rows := heightPx / previewCellHeightPx
+	if cols < 1 {
+		cols = 1
+	}
+	if rows < 1 {
+		rows = 1
+	}
+	e.previewRows = rows
+	if e.previewWinID >= 0 {
+		if err := e.nvim.SetWindowSize(e.previewWinID, cols, rows); err != nil {
+			log.Warnf("[FileExplorer] resize preview failed: %v", err)
+		}
+	}
+	e.restoreCurrentPaneFocus()
+	if e.previewKind == PreviewKindTextFile && e.previewPath != "" {
+		entry := DirectoryEntry{Path: e.previewPath, Text: e.previewTitle}
+		e.previewGeneration++
+		if err := e.refreshPreviewForEntry(entry, e.previewGeneration); err != nil {
+			log.Warnf("[FileExplorer] resize preview reload failed: %v", err)
+		}
+	}
+}
+
+func readPreviewLines(filename string, limit int) ([]string, bool, bool, error) {
+	info, err := os.Stat(filename)
+	if err != nil {
+		return nil, false, false, err
+	}
+	if info.IsDir() {
+		return nil, false, false, os.ErrInvalid
+	}
+	huge := info.Size() > previewHugeFileBytes
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, false, huge, err
+	}
+	defer file.Close()
+
+	probe := make([]byte, previewBinaryProbe)
+	n, err := file.Read(probe)
+	if err != nil && err != io.EOF {
+		return nil, false, huge, err
+	}
+	for _, b := range probe[:n] {
+		if b == 0 {
+			return nil, true, huge, nil
+		}
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return nil, false, huge, err
+	}
+
+	reader := bufio.NewReader(file)
+	lines := make([]string, 0, limit)
+	for len(lines) < limit {
+		line, err := reader.ReadString('\n')
+		if err != nil && err != io.EOF {
+			return nil, false, huge, err
+		}
+		line = strings.TrimRight(line, "\r\n")
+		if line != "" || err != io.EOF {
+			lines = append(lines, line)
+		}
+		if err == io.EOF {
+			break
+		}
+	}
+	if len(lines) == 0 {
+		lines = []string{""}
+	}
+	return lines, false, huge, nil
+}
+
+func stringsToBytes(lines []string) [][]byte {
+	result := make([][]byte, len(lines))
+	for i, line := range lines {
+		result[i] = []byte(line)
+	}
+	return result
+}
+
+func isPreviewImage(filename string) bool {
+	return previewImageExtensions[strings.ToLower(path.Ext(filename))]
+}
+
+func previewEntryTitle(entry DirectoryEntry) string {
+	if strings.TrimSpace(entry.Text) != "" {
+		return entry.Text
+	}
+	return path.Base(entry.Path)
 }
 
 func (e *FileExplorer) selectFirstEntry(directory *Directory) {
@@ -628,9 +1155,17 @@ func (e *FileExplorer) setupCurrentBufferAutocmd() error {
 }
 
 func (e *FileExplorer) resetSessionState() {
+	e.stopPreviewTimer()
 	e.parent = nil
 	e.current = nil
 	e.preview = Directory{}
+	e.previewKind = PreviewKindNone
+	e.previewPath = ""
+	e.previewTitle = ""
+	e.previewFiletype = ""
+	e.previewTextLines = nil
+	e.previewTextBufNr = 0
+	e.previewTextBufPath = ""
 	e.parentWinID = -1
 	e.currentWinID = -1
 	e.previewWinID = -1
@@ -827,7 +1362,7 @@ func bufferLinesEqual(a, b [][]byte) bool {
 }
 
 func (e *FileExplorer) syncPaneBuffers() error {
-	if e.preview.BufNr == 0 {
+	if e.preview.BufNr == 0 || e.previewKind == PreviewKindTextFile || e.previewKind == PreviewKindLocalImage {
 		return nil
 	}
 	if err := e.setBufferLinesFromEntries(e.preview.BufNr, e.preview.Entries); err != nil {
