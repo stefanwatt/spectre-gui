@@ -276,6 +276,11 @@ Execute action plan on disk and handle dirty-close UX.
 ### Acceptance
 
 - Required sequence works end-to-end (`dd` child, `<Left>`, `p`, `=`)
+- if target path includes dir that doesn't exist yet, then it will be created  
+    - e.g. explorer opened in `/tmp/empty-dir` 
+    - then buffer line is added with `foo/foo.txt` 
+    - hit = to sync will create dir `/tmp/empty-dir/foo` and file `/tmp/empty-dir/foo/foo.txt` 
+    - no error for non-existent dir
 - `q` on dirty shows prompt and follows chosen branch
 - `<Left>` always navigates without prompt
 
@@ -342,3 +347,5 @@ Keep code minimal.
 No overengineering for generic file manager behavior.
 
 Primary target: fast project-local ops with reliable draft persistence + explicit sync.
+
+- Outstanding: preview payload contract mismatch still needs refactor before preview dirty indicator.

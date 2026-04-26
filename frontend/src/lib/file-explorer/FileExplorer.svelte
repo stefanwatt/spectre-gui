@@ -114,16 +114,24 @@
 
 {#snippet pane(data: App.FileExplorerDirectory, role: 'parent' | 'current')}
 	<div
-		class="bg-very-dark overflow-y-auto border-r-2 border-r-surface0"
+		class="bg-very-dark border-r-surface0 overflow-y-auto border-r-2"
 		class:focused={role === 'current'}
 		class:parent-dir={role === 'parent'}
 		class:current-dir={role === 'current'}
 	>
-		<!-- <div -->
-		<!-- 	class="overflow-hidden text-ellipsis whitespace-nowrap border-b-2 border-b-surface0 px-1 py-2 text-xl" -->
-		<!-- > -->
-		<!-- 	{data.title} -->
-		<!-- </div> -->
+		<div
+			class:bg-yellow={data.dirty}
+			class:bg-blue={!data.dirty}
+			class="text-mantle m-2 overflow-hidden text-ellipsis whitespace-nowrap rounded-xl px-4 py-2 text-xl"
+		>
+			{#if data.dirty}
+				<!-- content here -->
+				<span> </span>
+			{/if}
+			<span>
+				{data.title}
+			</span>
+		</div>
 		<div class="overflow-y-auto px-4">
 			{#each data.entries as entry (entry.id)}
 				{@const selected = data.selectedEntryId === entry.id}
@@ -132,7 +140,7 @@
 				{@const split = cursorActive ? splitEntryTextAtCursor(entry, data.cursorCol ?? 0) : null}
 				<div
 					use:scrollSelectedIntoView={selected}
-					class="flex items-center h-9 cursor-default gap-1 whitespace-nowrap rounded-lg p-1"
+					class="flex h-9 cursor-default items-center gap-1 whitespace-nowrap rounded-lg p-1"
 					class:bg-blue={selected}
 					class:text-mantle={selected}
 				>

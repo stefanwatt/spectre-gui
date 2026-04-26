@@ -17,9 +17,10 @@ import (
 )
 
 type App struct {
-	ctx     context.Context
-	App     *application.App
-	runtime *appruntime.Runtime
+	ctx          context.Context
+	App          *application.App
+	runtime      *appruntime.Runtime
+	fileExplorer *fileexplorer.FileExplorer
 }
 
 type wailsUIEmitter struct {
@@ -41,9 +42,12 @@ func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOpt
 	a.ctx = ctx
 	utils.SetupLog()
 	fileExplorer := fileexplorer.NewFileExplorer(&neovim.NvimAdapter{})
+	a.fileExplorer = fileExplorer
 	neovim.SetFileExplorer(fileExplorer)
 	a.runtime = appruntime.New(nil, fileExplorer)
-	a.runtime.SetEmitter(wailsUIEmitter{app: a.App})
+	emitter := wailsUIEmitter{app: a.App}
+	a.runtime.SetEmitter(emitter)
+	fileExplorer.SetEmitter(emitter)
 	a.runtime.SetProjector(projection.CompositeProjector{
 		Projectors: []projection.Projector{
 			projection.NewLayoutContentProjector(),
@@ -74,10 +78,10 @@ func (a *App) OnFileExplorerPreviewResize(width, height int) {
 }
 
 func (a *App) OnFileExplorerConfirmChoice(choice int) {
-	if neovim.NvimScreen == nil {
+	if a.fileExplorer == nil {
 		return
 	}
-	// neovim.NvimScreen.HandleFileExplorerConfirmChoice(choice)
+	a.fileExplorer.HandleConfirmChoice(choice)
 }
 
 // RequestState triggers emission of current state to frontend

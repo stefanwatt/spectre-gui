@@ -33,20 +33,29 @@ var (
 
 //TODO: use uint64 where possible & reasonable
 
+//TODO: filesystem operations seem to work. dirty state tracking is broken
+// syncing does not set dirty to false for current pane. instead it sets dirty = true for parent and changes all dirs to type file
+
+//TODO: after sync the cursor should be on the same entry as before, even if order has changed through sorting
+
 type FileExplorer struct {
-	active            bool
-	Dirty             bool
-	idCounter         uint64
-	nvim              ports.NvimClient
-	parent            *Directory
-	current           *Directory
-	preview           Directory
-	openedFromWindow  int
-	parentWinID       int
-	currentWinID      int
-	previewWinID      int
-	directoriesByPath map[string]*Directory
-	directoriesByBuf  map[int]*Directory
+	active             bool
+	Dirty              bool
+	idCounter          uint64
+	nvim               ports.NvimClient
+	emitter            ports.UIEmitter
+	parent             *Directory
+	current            *Directory
+	preview            Directory
+	openedFromWindow   int
+	parentWinID        int
+	currentWinID       int
+	previewWinID       int
+	directoriesByPath  map[string]*Directory
+	directoriesByBuf   map[int]*Directory
+	dirtyByBuf         map[int]*DirDraft
+	sourceByID         map[uint64]DirectoryEntry
+	pendingClosePrompt bool
 }
 
 type DirectoryEntry struct {
@@ -78,6 +87,8 @@ func NewFileExplorer(nvim ports.NvimClient) *FileExplorer {
 		previewWinID:      -1,
 		directoriesByPath: map[string]*Directory{},
 		directoriesByBuf:  map[int]*Directory{},
+		dirtyByBuf:        map[int]*DirDraft{},
+		sourceByID:        map[uint64]DirectoryEntry{},
 	}
 }
 
@@ -88,6 +99,11 @@ func (e *FileExplorer) RegisterHandlers() {
 	e.nvim.RegisterHandler("nvim_buf_detach_event", e.onBufferDetach)
 	e.nvim.RegisterHandler("FileExplorerGoIn", e.onGoIn)
 	e.nvim.RegisterHandler("FileExplorerGoOut", e.onGoOut)
+	e.nvim.RegisterHandler("FileExplorerSync", e.onSync)
+}
+
+func (e *FileExplorer) SetEmitter(emitter ports.UIEmitter) {
+	e.emitter = emitter
 }
 
 func (e *FileExplorer) Open(filepath *string) error {
@@ -158,6 +174,14 @@ func (e *FileExplorer) GetCurrentBuf() int {
 	return e.current.BufNr
 }
 
+func (e *FileExplorer) IsBufDirty(bufNr int) bool {
+	if bufNr <= 0 {
+		return false
+	}
+	_, ok := e.dirtyByBuf[bufNr]
+	return ok
+}
+
 func (e *FileExplorer) UpdateSelectedyEntry(row, col int) error {
 	if e.current == nil {
 		return fmt.Errorf("[UpdateSelectedyEntry] no current directory")
@@ -196,6 +220,7 @@ func (e *FileExplorer) UpdateEntries(bufNr, firstline, lastline int, lines []str
 		log.Warnf("[UpdateEntries] ignoring out-of-range event buf=%d first=%d last=%d len=%d", bufNr, firstline, lastline, len(directory.Entries))
 		return nil
 	}
+	e.captureDirtyBaseline(bufNr, directory)
 
 	row := firstline
 	newEntries := []DirectoryEntry{}
@@ -222,7 +247,7 @@ func (e *FileExplorer) UpdateEntries(bufNr, firstline, lastline int, lines []str
 			for i, entry := range directory.Entries {
 				if entry.ID == id {
 					if row+1 == i {
-						// renamed
+						// renamed / synced replacement at same row
 						directory.Entries[i].Text = text
 					} else {
 						// e.g. copy pasted in same dir
@@ -270,6 +295,7 @@ func (e *FileExplorer) findExistingDraftEntry(directory *Directory, line string,
 }
 
 func (e *FileExplorer) Close() {
+	e.hideClosePrompt()
 	e.nvim.Command("tabc")
 	e.idCounter = 1
 	e.active = false
@@ -410,6 +436,7 @@ func (e *FileExplorer) loadDirectory(directory *Directory, directoryPath string)
 	}
 	directory.Path = directoryPath
 	directory.Entries = entries
+	e.indexSourceEntries(entries)
 	return nil
 }
 
@@ -522,6 +549,18 @@ func (e *FileExplorer) setupKeymaps(bufNr int) error {
 			return fmt.Sprintf(":lua vim.rpcnotify(%d, 'FileExplorerGoOut', {})<CR>", channelID)
 		},
 	)
+	if err != nil {
+		return err
+	}
+
+	err = e.nvim.CreateBufferKeymap(
+		bufNr,
+		"n",
+		"=",
+		func(channelID int) string {
+			return fmt.Sprintf(":lua vim.rpcnotify(%d, 'FileExplorerSync', {})<CR>", channelID)
+		},
+	)
 	return err
 }
 
@@ -548,6 +587,9 @@ func (e *FileExplorer) resetSessionState() {
 	e.previewWinID = -1
 	e.directoriesByPath = map[string]*Directory{}
 	e.directoriesByBuf = map[int]*Directory{}
+	e.dirtyByBuf = map[int]*DirDraft{}
+	e.sourceByID = map[uint64]DirectoryEntry{}
+	e.pendingClosePrompt = false
 }
 
 func (e *FileExplorer) createPreviewBuffer() error {

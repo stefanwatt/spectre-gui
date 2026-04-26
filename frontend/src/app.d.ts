@@ -251,6 +251,8 @@ declare global {
 		interface FileExplorerDirectory {
 			winId: number;
 			bufNr: number;
+			title: string;
+			dirty: boolean;
 			entries: FileExplorerEntry[];
 			selectedEntryId: number;
 			cursorCol: number;

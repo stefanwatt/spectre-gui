@@ -1,6 +1,10 @@
 package projection
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	"nvim-gui/core/model"
 	fileexplorer "nvim-gui/features/file-explorer"
 	"nvim-gui/rendering"
@@ -42,10 +46,13 @@ func (p *FileExplorerProjector) Project(state *model.AppState) UIProjection {
 	// Build the file-explorer-update payload
 	events := []EmittedEvent{}
 
+	parent := p.fileExplorer.GetParent()
+	current := p.fileExplorer.GetCurrent()
+	preview := p.fileExplorer.GetPreview()
 	payload := map[string]any{
-		"parent":         p.fileExplorer.GetParent(),
-		"current":        p.fileExplorer.GetCurrent(),
-		"preview":        p.fileExplorer.GetPreview(),
+		"parent":         p.buildPanePayload(parent, p.parentTitle(parent)),
+		"current":        p.buildPanePayload(current, p.basenameTitle(current.Path)),
+		"preview":        p.buildPanePayload(preview, p.previewTitle(current, preview)),
 		"currentWinMode": s.Mode,
 	}
 
@@ -53,6 +60,120 @@ func (p *FileExplorerProjector) Project(state *model.AppState) UIProjection {
 	p.fileExplorer.Dirty = false
 
 	return UIProjection{Events: events}
+}
+
+func (p *FileExplorerProjector) buildPanePayload(directory fileexplorer.Directory, title string) map[string]any {
+	return map[string]any{
+		"winId":           directory.WinID,
+		"bufNr":           directory.BufNr,
+		"title":           title,
+		"entries":         directory.Entries,
+		"selectedEntryId": directory.SelectedEntryId,
+		"cursorCol":       directory.CursorCol,
+		"dirty":           p.fileExplorer.IsBufDirty(directory.BufNr),
+	}
+}
+
+func (p *FileExplorerProjector) parentTitle(directory fileexplorer.Directory) string {
+	return compactPathTitle(replaceHomePrefix(directory.Path), 40)
+}
+
+func (p *FileExplorerProjector) previewTitle(current, preview fileexplorer.Directory) string {
+	for _, entry := range current.Entries {
+		if entry.ID != current.SelectedEntryId {
+			continue
+		}
+		if strings.TrimSpace(entry.Text) != "" {
+			return entry.Text
+		}
+		if title := p.basenameTitle(entry.Path); title != "" {
+			return title
+		}
+	}
+	return p.basenameTitle(preview.Path)
+}
+
+func (p *FileExplorerProjector) basenameTitle(path string) string {
+	path = replaceHomePrefix(path)
+	if strings.TrimSpace(path) == "" {
+		return ""
+	}
+	return filepath.Base(path)
+}
+
+func replaceHomePrefix(path string) string {
+	if strings.TrimSpace(path) == "" {
+		return ""
+	}
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return path
+	}
+
+	cleanPath := filepath.Clean(path)
+	cleanHome := filepath.Clean(home)
+	if cleanPath == cleanHome {
+		return "~"
+	}
+
+	homePrefix := cleanHome + string(os.PathSeparator)
+	if strings.HasPrefix(cleanPath, homePrefix) {
+		return "~/" + strings.TrimPrefix(cleanPath, homePrefix)
+	}
+	return cleanPath
+}
+
+func compactPathTitle(title string, maxLen int) string {
+	if maxLen <= 0 || runeLen(title) <= maxLen {
+		return title
+	}
+
+	const prefix = ".../"
+	available := maxLen - runeLen(prefix)
+	if available <= 0 {
+		return tailRunes(prefix, maxLen)
+	}
+
+	segments := strings.Split(filepath.ToSlash(title), "/")
+	suffix := ""
+	for i := len(segments) - 1; i >= 0; i-- {
+		segment := segments[i]
+		if segment == "" {
+			continue
+		}
+
+		candidate := segment
+		if suffix != "" {
+			candidate = segment + "/" + suffix
+		}
+		if runeLen(prefix+candidate) > maxLen {
+			if suffix != "" {
+				return prefix + suffix
+			}
+			return prefix + tailRunes(candidate, available)
+		}
+		suffix = candidate
+	}
+
+	if suffix == "" {
+		return tailRunes(title, maxLen)
+	}
+	return prefix + suffix
+}
+
+func runeLen(value string) int {
+	return len([]rune(value))
+}
+
+func tailRunes(value string, maxLen int) string {
+	if maxLen <= 0 {
+		return ""
+	}
+	runes := []rune(value)
+	if len(runes) <= maxLen {
+		return value
+	}
+	return string(runes[len(runes)-maxLen:])
 }
 
 // buildDirectory parses a file explorer pane into a Directory struct.

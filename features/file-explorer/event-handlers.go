@@ -7,7 +7,7 @@ import (
 )
 
 func (e *FileExplorer) onClose(_ ...any) {
-	e.Close()
+	e.RequestClose()
 }
 
 func (e *FileExplorer) onCursorMoved(data ...any) {
@@ -92,5 +92,11 @@ func (e *FileExplorer) onGoIn(_ ...any) {
 func (e *FileExplorer) onGoOut(_ ...any) {
 	if err := e.GoOut(); err != nil {
 		log.Errorf("FileExplorerGoOut failed: %v", err)
+	}
+}
+
+func (e *FileExplorer) onSync(_ ...any) {
+	if err := e.Sync(); err != nil {
+		log.Errorf("FileExplorerSync failed: %v", err)
 	}
 }
