@@ -86,6 +86,10 @@ func (a *NvimAdapter) AttachBuffer(bufNr int, sendBuffer bool, opts map[string]a
 	return NvimClient.AttachBuffer(nvim.Buffer(bufNr), sendBuffer, opts)
 }
 
+func (a *NvimAdapter) DetachBuffer(bufNr int) (bool, error) {
+	return NvimClient.DetachBuffer(nvim.Buffer(bufNr))
+}
+
 func (a *NvimAdapter) RegisterHandler(event string, handler func(data ...any)) {
 	NvimClient.RegisterHandler(event, func(_ *nvim.Nvim, data ...any) {
 		handler(data...)

@@ -58,9 +58,6 @@ func (e *FileExplorer) captureDirtyBaseline(bufNr int, directory *Directory) {
 
 func (e *FileExplorer) indexSourceEntries(entries []DirectoryEntry) {
 	for _, entry := range entries {
-		if _, exists := e.sourceByID[entry.ID]; exists {
-			continue
-		}
 		e.sourceByID[entry.ID] = entry
 	}
 }
@@ -156,27 +153,99 @@ func (e *FileExplorer) Sync() error {
 	}
 
 	e.dirtyByBuf = map[int]*DirDraft{}
-	if err := e.refreshDirectoriesFromDisk(); err != nil {
+	detachedBufs, err := e.detachTrackedDirectoryBuffers()
+	if err != nil {
+		e.reattachDirectoryBuffers(detachedBufs)
 		e.echoSyncMessage(fmt.Sprintf("file-explorer sync failed: %v", err))
 		return err
 	}
-	e.clearPreview()
-	if err := e.refreshVisiblePanes(); err != nil {
-		e.echoSyncMessage(fmt.Sprintf("file-explorer sync failed: %v", err))
-		return err
+	refreshErr := func() error {
+		if err := e.refreshDirectoriesFromDisk(e.touchedCachedDirectories(actions)); err != nil {
+			return err
+		}
+		e.clearPreview()
+		return e.refreshVisiblePanes()
+	}()
+	e.reattachDirectoryBuffers(detachedBufs)
+	if refreshErr != nil {
+		e.echoSyncMessage(fmt.Sprintf("file-explorer sync failed: %v", refreshErr))
+		return refreshErr
 	}
 	e.Dirty = true
 	e.echoSyncMessage("file-explorer sync: success")
 	return nil
 }
 
-func (e *FileExplorer) refreshDirectoriesFromDisk() error {
-	paths := make([]string, 0, len(e.directoriesByPath))
-	for dirPath := range e.directoriesByPath {
+func (e *FileExplorer) detachTrackedDirectoryBuffers() ([]int, error) {
+	bufNrs := make([]int, 0, len(e.directoriesByBuf))
+	for bufNr := range e.directoriesByBuf {
+		bufNrs = append(bufNrs, bufNr)
+	}
+	sort.Ints(bufNrs)
+
+	detachedBufs := make([]int, 0, len(bufNrs))
+	for _, bufNr := range bufNrs {
+		detached, err := e.nvim.DetachBuffer(bufNr)
+		if err != nil {
+			return detachedBufs, fmt.Errorf("detach buffer %d: %w", bufNr, err)
+		}
+		if detached {
+			detachedBufs = append(detachedBufs, bufNr)
+		}
+	}
+	return detachedBufs, nil
+}
+
+func (e *FileExplorer) reattachDirectoryBuffers(bufNrs []int) {
+	for _, bufNr := range bufNrs {
+		ok, err := e.nvim.AttachBuffer(bufNr, false, map[string]any{})
+		if err != nil {
+			log.Errorf("[FileExplorer] reattach buffer %d failed: %v", bufNr, err)
+			continue
+		}
+		if !ok {
+			log.Warnf("[FileExplorer] reattach buffer %d returned false", bufNr)
+		}
+	}
+}
+
+func (e *FileExplorer) touchedCachedDirectories(actions []SyncAction) []string {
+	touched := map[string]struct{}{}
+	addTouched := func(targetPath string) {
+		if targetPath == "" {
+			return
+		}
+		dirPath := path.Dir(targetPath)
+		for {
+			if dirPath == "" || dirPath == "." {
+				return
+			}
+			if _, ok := e.directoriesByPath[dirPath]; ok {
+				touched[dirPath] = struct{}{}
+				return
+			}
+			next := path.Dir(dirPath)
+			if next == dirPath {
+				return
+			}
+			dirPath = next
+		}
+	}
+
+	for _, action := range actions {
+		addTouched(action.From)
+		addTouched(action.To)
+	}
+
+	paths := make([]string, 0, len(touched))
+	for dirPath := range touched {
 		paths = append(paths, dirPath)
 	}
 	sort.Strings(paths)
+	return paths
+}
 
+func (e *FileExplorer) refreshDirectoriesFromDisk(paths []string) error {
 	for _, dirPath := range paths {
 		directory := e.directoriesByPath[dirPath]
 		selectedPath := selectedEntryPath(directory)

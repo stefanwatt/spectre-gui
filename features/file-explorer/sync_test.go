@@ -1,6 +1,7 @@
 package fileexplorer
 
 import (
+	"fmt"
 	"os"
 	path "path/filepath"
 	"testing"
@@ -8,6 +9,7 @@ import (
 
 type fakeNvim struct {
 	linesByBuf map[int][][]byte
+	calls      []string
 }
 
 type fakeEmitter struct {
@@ -20,6 +22,15 @@ func (f *fakeEmitter) Emit(name string, payload any) {
 
 func (f *fakeNvim) CreateBuffer(listed, scratch bool) (int, error) { return 0, nil }
 func (f *fakeNvim) SetBufferLines(buf int, start, end int, strict bool, lines [][]byte) error {
+	f.calls = append(f.calls, fmt.Sprintf("set:%d", buf))
+	if f.linesByBuf == nil {
+		f.linesByBuf = map[int][][]byte{}
+	}
+	copied := make([][]byte, len(lines))
+	for i := range lines {
+		copied[i] = append([]byte(nil), lines[i]...)
+	}
+	f.linesByBuf[buf] = copied
 	return nil
 }
 func (f *fakeNvim) GetBufferLines(buf int, start, end int, strict bool) ([][]byte, error) {
@@ -41,6 +52,11 @@ func (f *fakeNvim) CreateBufferKeymap(bufNr int, mode, lhs string, rhs func(chan
 }
 func (f *fakeNvim) CreateBufferAutocmd(winId, bufNr int, luaCallback string) error { return nil }
 func (f *fakeNvim) AttachBuffer(bufNr int, sendBuffer bool, opts map[string]any) (bool, error) {
+	f.calls = append(f.calls, fmt.Sprintf("attach:%d", bufNr))
+	return true, nil
+}
+func (f *fakeNvim) DetachBuffer(bufNr int) (bool, error) {
+	f.calls = append(f.calls, fmt.Sprintf("detach:%d", bufNr))
 	return true, nil
 }
 func (f *fakeNvim) RegisterHandler(event string, handler func(data ...any)) {}
@@ -194,6 +210,140 @@ func TestSync_CreateNestedFileFromDraftLine(t *testing.T) {
 	if len(e.dirtyByBuf) != 0 {
 		t.Fatalf("dirty drafts not cleared")
 	}
+	expectedCalls := []string{"detach:88", "set:88", "attach:88"}
+	if len(nvim.calls) != len(expectedCalls) {
+		t.Fatalf("expected nvim calls %#v, got %#v", expectedCalls, nvim.calls)
+	}
+	for i, expected := range expectedCalls {
+		if nvim.calls[i] != expected {
+			t.Fatalf("expected nvim calls %#v, got %#v", expectedCalls, nvim.calls)
+		}
+	}
+}
+
+func TestUpdateEntries_SameRowIDReplacementKeepsExistingEntryShape(t *testing.T) {
+	nvim := &fakeNvim{}
+	e := NewFileExplorer(nvim)
+	dir := &Directory{BufNr: 7, Path: "/project", Entries: []DirectoryEntry{
+		{ID: 10, Icon: DIR_ICON, Text: "old", Path: "/project/old", IsDir: true},
+	}}
+	e.directoriesByBuf[7] = dir
+
+	if err := e.UpdateEntries(7, 0, 1, []string{"10/new"}); err != nil {
+		t.Fatalf("UpdateEntries failed: %v", err)
+	}
+
+	if len(dir.Entries) != 1 {
+		t.Fatalf("expected replacement row kept, got %d entries", len(dir.Entries))
+	}
+	entry := dir.Entries[0]
+	if entry.ID != 10 || entry.Text != "new" || entry.Path != "/project/new" {
+		t.Fatalf("unexpected replacement entry: %#v", entry)
+	}
+	if entry.Icon != DIR_ICON || !entry.IsDir || entry.IsDraft {
+		t.Fatalf("replacement corrupted entry shape: %#v", entry)
+	}
+}
+
+func TestSync_SelectiveRefreshSkipsUntouchedCachedDirectory(t *testing.T) {
+	tmpDir := t.TempDir()
+	touched := path.Join(tmpDir, "touched")
+	untouched := path.Join(tmpDir, "untouched")
+	if err := os.MkdirAll(touched, 0o755); err != nil {
+		t.Fatalf("mkdir touched failed: %v", err)
+	}
+	if err := os.MkdirAll(untouched, 0o755); err != nil {
+		t.Fatalf("mkdir untouched failed: %v", err)
+	}
+	if err := os.WriteFile(path.Join(untouched, "existing.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("write untouched file failed: %v", err)
+	}
+
+	nvim := &fakeNvim{linesByBuf: map[int][][]byte{
+		1: {[]byte("foo.txt")},
+		2: {[]byte("20/existing.txt")},
+	}}
+	e := NewFileExplorer(nvim)
+	touchedDir := &Directory{BufNr: 1, Path: touched, Entries: []DirectoryEntry{}}
+	untouchedDir := &Directory{BufNr: 2, Path: untouched, Entries: []DirectoryEntry{
+		{ID: 20, Icon: FILE_ICON, Text: "existing.txt", Path: path.Join(untouched, "existing.txt")},
+	}}
+	e.directoriesByPath[touched] = touchedDir
+	e.directoriesByPath[untouched] = untouchedDir
+	e.directoriesByBuf[1] = touchedDir
+	e.directoriesByBuf[2] = untouchedDir
+	e.parent = touchedDir
+	e.current = touchedDir
+	e.parentWinID = 1
+	e.currentWinID = 2
+	e.previewWinID = 3
+	e.dirtyByBuf[1] = &DirDraft{BufNr: 1, DirPath: touched, OriginalEntries: map[uint64]DirectoryEntry{}}
+
+	if err := e.Sync(); err != nil {
+		t.Fatalf("sync failed: %v", err)
+	}
+
+	if _, err := os.Stat(path.Join(touched, "foo.txt")); err != nil {
+		t.Fatalf("created file missing: %v", err)
+	}
+	for _, call := range nvim.calls {
+		if call == "set:2" {
+			t.Fatalf("untouched cached directory was rewritten, calls=%#v", nvim.calls)
+		}
+	}
+}
+
+func TestSetBufferLinesFromEntries_SkipsNoOpWrite(t *testing.T) {
+	nvim := &fakeNvim{linesByBuf: map[int][][]byte{
+		7: {[]byte("10/file.txt")},
+	}}
+	e := NewFileExplorer(nvim)
+
+	err := e.setBufferLinesFromEntries(7, []DirectoryEntry{{ID: 10, Text: "file.txt"}})
+	if err != nil {
+		t.Fatalf("setBufferLinesFromEntries failed: %v", err)
+	}
+	if len(nvim.calls) != 0 {
+		t.Fatalf("expected no SetBufferLines call, got %#v", nvim.calls)
+	}
+}
+
+func TestMapDirectoryEntries_ReusesIDForStablePath(t *testing.T) {
+	tmpDir := t.TempDir()
+	stablePath := path.Join(tmpDir, "stable.txt")
+	if err := os.WriteFile(stablePath, []byte("x"), 0o644); err != nil {
+		t.Fatalf("write stable file failed: %v", err)
+	}
+
+	e := NewFileExplorer(&fakeNvim{})
+	first, err := e.mapDirectoryEntries(tmpDir)
+	if err != nil {
+		t.Fatalf("first mapDirectoryEntries failed: %v", err)
+	}
+	if err := os.WriteFile(path.Join(tmpDir, "other.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("write other file failed: %v", err)
+	}
+	second, err := e.mapDirectoryEntries(tmpDir)
+	if err != nil {
+		t.Fatalf("second mapDirectoryEntries failed: %v", err)
+	}
+
+	firstID := idForTestPath(t, first, stablePath)
+	secondID := idForTestPath(t, second, stablePath)
+	if firstID != secondID {
+		t.Fatalf("expected stable ID for unchanged path, first=%d second=%d", firstID, secondID)
+	}
+}
+
+func idForTestPath(t *testing.T, entries []DirectoryEntry, target string) uint64 {
+	t.Helper()
+	for _, entry := range entries {
+		if entry.Path == target {
+			return entry.ID
+		}
+	}
+	t.Fatalf("path %s not found in %#v", target, entries)
+	return 0
 }
 
 func TestRequestClose_ShowsPromptWhenDirty(t *testing.T) {

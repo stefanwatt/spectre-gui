@@ -38,6 +38,8 @@ var (
 
 //TODO: after sync the cursor should be on the same entry as before, even if order has changed through sorting
 
+//TODO: manage cursor col: pressing ^ should put the cursor at the beginning of the visible text not at the beginning of the buffer line
+
 type FileExplorer struct {
 	active             bool
 	Dirty              bool
@@ -55,6 +57,7 @@ type FileExplorer struct {
 	directoriesByBuf   map[int]*Directory
 	dirtyByBuf         map[int]*DirDraft
 	sourceByID         map[uint64]DirectoryEntry
+	idByPath           map[string]uint64
 	pendingClosePrompt bool
 }
 
@@ -89,6 +92,7 @@ func NewFileExplorer(nvim ports.NvimClient) *FileExplorer {
 		directoriesByBuf:  map[int]*Directory{},
 		dirtyByBuf:        map[int]*DirDraft{},
 		sourceByID:        map[uint64]DirectoryEntry{},
+		idByPath:          map[string]uint64{},
 	}
 }
 
@@ -245,16 +249,20 @@ func (e *FileExplorer) UpdateEntries(bufNr, firstline, lastline int, lines []str
 		} else {
 			handled := false
 			for i, entry := range directory.Entries {
-				if entry.ID == id {
-					if row+1 == i {
-						// renamed / synced replacement at same row
-						directory.Entries[i].Text = text
-					} else {
-						// e.g. copy pasted in same dir
-						newEntries = append(newEntries, e.createDraftEntry(directory, e.nextID(), text))
-					}
-					handled = true
+				if entry.ID != id {
+					continue
 				}
+				if row == i {
+					// renamed / synced replacement at same row
+					entry.Text = text
+					entry.Path = path.Join(directory.Path, text)
+					newEntries = append(newEntries, entry)
+				} else {
+					// e.g. copy pasted in same dir
+					newEntries = append(newEntries, e.createDraftEntry(directory, e.nextID(), text))
+				}
+				handled = true
+				break
 			}
 			if !handled {
 				// e.g. brought back via undo
@@ -270,12 +278,19 @@ func (e *FileExplorer) UpdateEntries(bufNr, firstline, lastline int, lines []str
 }
 
 func (e *FileExplorer) createDraftEntry(directory *Directory, id uint64, text string) DirectoryEntry {
+	entryPath := path.Join(directory.Path, text)
+	if e.idByPath == nil {
+		e.idByPath = map[string]uint64{}
+	}
+	if _, exists := e.idByPath[entryPath]; !exists {
+		e.idByPath[entryPath] = id
+	}
 	return DirectoryEntry{
 		ID:        id,
 		Text:      text,
 		Icon:      FILE_ICON,
 		IconClass: "",
-		Path:      directory.Path + "/" + text,
+		Path:      entryPath,
 		IsDir:     false,
 		IsDraft:   true,
 	}
@@ -589,6 +604,7 @@ func (e *FileExplorer) resetSessionState() {
 	e.directoriesByBuf = map[int]*Directory{}
 	e.dirtyByBuf = map[int]*DirDraft{}
 	e.sourceByID = map[uint64]DirectoryEntry{}
+	e.idByPath = map[string]uint64{}
 	e.pendingClosePrompt = false
 }
 
@@ -706,22 +722,24 @@ func (e *FileExplorer) mapDirectoryEntries(path string) ([]DirectoryEntry, error
 	})
 
 	dirs := utils.MapArray(dirStrings, func(dir string) DirectoryEntry {
+		entryPath := path + string(os.PathSeparator) + dir
 		return DirectoryEntry{
-			ID:        e.nextID(),
+			ID:        e.idForPath(entryPath),
 			Icon:      DIR_ICON,
 			IconClass: "",
 			Text:      dir,
 			IsDir:     true,
-			Path:      path + string(os.PathSeparator) + dir,
+			Path:      entryPath,
 		}
 	})
 	files := utils.MapArray(fileStrings, func(file string) DirectoryEntry {
+		entryPath := path + string(os.PathSeparator) + file
 		return DirectoryEntry{
-			ID:        e.nextID(),
+			ID:        e.idForPath(entryPath),
 			Icon:      FILE_ICON,
 			IconClass: "",
 			Text:      file,
-			Path:      path + string(os.PathSeparator) + file,
+			Path:      entryPath,
 			IsDir:     false,
 		}
 	})
@@ -738,8 +756,40 @@ func (e *FileExplorer) entriesToBufferLines(entries []DirectoryEntry) [][]byte {
 	return lines
 }
 
+func (e *FileExplorer) idForPath(entryPath string) uint64 {
+	if e.idByPath == nil {
+		e.idByPath = map[string]uint64{}
+	}
+	if id, ok := e.idByPath[entryPath]; ok {
+		return id
+	}
+	id := e.nextID()
+	e.idByPath[entryPath] = id
+	return id
+}
+
 func (e *FileExplorer) setBufferLinesFromEntries(bufNr int, entries []DirectoryEntry) error {
-	return e.nvim.SetBufferLines(bufNr, 0, -1, false, e.entriesToBufferLines(entries))
+	target := e.entriesToBufferLines(entries)
+	existing, err := e.nvim.GetBufferLines(bufNr, 0, -1, false)
+	if err != nil {
+		return err
+	}
+	if bufferLinesEqual(existing, target) {
+		return nil
+	}
+	return e.nvim.SetBufferLines(bufNr, 0, -1, false, target)
+}
+
+func bufferLinesEqual(a, b [][]byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if string(a[i]) != string(b[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 func (e *FileExplorer) syncPaneBuffers() error {

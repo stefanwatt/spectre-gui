@@ -30,5 +30,6 @@ type NvimClient interface {
 	CreateBufferKeymap(bufNr int, mode, lhs string, rhs func(channelID int) string) error
 	CreateBufferAutocmd(winId, bufNr int, luaCallback string) error
 	AttachBuffer(bufNr int, sendBuffer bool, opts map[string]any) (bool, error)
+	DetachBuffer(bufNr int) (bool, error)
 	RegisterHandler(event string, handler func(data ...any))
 }
