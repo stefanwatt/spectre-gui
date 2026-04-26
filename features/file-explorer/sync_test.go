@@ -8,8 +8,15 @@ import (
 )
 
 type fakeNvim struct {
-	linesByBuf map[int][][]byte
-	calls      []string
+	linesByBuf  map[int][][]byte
+	calls       []string
+	cursorCalls []cursorCall
+}
+
+type cursorCall struct {
+	winID int
+	row   int
+	col   int
 }
 
 type fakeEmitter struct {
@@ -39,10 +46,13 @@ func (f *fakeNvim) GetBufferLines(buf int, start, end int, strict bool) ([][]byt
 	}
 	return [][]byte{}, nil
 }
-func (f *fakeNvim) Command(cmd string) error                               { return nil }
-func (f *fakeNvim) OpenSplitRight(winId *int, bufNr int) error             { return nil }
-func (f *fakeNvim) CurrentWindow() (int, error)                            { return 0, nil }
-func (f *fakeNvim) SetWindowCursor(winId, row, col int) error              { return nil }
+func (f *fakeNvim) Command(cmd string) error                   { return nil }
+func (f *fakeNvim) OpenSplitRight(winId *int, bufNr int) error { return nil }
+func (f *fakeNvim) CurrentWindow() (int, error)                { return 0, nil }
+func (f *fakeNvim) SetWindowCursor(winId, row, col int) error {
+	f.cursorCalls = append(f.cursorCalls, cursorCall{winID: winId, row: row, col: col})
+	return nil
+}
 func (f *fakeNvim) SetCurrentWindow(winId int) error                       { return nil }
 func (f *fakeNvim) SetBufferToWindow(winId int, bufNr int) error           { return nil }
 func (f *fakeNvim) GetCurrentFilepath() (string, error)                    { return "", nil }
@@ -305,6 +315,41 @@ func TestSetBufferLinesFromEntries_SkipsNoOpWrite(t *testing.T) {
 	}
 	if len(nvim.calls) != 0 {
 		t.Fatalf("expected no SetBufferLines call, got %#v", nvim.calls)
+	}
+}
+
+func TestRefreshVisiblePanes_SyncsCursorsToSelectedEntries(t *testing.T) {
+	nvim := &fakeNvim{linesByBuf: map[int][][]byte{
+		10: {[]byte("1/sibling"), []byte("2/current")},
+		20: {[]byte("3/event-handlers.go"), []byte("4/target.go")},
+		30: {},
+	}}
+	e := NewFileExplorer(nvim)
+	e.parent = &Directory{BufNr: 10, Path: "/project", Entries: []DirectoryEntry{
+		{ID: 2, Text: "current"},
+		{ID: 1, Text: "sibling"},
+	}, SelectedEntryId: 2}
+	e.current = &Directory{BufNr: 20, Path: "/project/current", Entries: []DirectoryEntry{
+		{ID: 4, Text: "target.go"},
+		{ID: 3, Text: "event-handlers.go"},
+	}, SelectedEntryId: 4}
+	e.preview = Directory{BufNr: 30, Entries: []DirectoryEntry{}}
+	e.parentWinID = 101
+	e.currentWinID = 102
+	e.previewWinID = 103
+
+	if err := e.refreshVisiblePanes(); err != nil {
+		t.Fatalf("refreshVisiblePanes failed: %v", err)
+	}
+
+	expected := []cursorCall{{winID: 101, row: 2, col: 0}, {winID: 102, row: 2, col: 0}}
+	if len(nvim.cursorCalls) != len(expected) {
+		t.Fatalf("expected cursor calls %#v, got %#v", expected, nvim.cursorCalls)
+	}
+	for i := range expected {
+		if nvim.cursorCalls[i] != expected[i] {
+			t.Fatalf("expected cursor calls %#v, got %#v", expected, nvim.cursorCalls)
+		}
 	}
 }
 

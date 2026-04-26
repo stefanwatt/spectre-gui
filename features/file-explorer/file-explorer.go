@@ -33,9 +33,6 @@ var (
 
 //TODO: use uint64 where possible & reasonable
 
-//TODO: filesystem operations seem to work. dirty state tracking is broken
-// syncing does not set dirty to false for current pane. instead it sets dirty = true for parent and changes all dirs to type file
-
 //TODO: after sync the cursor should be on the same entry as before, even if order has changed through sorting
 
 //TODO: manage cursor col: pressing ^ should put the cursor at the beginning of the visible text not at the beginning of the buffer line
@@ -497,7 +494,46 @@ func (e *FileExplorer) refreshVisiblePanes() error {
 	if err := e.syncPaneBuffers(); err != nil {
 		return err
 	}
+	if err := e.syncVisiblePaneCursorsToSelection(); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (e *FileExplorer) syncVisiblePaneCursorsToSelection() error {
+	if err := e.syncPaneCursorToSelection(e.parentWinID, e.parent); err != nil {
+		return err
+	}
+	return e.syncPaneCursorToSelection(e.currentWinID, e.current)
+}
+
+func (e *FileExplorer) syncPaneCursorToSelection(winID int, directory *Directory) error {
+	if directory == nil || winID < 0 || directory.SelectedEntryId == 0 {
+		return nil
+	}
+	row, ok, err := e.findBufferRowBySelectedEntryID(directory.BufNr, directory.SelectedEntryId)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		log.Warnf("[FileExplorer] selected entry %d not found in buffer %d", directory.SelectedEntryId, directory.BufNr)
+		return nil
+	}
+	return e.nvim.SetWindowCursor(winID, row, 0)
+}
+
+func (e *FileExplorer) findBufferRowBySelectedEntryID(bufNr int, selectedEntryID uint64) (int, bool, error) {
+	lines, err := e.nvim.GetBufferLines(bufNr, 0, -1, false)
+	if err != nil {
+		return 0, false, err
+	}
+	for i, line := range lines {
+		id, _ := parseBufferLine(strings.TrimSpace(string(line)))
+		if id == selectedEntryID {
+			return i + 1, true, nil
+		}
+	}
+	return 0, false, nil
 }
 
 func (e *FileExplorer) clearPreview() {
