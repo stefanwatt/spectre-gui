@@ -33,8 +33,6 @@ var (
 
 //TODO: use uint64 where possible & reasonable
 
-//TODO: after sync the cursor should be on the same entry as before, even if order has changed through sorting
-
 //TODO: manage cursor col: pressing ^ should put the cursor at the beginning of the visible text not at the beginning of the buffer line
 
 type FileExplorer struct {

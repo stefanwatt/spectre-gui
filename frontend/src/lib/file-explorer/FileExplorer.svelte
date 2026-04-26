@@ -113,39 +113,44 @@
 </script>
 
 {#snippet pane(data: App.FileExplorerDirectory, role: 'parent' | 'current')}
+	{@const isCurrentPane = role === 'current'}
 	<div
-		class="bg-very-dark border-r-surface0 overflow-y-auto border-r-2"
-		class:focused={role === 'current'}
+		class="border-r-mantle flex h-full flex-col overflow-hidden border-r-2"
+    class:bg-very-dark={!isCurrentPane}
+    class:bg-pretty-dark={isCurrentPane}
+		class:focused={isCurrentPane}
 		class:parent-dir={role === 'parent'}
-		class:current-dir={role === 'current'}
+		class:current-dir={isCurrentPane}
 	>
-		<div
-			class:bg-yellow={data.dirty}
-			class:bg-blue={!data.dirty}
-			class="text-mantle m-2 overflow-hidden text-ellipsis whitespace-nowrap rounded-xl px-4 py-2 text-xl"
-		>
-			{#if data.dirty}
-				<!-- content here -->
-				<span> </span>
+		<div class="pane-header">
+			{#if isCurrentPane}
+				<span class="title-top-marker" aria-hidden="true"></span>
 			{/if}
-			<span>
-				{data.title}
-			</span>
+			<div
+				class:text-mauve={isCurrentPane}
+				class:text-surface0={!isCurrentPane}
+				class="pane-title mx-2 mb-2 flex items-center gap-4 overflow-hidden text-ellipsis whitespace-nowrap px-4 pb-4 text-xl"
+			>
+				{#if isCurrentPane}
+					<span class="current-indicator"> </span>
+				{/if}
+				<span>
+					{data.title}
+				</span>
+			</div>
 		</div>
-		<div class="overflow-y-auto px-4">
+		<div class="min-h-0 flex-1 overflow-y-auto">
 			{#each data.entries as entry (entry.id)}
 				{@const selected = data.selectedEntryId === entry.id}
-				{@const isCurrentPane = role === 'current'}
 				{@const cursorActive = isCurrentPane && selected}
 				{@const split = cursorActive ? splitEntryTextAtCursor(entry, data.cursorCol ?? 0) : null}
 				<div
 					use:scrollSelectedIntoView={selected}
-					class="flex h-9 cursor-default items-center gap-1 whitespace-nowrap rounded-lg p-1"
-					class:bg-blue={selected}
-					class:text-mantle={selected}
+					class="flex h-9 cursor-default items-center gap-1 whitespace-nowrap px-4 py-1"
+					class:bg-surface0={selected}
 				>
 					<span
-						class:bg-very-dark={selected}
+            class:text-peach={entry.isDir}
 						class={`grid h-[2ch] w-[2ch] shrink-0 place-items-center rounded-full ${entry.iconClass ?? ''}`}
 						>{entry.icon}</span
 					>
@@ -233,5 +238,36 @@
 	.end-cursor {
 		display: inline-block;
 		min-width: 1ch;
+	}
+
+	.pane-header {
+		position: relative;
+		flex-shrink: 0;
+	}
+
+	.title-top-marker {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 2px;
+		border-radius: 9999px;
+		background: linear-gradient(
+			90deg,
+			rgba(var(--ctp-mauve), 1) 0%,
+			rgba(var(--ctp-blue), 0.35) 65%,
+			rgba(var(--ctp-blue), 0) 100%
+		);
+		box-shadow:
+			0 0 8px rgba(var(--ctp-mauve), 0.8),
+			0 0 16px rgba(var(--ctp-mauve), 0.35);
+	}
+
+	.current-indicator {
+		display: inline-block;
+		text-shadow:
+			0 0 2px rgba(var(--ctp-mauve), 0.95),
+			0 0 5px rgba(var(--ctp-mauve), 0.6);
+		filter: drop-shadow(0 0 6px rgba(var(--ctp-mauve), 0.8));
 	}
 </style>
